@@ -151,6 +151,281 @@ class SealedRecord {
       };
 }
 
+/// A cryptographic digest as a multibase-encoded multihash — the encoding the W3C
+/// Verifiable Credentials Data Model 2.0 defines for `digestMultibase`, and the one
+/// `did:webvh` uses for its SCID and entry hashes. Multihash carries the hash
+/// algorithm in-band, so the value is self-describing and the wire format survives an
+/// algorithm change without a schema revision; multibase does the same for the base
+/// encoding, so a verifier never infers base58 from base64url by context. A bare hex
+/// string or a `sha-256:`-style prefix hard-codes one algorithm into the wire contract
+/// and is non-conforming here. This definition constrains the *encoding only*. What
+/// the digest is computed over is stated by each referencing field, because it differs
+/// legitimately: a digest over a JSON document is taken over its RFC 8785 (JCS)
+/// canonicalization, while a digest over an opaque artifact is taken over its bytes. A
+/// field whose input is a JSON document and which does not name a canonicalization is
+/// not reproducible. Restricted to the two multibase headers W3C Controlled
+/// Identifiers 1.0 §2.4 normatively requires — `z` (base58btc) and `u`
+/// (base64url-no-pad). CID permits others but states that "interoperability is not
+/// guaranteed between implementations using such values", and a registry whose purpose
+/// is interoperability should not mint digests a conforming verifier may be unable to
+/// read. The alphabets are enforced rather than assumed: base58btc excludes 0, O, I
+/// and l, and an earlier permissive pattern let three published examples carry digests
+/// that were not valid base58 at all. base58btc is RECOMMENDED, for consistency with
+/// `did:key` and `did:webvh`.
+typedef DigestMultibase = String;
+
+/// The name of one blob: the digest of its BlobManifest, taken over the manifest's RFC
+/// 8785 (JCS) canonicalization. sha2-256 is RECOMMENDED and MUST be implemented.
+/// Content addressing over ciphertext, never plaintext, so a BlobRef says nothing
+/// about what the file contains, and two uploads of one file have different BlobRefs
+/// (a fresh `fileId` gives a different key, and so different ciphertext). Rooms cannot
+/// be correlated by the files they share. Compared as decoded multihash bytes, never
+/// as encoded strings. A BlobRef is defined over the manifest's JSON, as this schema
+/// states it and RFC 8785 canonicalizes it, never over any binding's generated type:
+/// two bindings that model the manifest as distinct types still compute the same
+/// BlobRef from the same JSON.
+typedef BlobRef = DigestMultibase;
+
+/// Whether the plaintext was padded before sealing, so that ciphertext sizes do not
+/// fingerprint known documents. `padme`: zero bytes appended to reach `padme(size)`,
+/// the formula above. Absent means `none`. The padding is inside the final segments,
+/// and a reader checks it is zero and removes it by truncating to `size`.
+///
+/// An extension type rather than an enum: a value from a newer MINOR of this
+/// specification must not crash the parse (SPEC §5.2), and an enum would throw on one.
+/// Compare against the constants below, and treat anything else as unrecognised.
+extension type const FileManifestPadding(String value) {
+  static const FileManifestPadding none = FileManifestPadding('none');
+  static const FileManifestPadding padme = FileManifestPadding('padme');
+
+  /// Every value this specification's schema permits.
+  static const List<FileManifestPadding> values = <FileManifestPadding>[
+    none,
+    padme
+  ];
+}
+
+/// The `file` member of a sealed record body: everything that describes a file, sealed
+/// with the record, signed by the record's author, and never seen by the host. Defined
+/// here so that clients interoperate; no host task carries it, because the host
+/// receives only ciphertext. **Byte encodings.** In every derivation below, `fileId`
+/// is its **32 decoded bytes**, never its base64url text; `roomId` is the **UTF-8
+/// bytes** of the room identifier exactly as it appears on the wire; string constants
+/// are their ASCII bytes; `u8`, `u32be` and `u64be` are unsigned integers of that
+/// width, big-endian. Epochs are unsigned 64-bit on the wire. An implementation that
+/// holds epochs in a narrower type **MUST** refuse a value it cannot represent with
+/// `malformedRequest` (or, reading a manifest, refuse the file), and **MUST NOT**
+/// truncate it. **The file key.** `file_key = HKDF-SHA256(ikm = storage_key(epoch),
+/// salt = fileId, info = "openvtc/room/file/v1" || roomId || u64be(epoch))`, where
+/// `storage_key(epoch)` is the room's per-epoch storage key, the one records are
+/// sealed under. It is derived per file and never stored. It is bound to the room and
+/// the epoch, so a key released for one room cannot open a blob relocated from
+/// another, and releasing it exposes one file and nothing else. **Padding.** With
+/// `padding: "padme"`, the plaintext of length `L = size` is extended with zero bytes
+/// to `padme(L)`: for `L &lt; 2`, `padme(L) = L`; otherwise `E = floor(log2 L)`, `S =
+/// floor(log2 E) + 1`, `z = E − S`, `mask = 2^z − 1`, and `padme(L) = (L + mask) &
+/// ~mask`. The padded length is `padme(size)`; without padding it is `size`. Padding
+/// bytes **MUST** be zero. **The STREAM construction.** The padded plaintext is cut
+/// into `segmentSize`-byte segments, the last holding the remainder; an empty
+/// plaintext is one empty final segment. Segment `i` is sealed with ChaCha20-Poly1305
+/// under `file_key`, with nonce `u32be(0) || u64be(i)` and associated data
+/// `"openvtc/room/file/v1" || roomId || fileId || u64be(epoch) || u64be(i) ||
+/// u8(final)`, where `final` is 1 on the last segment and 0 on every other. A host
+/// that truncates, reorders or splices ciphertext produces an authentication failure,
+/// never a shorter or rearranged file. The nonces are counters, so a `file_key` MUST
+/// NOT seal two different files; a fresh random `fileId` is what guarantees it. Each
+/// sealed segment is one transfer chunk of the blob (BlobManifest), so `segmentSize +
+/// 16` is the blob's `chunks.chunkSize`, and an empty file is one 16-byte chunk.
+/// **Reading.** A reader opens the record, derives or obtains the file key, and
+/// **MUST**, before trusting a byte: - check that the blob's `chunks.chunkSize` equals
+/// `segmentSize + 16` and that `chunks.chunkCount` equals `max(1, ceil(paddedLength /
+/// segmentSize))`, and refuse the file otherwise; - decrypt every segment in order,
+/// refusing the file on any authentication failure or on a final flag anywhere but the
+/// last segment; - check that the decrypted length equals the padded length, that
+/// every padding byte is zero, and, after removing the padding, that the plaintext
+/// matches `digest`. A reader **MUST** refuse a file that fails any check, and **MUST
+/// NOT** present it with a warning instead. A reader that streams **MUST NOT** treat
+/// the plaintext as received — save it under its final name, render it, or hand it to
+/// another component — until the digest has verified; it writes to a temporary
+/// destination and discards that destination on a mismatch.
+class FileManifest {
+  const FileManifest({
+    required this.fileId,
+    required this.name,
+    this.mediaType,
+    required this.size,
+    required this.digest,
+    required this.epoch,
+    required this.segmentSize,
+    this.padding,
+    required this.blobRef,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory FileManifest.fromJson(Map<String, dynamic> json) => FileManifest(
+        fileId: json['fileId'] as String,
+        name: json['name'] as String,
+        mediaType: json['mediaType'] as String?,
+        size: json['size'] as int,
+        digest: json['digest'] as String,
+        epoch: json['epoch'] as int,
+        segmentSize: json['segmentSize'] as int,
+        padding: json['padding'] == null
+            ? null
+            : FileManifestPadding(json['padding'] as String),
+        blobRef: json['blobRef'] as String,
+      );
+
+  /// 32 random bytes, base64url without padding, minted by the uploader for this file
+  /// and never reused. The salt of the file key.
+  final String fileId;
+
+  /// The file's name as the uploader gave it. Sealed: the host never sees it. Readers
+  /// MUST treat it as untrusted text: strip path separators before using it as a local
+  /// file name, and never interpret it as markup.
+  final String name;
+
+  /// IANA media type, without parameters. Advisory: a reader decides how to render from
+  /// the bytes and its own policy, never from this alone.
+  final String? mediaType;
+
+  /// Plaintext bytes, before padding. The decrypted length is `padme(size)` with `padme`
+  /// padding and `size` without.
+  final int size;
+
+  /// Digest of the plaintext bytes. Signed, with the rest of the record body, by the
+  /// record's author, so a reader that verifies it knows which member put exactly these
+  /// bytes there.
+  final DigestMultibase digest;
+
+  /// The epoch whose storage key the file key derives from. Usually the record's own
+  /// epoch; a record rewritten under a later epoch that keeps the same blob keeps the
+  /// file's original epoch here. Unsigned 64-bit; see Byte encodings.
+  final int epoch;
+
+  /// Plaintext bytes per STREAM segment: the transfer chunk size less the 16-byte tag,
+  /// so that one sealed segment is one chunk.
+  final int segmentSize;
+
+  /// Whether the plaintext was padded before sealing, so that ciphertext sizes do not
+  /// fingerprint known documents. `padme`: zero bytes appended to reach `padme(size)`,
+  /// the formula above. Absent means `none`. The padding is inside the final segments,
+  /// and a reader checks it is zero and removes it by truncating to `size`.
+  final FileManifestPadding? padding;
+  final BlobRef blobRef;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'fileId': fileId,
+        'name': name,
+        if (mediaType != null) 'mediaType': mediaType!,
+        'size': size,
+        'digest': digest,
+        'epoch': epoch,
+        'segmentSize': segmentSize,
+        if (padding != null) 'padding': padding!.value,
+        'blobRef': blobRef,
+      };
+}
+
+/// The plaintext inside `SealedRecord.ciphertext` on an `attributed` or `private`
+/// room, as JSON, signed by its author. Client to client: no host task carries it,
+/// because a host receives only ciphertext. Defined so that every member's client
+/// writes and reads the same thing. **Producing.** A writer builds the object without
+/// `proof`, signs it with a W3C Data Integrity proof whose `verificationMethod` is a
+/// key of `author` and whose `proofPurpose` is `assertionMethod`, and seals the result
+/// (its UTF-8 JSON bytes) under the AEAD that binds the same `roomId`, `key`,
+/// `version` and epoch. A writer MUST support `eddsa-jcs-2022`; `ecdsa-jcs-2019` MAY
+/// be used for a hardware-backed signer. **Reading.** After opening a record a reader
+/// MUST, before showing any member of it or trusting its `file`: (1) parse it as this
+/// object and refuse an unknown member; (2) verify `proof` against `author`'s DID
+/// document, for `assertionMethod`; (3) check that `roomId`, `key` and `version` equal
+/// the location the record was read from; (4) on an `attributed` room, check that
+/// `author` equals the `author` the host recorded for the record. A reader MUST refuse
+/// a record that fails any of these, and MUST NOT show it with a warning instead.
+/// **Why the location is signed as well as sealed.** The AEAD stops the host
+/// relocating ciphertext, but every member can open and re-seal a record. Without
+/// `roomId`, `key` and `version` under the author's signature, a member could copy
+/// another member's signed body to a new key or a later version, and on a `private`
+/// room, where the host records no author, readers would attribute it to the original
+/// author.
+class SealedRecordBody {
+  const SealedRecordBody({
+    required this.roomId,
+    required this.key,
+    required this.version,
+    required this.author,
+    this.title,
+    this.description,
+    this.body,
+    this.tags,
+    this.file,
+    required this.proof,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory SealedRecordBody.fromJson(Map<String, dynamic> json) =>
+      SealedRecordBody(
+        roomId: json['roomId'] as String,
+        key: json['key'] as String,
+        version: json['version'] as int,
+        author: json['author'] as String,
+        title: json['title'] as String?,
+        description: json['description'] as String?,
+        body: json['body'] as String?,
+        tags: json['tags'] == null
+            ? null
+            : (json['tags'] as List<dynamic>).map((e) => e as String).toList(),
+        file: json['file'] == null
+            ? null
+            : FileManifest.fromJson(json['file'] as Map<String, dynamic>),
+        proof: json['proof'] as Map<String, dynamic>,
+      );
+
+  /// The room the record was written in, exactly as on the wire.
+  final String roomId;
+
+  /// The record's key, as in `rooms/records/put`.
+  final String key;
+
+  /// The version the writer intended the record to take, as sealed with
+  /// `rooms/keys/seal`.
+  final int version;
+
+  /// The DID of the party that wrote the record: the member, or the agent acting under
+  /// an attenuated credential, whose key signed `proof`. On a `private` room this is the
+  /// only attribution there is.
+  final String author;
+  final String? title;
+  final String? description;
+
+  /// The record's text, markdown. Human-readable, never a model-optimised blob, and
+  /// rendered inert.
+  final String? body;
+  final List<String>? tags;
+
+  /// Present when the record carries a file. Its `blobRef` MUST be the one the record
+  /// names in `blobs`.
+  final FileManifest? file;
+
+  /// The author's Data Integrity proof over every other member.
+  final Map<String, dynamic> proof;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'roomId': roomId,
+        'key': key,
+        'version': version,
+        'author': author,
+        if (title != null) 'title': title!,
+        if (description != null) 'description': description!,
+        if (body != null) 'body': body!,
+        if (tags != null) 'tags': tags!,
+        if (file != null) 'file': file!.toJson(),
+        'proof': proof,
+      };
+}
+
 /// One rung of a room's epoch key chain: the storage key of epoch `epoch - 1`, sealed
 /// under the storage key of `epoch`. A group key schedule offers no way to derive an
 /// earlier epoch's key from a later one — that property is what makes removing a
@@ -288,41 +563,6 @@ class RecordMetadata {
         if (author != null) 'author': author!,
       };
 }
-
-/// A cryptographic digest as a multibase-encoded multihash — the encoding the W3C
-/// Verifiable Credentials Data Model 2.0 defines for `digestMultibase`, and the one
-/// `did:webvh` uses for its SCID and entry hashes. Multihash carries the hash
-/// algorithm in-band, so the value is self-describing and the wire format survives an
-/// algorithm change without a schema revision; multibase does the same for the base
-/// encoding, so a verifier never infers base58 from base64url by context. A bare hex
-/// string or a `sha-256:`-style prefix hard-codes one algorithm into the wire contract
-/// and is non-conforming here. This definition constrains the *encoding only*. What
-/// the digest is computed over is stated by each referencing field, because it differs
-/// legitimately: a digest over a JSON document is taken over its RFC 8785 (JCS)
-/// canonicalization, while a digest over an opaque artifact is taken over its bytes. A
-/// field whose input is a JSON document and which does not name a canonicalization is
-/// not reproducible. Restricted to the two multibase headers W3C Controlled
-/// Identifiers 1.0 §2.4 normatively requires — `z` (base58btc) and `u`
-/// (base64url-no-pad). CID permits others but states that "interoperability is not
-/// guaranteed between implementations using such values", and a registry whose purpose
-/// is interoperability should not mint digests a conforming verifier may be unable to
-/// read. The alphabets are enforced rather than assumed: base58btc excludes 0, O, I
-/// and l, and an earlier permissive pattern let three published examples carry digests
-/// that were not valid base58 at all. base58btc is RECOMMENDED, for consistency with
-/// `did:key` and `did:webvh`.
-typedef DigestMultibase = String;
-
-/// The name of one blob: the digest of its BlobManifest, taken over the manifest's RFC
-/// 8785 (JCS) canonicalization. sha2-256 is RECOMMENDED and MUST be implemented.
-/// Content addressing over ciphertext, never plaintext, so a BlobRef says nothing
-/// about what the file contains, and two uploads of one file have different BlobRefs
-/// (a fresh `fileId` gives a different key, and so different ciphertext). Rooms cannot
-/// be correlated by the files they share. Compared as decoded multihash bytes, never
-/// as encoded strings. A BlobRef is defined over the manifest's JSON, as this schema
-/// states it and RFC 8785 canonicalizes it, never over any binding's generated type:
-/// two bindings that model the manifest as distinct types still compute the same
-/// BlobRef from the same JSON.
-typedef BlobRef = DigestMultibase;
 
 /// Curation state. `retracted` is a tombstone: the body is gone, the key and version
 /// remain so incremental sync converges and the audit chain stays intact.

@@ -83,7 +83,7 @@ A conforming producer and consumer satisfy [SPEC §7.1 and §7.2](/SPEC.md#7-min
 
 **`version`** — the version the writer intends the record to take.
 
-**`plaintext`** — the record body, base64url. Sealed whole rather than field by field: splitting it would let a host learn the shape of the material from ciphertext lengths, for no benefit, since a reader decrypts the whole record either way.
+**`plaintext`** — the record body, base64url. Sealed whole rather than field by field: splitting it would let a host learn the shape of the material from ciphertext lengths, for no benefit, since a reader decrypts the whole record either way. The body is a [`SealedRecordBody`](../../../_shared/0.1/room.schema.json), signed by its author before it is sent here. A key holder seals what it is given and does not sign on the writer's behalf: the signature attributes the record, and that is the writer's act.
 
 **`sealed`** (response) — a [`SealedRecord`](../../../_shared/0.1/room.schema.json): ciphertext, nonce, and the epoch it was sealed under.
 
