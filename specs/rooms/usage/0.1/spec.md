@@ -21,8 +21,8 @@ parties:
     requirement: REQUIRED
     member: recipient
 proofRequirement:
-  requirement: RECOMMENDED
-  rationale: "A read that discloses which members add how much. Authority is the room-issued chain in the payload, bound to whoever the host authenticated; a proof makes that binding hold on relayed transports, and makes each disclosure attributable."
+  requirement: REQUIRED
+  rationale: "A read that discloses which members add how much. Authority is the room-issued chain in the payload, whose leaf must be the party the host authenticated. A room operation carries no session, so that party is the proof's signer and nothing else: without a proof there is nobody to bind the chain to, and the presentation becomes a bearer token. The proof also makes each disclosure attributable."
 sideEffects:
   level: none
   rationale: "Reads the host's per-member usage counters for one room. Persists nothing."
