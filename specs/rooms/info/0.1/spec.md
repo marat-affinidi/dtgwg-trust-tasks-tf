@@ -21,8 +21,8 @@ parties:
     requirement: REQUIRED
     member: recipient
 proofRequirement:
-  requirement: RECOMMENDED
-  rationale: "A read of hosting metadata. Authority is the room-issued chain in the payload, bound to whoever the host authenticated; a proof makes that binding hold on relayed transports too, which is why it is recommended rather than left optional."
+  requirement: REQUIRED
+  rationale: "Authority is the room-issued chain in the payload, whose leaf must be the party the host authenticated. A room operation carries no session, so that party is the proof's signer and nothing else: without a proof there is nobody to bind the chain to, and the presentation becomes a bearer token. The same rule as every other rooms/* task."
 sideEffects:
   level: none
   rationale: "Reads the host's record of the room and its usage counters. Persists nothing."
