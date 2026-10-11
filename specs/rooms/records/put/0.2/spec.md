@@ -138,12 +138,15 @@ A conforming **producer** (the member, or an agent acting under an attenuated cr
 2. Present the **entire** authority chain, leaf first, ending in a credential issued by the
    room. A producer MUST NOT rely on the host resolving a link it was not given.
 3. Seal the record and set `sealed` on an `attributed` or `private` room, or set
-   `cleartext` on an `open` one. Exactly one of the two.
+   `cleartext` on an `open` one. Exactly one of the two. What is sealed is a
+   [`SealedRecordBody`](../../../_shared/0.1/room.schema.json), signed by its author and
+   naming this record's `roomId`, `key` and `version`.
 4. Bind the sealed record's AEAD associated data to `roomId`, `key`, `version` and `epoch`.
 5. On a `private` room, include `presentation.subjectBinding`.
 6. When the record carries a file: commit its blob in this room first, put the file's
-   [`FileManifest`](../../../_shared/0.1/blobs.schema.json) in the record's body (inside
-   the seal on `attributed` and `private` rooms), and name the same `blobRef` in `blobs`.
+   [`FileManifest`](../../../_shared/0.1/blobs.schema.json) in the record's body (the
+   `file` member of its `SealedRecordBody` on `attributed` and `private` rooms), and name
+   the same `blobRef` in `blobs`.
    A producer **MUST NOT** name a blob in `blobs` that the record's body does not describe:
    the host cannot tell, and a reader would find a blob kept alive by a record that never
    mentions it.
