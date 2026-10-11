@@ -1328,10 +1328,16 @@ async function main() {
   const NOT_PAYLOAD_SCHEMAS = new Set(["spec.meta.schema.json", "trust-task.schema.json"]);
   const filtered = schemas.filter((p) => !NOT_PAYLOAD_SCHEMAS.has(path.basename(p)));
 
-  // The component registry is built from the payload schemas alone: a `$def`
-  // no payload reaches is duplicated nowhere and needs no hoisting.
+  // The component registry is seeded from the payload schemas and the shared
+  // schemas. A `$def` neither reaches is duplicated nowhere and needs no
+  // hoisting. The shared schemas count because each is compiled whole: a
+  // shared definition no payload uses (`SealedRecordBody`, which only clients
+  // read) still compiles, and a cross-file `$ref` inside it must resolve to a
+  // component like any other.
   const registry = buildComponentRegistry(
-    filtered.filter((p) => path.basename(p) === "payload.schema.json"),
+    filtered.filter(
+      (p) => path.basename(p) === "payload.schema.json" || /[\\/]_(shared|framework)[\\/]/.test(p),
+    ),
   );
   console.log(
     `Hoisting ${registry.components.size} cross-file definitions into ` +

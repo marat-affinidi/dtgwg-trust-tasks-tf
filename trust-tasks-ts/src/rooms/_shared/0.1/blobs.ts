@@ -14,4 +14,4 @@ export interface RoomsSharedFileAndBlobTypes {
  * The definitions this shared schema publishes, hoisted to one declaration each.
  * See "../../../_shared/components.js".
  */
-export type { BlobManifest, BlobRef, RoomLimits, ScopeLimits, TransferId, Usage } from "../../../_shared/components.js";
+export type { BlobManifest, BlobRef, FileManifest, RoomLimits, ScopeLimits, TransferId, Usage } from "../../../_shared/components.js";

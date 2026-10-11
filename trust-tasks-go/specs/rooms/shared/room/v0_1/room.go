@@ -96,6 +96,56 @@ type SealedRecord struct {
 	Epoch int64 `json:"epoch"`
 }
 
+// SealedRecordBody The plaintext inside `SealedRecord.ciphertext` on an `attributed` or
+// `private` room, as JSON, signed by its author. Client to client: no host task carries
+// it, because a host receives only ciphertext. Defined so that every member's client
+// writes and reads the same thing. **Producing.** A writer builds the object without
+// `proof`, signs it with a W3C Data Integrity proof whose `verificationMethod` is a key
+// of `author` and whose `proofPurpose` is `assertionMethod`, and seals the result (its
+// UTF-8 JSON bytes) under the AEAD that binds the same `roomId`, `key`, `version` and
+// epoch. A writer MUST support `eddsa-jcs-2022`; `ecdsa-jcs-2019` MAY be used for a
+// hardware-backed signer. **Reading.** After opening a record a reader MUST, before
+// showing any member of it or trusting its `file`: (1) parse it as this object and refuse
+// an unknown member; (2) verify `proof` against `author`'s DID document, for
+// `assertionMethod`; (3) check that `roomId`, `key` and `version` equal the location the
+// record was read from; (4) on an `attributed` room, check that `author` equals the
+// `author` the host recorded for the record. A reader MUST refuse a record that fails any
+// of these, and MUST NOT show it with a warning instead. **Why the location is signed as
+// well as sealed.** The AEAD stops the host relocating ciphertext, but every member can
+// open and re-seal a record. Without `roomId`, `key` and `version` under the author's
+// signature, a member could copy another member's signed body to a new key or a later
+// version, and on a `private` room, where the host records no author, readers would
+// attribute it to the original author.
+type SealedRecordBody struct {
+	// The room the record was written in, exactly as on the wire.
+	RoomID string `json:"roomId"`
+
+	// The record's key, as in `rooms/records/put`.
+	Key string `json:"key"`
+
+	// The version the writer intended the record to take, as sealed with `rooms/keys/seal`.
+	Version int64 `json:"version"`
+
+	// The DID of the party that wrote the record: the member, or the agent acting under an
+	// attenuated credential, whose key signed `proof`. On a `private` room this is the only
+	// attribution there is.
+	Author      string  `json:"author"`
+	Title       *string `json:"title,omitempty"`
+	Description *string `json:"description,omitempty"`
+
+	// The record's text, markdown. Human-readable, never a model-optimised blob, and rendered
+	// inert.
+	Body *string   `json:"body,omitempty"`
+	Tags *[]string `json:"tags,omitempty"`
+
+	// Present when the record carries a file. Its `blobRef` MUST be the one the record names
+	// in `blobs`.
+	File *FileManifest `json:"file,omitempty"`
+
+	// The author's Data Integrity proof over every other member.
+	Proof map[string]json.RawMessage `json:"proof"`
+}
+
 // EpochLink One rung of a room's epoch key chain: the storage key of epoch `epoch - 1`,
 // sealed under the storage key of `epoch`. A group key schedule offers no way to derive
 // an earlier epoch's key from a later one — that property is what makes removing a member
@@ -703,3 +753,96 @@ type DigestMultibase = string
 // that model the manifest as distinct types still compute the same BlobRef from the same
 // JSON.
 type BlobRef = DigestMultibase
+
+// FileManifestPadding Whether the plaintext was padded before sealing, so that ciphertext
+// sizes do not fingerprint known documents. `padme`: zero bytes appended to reach
+// `padme(size)`, the formula above. Absent means `none`. The padding is inside the final
+// segments, and a reader checks it is zero and removes it by truncating to `size`.
+type FileManifestPadding string
+
+// Values FileManifestPadding may take, per this specification's schema.
+const (
+	FileManifestPaddingNone  FileManifestPadding = "none"
+	FileManifestPaddingPadme FileManifestPadding = "padme"
+)
+
+// FileManifest The `file` member of a sealed record body: everything that describes a
+// file, sealed with the record, signed by the record's author, and never seen by the
+// host. Defined here so that clients interoperate; no host task carries it, because the
+// host receives only ciphertext. **Byte encodings.** In every derivation below, `fileId`
+// is its **32 decoded bytes**, never its base64url text; `roomId` is the **UTF-8 bytes**
+// of the room identifier exactly as it appears on the wire; string constants are their
+// ASCII bytes; `u8`, `u32be` and `u64be` are unsigned integers of that width, big-endian.
+// Epochs are unsigned 64-bit on the wire. An implementation that holds epochs in a
+// narrower type **MUST** refuse a value it cannot represent with `malformedRequest` (or,
+// reading a manifest, refuse the file), and **MUST NOT** truncate it. **The file key.**
+// `file_key = HKDF-SHA256(ikm = storage_key(epoch), salt = fileId, info =
+// "openvtc/room/file/v1" || roomId || u64be(epoch))`, where `storage_key(epoch)` is the
+// room's per-epoch storage key, the one records are sealed under. It is derived per file
+// and never stored. It is bound to the room and the epoch, so a key released for one room
+// cannot open a blob relocated from another, and releasing it exposes one file and
+// nothing else. **Padding.** With `padding: "padme"`, the plaintext of length `L = size`
+// is extended with zero bytes to `padme(L)`: for `L < 2`, `padme(L) = L`; otherwise `E =
+// floor(log2 L)`, `S = floor(log2 E) + 1`, `z = E − S`, `mask = 2^z − 1`, and `padme(L) =
+// (L + mask) & ~mask`. The padded length is `padme(size)`; without padding it is `size`.
+// Padding bytes **MUST** be zero. **The STREAM construction.** The padded plaintext is
+// cut into `segmentSize`-byte segments, the last holding the remainder; an empty
+// plaintext is one empty final segment. Segment `i` is sealed with ChaCha20-Poly1305
+// under `file_key`, with nonce `u32be(0) || u64be(i)` and associated data
+// `"openvtc/room/file/v1" || roomId || fileId || u64be(epoch) || u64be(i) || u8(final)`,
+// where `final` is 1 on the last segment and 0 on every other. A host that truncates,
+// reorders or splices ciphertext produces an authentication failure, never a shorter or
+// rearranged file. The nonces are counters, so a `file_key` MUST NOT seal two different
+// files; a fresh random `fileId` is what guarantees it. Each sealed segment is one
+// transfer chunk of the blob (BlobManifest), so `segmentSize + 16` is the blob's
+// `chunks.chunkSize`, and an empty file is one 16-byte chunk. **Reading.** A reader opens
+// the record, derives or obtains the file key, and **MUST**, before trusting a byte: -
+// check that the blob's `chunks.chunkSize` equals `segmentSize + 16` and that
+// `chunks.chunkCount` equals `max(1, ceil(paddedLength / segmentSize))`, and refuse the
+// file otherwise; - decrypt every segment in order, refusing the file on any
+// authentication failure or on a final flag anywhere but the last segment; - check that
+// the decrypted length equals the padded length, that every padding byte is zero, and,
+// after removing the padding, that the plaintext matches `digest`. A reader **MUST**
+// refuse a file that fails any check, and **MUST NOT** present it with a warning instead.
+// A reader that streams **MUST NOT** treat the plaintext as received — save it under its
+// final name, render it, or hand it to another component — until the digest has verified;
+// it writes to a temporary destination and discards that destination on a mismatch.
+type FileManifest struct {
+	// 32 random bytes, base64url without padding, minted by the uploader for this file and
+	// never reused. The salt of the file key.
+	FileID string `json:"fileId"`
+
+	// The file's name as the uploader gave it. Sealed: the host never sees it. Readers MUST
+	// treat it as untrusted text: strip path separators before using it as a local file name,
+	// and never interpret it as markup.
+	Name string `json:"name"`
+
+	// IANA media type, without parameters. Advisory: a reader decides how to render from the
+	// bytes and its own policy, never from this alone.
+	MediaType *string `json:"mediaType,omitempty"`
+
+	// Plaintext bytes, before padding. The decrypted length is `padme(size)` with `padme`
+	// padding and `size` without.
+	Size int64 `json:"size"`
+
+	// Digest of the plaintext bytes. Signed, with the rest of the record body, by the
+	// record's author, so a reader that verifies it knows which member put exactly these
+	// bytes there.
+	Digest DigestMultibase `json:"digest"`
+
+	// The epoch whose storage key the file key derives from. Usually the record's own epoch;
+	// a record rewritten under a later epoch that keeps the same blob keeps the file's
+	// original epoch here. Unsigned 64-bit; see Byte encodings.
+	Epoch int64 `json:"epoch"`
+
+	// Plaintext bytes per STREAM segment: the transfer chunk size less the 16-byte tag, so
+	// that one sealed segment is one chunk.
+	SegmentSize int64 `json:"segmentSize"`
+
+	// Whether the plaintext was padded before sealing, so that ciphertext sizes do not
+	// fingerprint known documents. `padme`: zero bytes appended to reach `padme(size)`, the
+	// formula above. Absent means `none`. The padding is inside the final segments, and a
+	// reader checks it is zero and removes it by truncating to `size`.
+	Padding *FileManifestPadding `json:"padding,omitempty"`
+	BlobRef BlobRef              `json:"blobRef"`
+}
