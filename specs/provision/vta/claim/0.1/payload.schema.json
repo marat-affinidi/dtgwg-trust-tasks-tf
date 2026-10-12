@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trusttasks.org/spec/provision/vta/claim/0.1",
+  "title": "Provision — VTA Claim — payload",
+  "description": "A wallet claims a VTA that a Farm has reserved behind a `vta-claim` trigger link. The document is the first request of the exchange (VTI-LNK-054): issued and signed by a fresh Ed25519 `did:key` that becomes the VTA's administrator, addressed to the Farm, and carrying the reservation's handle both here and as the envelope's `parentThreadId`. The task defines no `#response`: the Farm answers a `trust-task-next-step` expecting `provision/vta/redeem/0.1`, whose response is the hand-over. The outer document members (id, type, issuer, recipient, issuedAt, expiresAt, parentThreadId, proof) are owned by the framework — SPEC §6.3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "handle"
+  ],
+  "properties": {
+    "handle": {
+      "$ref": "../../_shared/0.1/vta.schema.json#/$defs/Handle"
+    },
+    "ext": {
+      "$ref": "../../../../_framework/0.4/framework.schema.json#/$defs/Ext"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+[
+  {
+    "note": "Missing handle — a claim must name the reservation it claims.",
+    "payload": {}
+  },
+  {
+    "note": "handle with characters outside unpadded base64url (padding `=`) must be rejected; VTI-LNK-033 fixes the alphabet.",
+    "payload": {
+      "handle": "q3Vn7Zk2Xo9Rt1LwPb4HdA=="
+    }
+  },
+  {
+    "note": "handle shorter than 16 bytes (22 characters) must be rejected.",
+    "payload": {
+      "handle": "q3Vn7Zk2Xo9Rt1Lw"
+    }
+  },
+  {
+    "note": "Unknown member — additionalProperties: false rejects a claimant-supplied administrator DID. The administrator is the envelope's issuer (VTI-LNK-113), never a payload member, so a Farm cannot be talked into writing a key that did not sign the claim.",
+    "payload": {
+      "handle": "q3Vn7Zk2Xo9Rt1LwPb4HdA",
+      "adminDid": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+    }
+  }
+]
