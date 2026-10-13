@@ -1,6 +1,6 @@
 ---
 slug: git-ns/namespace/bind
-version: "0.1"
+version: "0.2"
 title: "Git Namespaces — Bind Namespace"
 summary: "A VTC administrator binds the VTC to one owner on one forge, so the VTC governs repositories there. In bridge mode the namespace stays pending until the administrator proves control of the owner on the forge; in manual mode it is bound at once."
 status: draft
@@ -66,6 +66,14 @@ A **namespace** binds a VTC to one owner — an organisation or a personal accou
 
 This task starts a binding. In **bridge mode** the forge-side proof that the administrator controls the owner is carried by the community's bridge: installing the community's own forge app on the owner (GitHub), or signing in to the forge as an owner of the organisation (Forgejo). The namespace is `pending` until that proof arrives. In **manual mode** there is no automation and no forge-side proof: the namespace is bound at once, and each repository's own CI configuration naming this VTC is what connects it.
 
+## Changes from 0.1
+
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- **`owner` is still one segment**, now up to 255 characters: an organisation or user, or a GitLab top-level group. A subgroup cannot be bound; its repositories belong to the namespace of its top-level group.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.1`). Moving to it also brings in what the shared definitions changed since: `Did` is the DID Core form `git-ns/_shared/0.3` introduced: a method-specific id of colon-separated segments drawn from `A-Z a-z 0-9 . - _` and percent-encoded octets, where `0.1` accepted any non-whitespace.
+
+Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
@@ -111,7 +119,7 @@ A VTC **MUST** make clear to the administrator, before the namespace is bound, t
 ```json
 {
   "id": "urn:uuid:4fa07603-6606-4b9a-a5c9-824c073d1701",
-  "type": "https://trusttasks.org/spec/git-ns/namespace/bind/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/namespace/bind/0.2",
   "threadId": "urn:uuid:4fa07603-6606-4b9a-a5c9-824c073d1701",
   "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -137,7 +145,7 @@ A VTC **MUST** make clear to the administrator, before the namespace is bound, t
 ```json
 {
   "id": "urn:uuid:4fa07603-6606-4b9a-a5c9-824c073d1703",
-  "type": "https://trusttasks.org/spec/git-ns/namespace/bind/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/namespace/bind/0.2",
   "threadId": "urn:uuid:4fa07603-6606-4b9a-a5c9-824c073d1703",
   "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

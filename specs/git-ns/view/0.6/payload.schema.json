@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/view/0.5",
+  "$id": "https://trusttasks.org/spec/git-ns/view/0.6",
   "title": "Git Namespaces \u2014 View \u2014 payload",
   "description": "A member reads the namespaces, repositories and rights they are entitled to see, optionally narrowed to one resource, together with the forge accounts linked to their own DID. An administrator may instead ask for everything in the namespaces they administer, and either may narrow the rights to break-glass records.",
   "type": "object",
@@ -8,7 +8,7 @@
   "required": [],
   "properties": {
     "resource": {
-      "$ref": "../../_shared/0.4/git-ns.schema.json#/$defs/Resource",
+      "$ref": "../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
       "description": "Narrow the answer to this resource and everything inside it. Absent: everything the caller may see."
     },
     "scope": {
@@ -39,7 +39,7 @@
       ],
       "properties": {
         "account": {
-          "$ref": "../../_shared/0.4/git-ns.schema.json#/$defs/ForgeAccount",
+          "$ref": "../../_shared/0.6/git-ns.schema.json#/$defs/ForgeAccount",
           "description": "The linked account. `id` is authoritative; `login` is as the forge last reported it."
         },
         "linkedAt": {
@@ -65,21 +65,21 @@
         "namespaces": {
           "type": "array",
           "items": {
-            "$ref": "../../_shared/0.4/git-ns.schema.json#/$defs/GitNamespace"
+            "$ref": "../../_shared/0.6/git-ns.schema.json#/$defs/GitNamespace"
           },
           "description": "Namespaces bound to this VTC that contain, or are contained by, `resource`. With `scope: administrator`, only those the caller administers. With `breakGlass: true`, only those containing a returned record."
         },
         "repos": {
           "type": "array",
           "items": {
-            "$ref": "../../_shared/0.4/git-ns.schema.json#/$defs/RepoSummary"
+            "$ref": "../../_shared/0.6/git-ns.schema.json#/$defs/RepoSummary"
           },
           "description": "Repositories within `resource`. `unmanaged` repositories are included only for callers holding `git.ns.admin` over them, or with `scope: administrator`. With `breakGlass: true`, only those carrying a returned record."
         },
         "rights": {
           "type": "array",
           "items": {
-            "$ref": "../../_shared/0.4/git-ns.schema.json#/$defs/RightRecord"
+            "$ref": "../../_shared/0.6/git-ns.schema.json#/$defs/RightRecord"
           },
           "description": "Rights within `resource` the caller may see: always the caller's own; every right on a resource the caller owns or administers; every unratified break-glass record in a namespace they administer or on a resource they own. With `scope: administrator`, every recorded right in the namespaces the caller administers. `reason` is omitted except on resources the caller owns or administers. With `breakGlass: true`, only records carrying `breakGlass`."
         },

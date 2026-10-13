@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/projection/show/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/projection/show/0.2",
   "title": "Git Namespaces — Show Trust Registry Projection — payload",
   "description": "A community administrator reads what the VTC has published (and what it still owes) to the Trust Registry for its git namespaces. The outer document members (id, type, issuer, recipient, issuedAt, expiresAt, proof) are owned by the framework — SPEC §6.3.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
     "resource": {
-      "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Resource",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
       "description": "Only published records on this resource or inside it. Absent: every resource."
     },
     "cursor": {
@@ -58,7 +58,7 @@
           "description": "When the underlying right expires. Absent: no expiry, or the longest of two merged sources' expiries once neither is absent."
         },
         "impliedBy": {
-          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Right",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Right",
           "description": "Present when this tuple publishes a right implied by another recorded right (a repository's `git.commit.sign` implied by its `git.repo.own`, or a namespace's implied rights). Names the right that implies it."
         }
       }
@@ -77,15 +77,15 @@
       ],
       "properties": {
         "entity": {
-          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
           "description": "The DID the record is about — the right's subject."
         },
         "action": {
-          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Right",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Right",
           "description": "The TRQP action the record is published under."
         },
         "resource": {
-          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Resource"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource"
         },
         "context": {
           "$ref": "#/$defs/Context"

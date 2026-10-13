@@ -1,6 +1,6 @@
 ---
 slug: git-ns/repo/list
-version: "0.1"
+version: "0.2"
 title: "Git Namespaces — List Repositories"
 summary: "An administrator lists the repositories in the namespaces they administer — every one, for a community administrator — with owners, right counts, bootstrap and sync status, and what the bridge last reported on each."
 status: draft
@@ -58,6 +58,13 @@ An administrator's repository table shows more than a member's: how many people 
 
 It is a read. It changes nothing, grants nothing and publishes nothing.
 
+## Changes from 0.1
+
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
+
+Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
@@ -101,7 +108,7 @@ A VTC **MUST NOT** return a repository outside the caller's administered namespa
 ```json
 {
   "id": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6a11",
-  "type": "https://trusttasks.org/spec/git-ns/repo/list/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/repo/list/0.2",
   "threadId": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6a11",
   "issuer": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

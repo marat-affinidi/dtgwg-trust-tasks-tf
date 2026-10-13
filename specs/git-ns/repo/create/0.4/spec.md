@@ -1,6 +1,6 @@
 ---
 slug: git-ns/repo/create
-version: "0.3"
+version: "0.4"
 title: "Git Namespaces — Create Repository"
 summary: "A holder of git.repo.create creates a repository and names its owners. A creator owns it only when their git.repo.create is an explicit record, never when it is implied by git.ns.admin. A bridge creates it, or the response lists manual steps."
 status: draft
@@ -75,14 +75,13 @@ related:
 
 A holder of `git.repo.create` on a namespace creates a repository in it and names its owners — by default, themselves. The VTC reserves the name at once. Where the namespace has a bridge that can create repositories — a GitHub organisation with the community's app, a Forgejo organisation with the community's bot — the bridge creates it and turns commit trust on: the verify-trust workflow, the trust-anchor variables, and a required check nobody can bypass. Where no bot can create repositories — a manual-mode namespace, or a personal account — the response lists the steps a person must take, and the repository becomes `active` when it is then adopted with [`git-ns/repo/adopt`](../../../../git-ns/repo/adopt/0.2/spec.md).
 
-## Changes from 0.2
+## Changes from 0.3
 
-- **Creator ownership needs an explicit `git.repo.create`.** In `0.2` every creator became owner, and `git.ns.admin` implies `git.repo.create`, so a namespace admin could give themselves `git.repo.own` — and with it a forge admin role — on any number of new repositories, with nobody else involved. That is the self-grant fixed rule 7 of [`git-ns/right/grant`](../../../right/grant/0.3/spec.md#tasks-the-separation-of-duties-rule-binds) forbids. Now the requester is an owner only when they hold `git.repo.create` on the namespace **by explicit record**: granted by someone else, or recorded through [`git-ns/right/break-glass`](../../../right/break-glass/0.1/spec.md). A requester whose `git.repo.create` is only implied is refused `git-ns:selfGrantNotAllowed` if they would be an owner, unless that rule's [single-administrator waiver](../../../right/grant/0.3/spec.md#the-single-administrator-waiver) applies.
-- **`owners`** (optional): who owns the new repository. Absent, the requester alone. Naming anyone else is a grant of `git.repo.own` held to the fixed rules of grant: the authority to grant it (`git-ns:escalation`), and members only (`git-ns:membersOnly`).
-- **Members only.** Every owner, and the requester, must be a current member of the community holding standing in the VTC's access-control records ([fixed rule 5](../../../right/grant/0.3/spec.md#the-fixed-rules)).
-- The schema pins [`git-ns/_shared/0.4`](../../../_shared/0.4/git-ns.schema.json).
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- **`name` is still one segment.** This task creates a repository directly under the namespace's owner. A repository inside a subgroup is created on the forge and brought under the VTC with [`git-ns/repo/adopt`](../../adopt/0.3/spec.md).
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
 
-Refusing a request `0.2` accepted is a breaking change, released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). A `0.2` request is a valid `0.3` request; it is refused under `0.3` exactly when its requester's `git.repo.create` is only implied. A VTC that implements this version **SHOULD NOT** keep serving `0.2`, which would leave the path open; where it does, it **MUST** apply the same rule to it. Everything else is unchanged from `0.2` and restated below, so that this version stands on its own.
+Accepting what `0.3` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.3` document is a valid `0.4` document. A producer that also serves `0.3` **MUST NOT** put a resource `0.3` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.3` document: a `0.3` consumer validates against the `0.3` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.3` answer instead. Everything else is unchanged from `0.3` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -139,7 +138,7 @@ The response describes the reservation. Creation on the forge is asynchronous, a
 ```json
 {
   "id": "urn:uuid:ae64c15d-2cbf-491b-a20a-a04ed80c3601",
-  "type": "https://trusttasks.org/spec/git-ns/repo/create/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/repo/create/0.4",
   "threadId": "urn:uuid:ae64c15d-2cbf-491b-a20a-a04ed80c3601",
   "issuer": "did:webvh:QmBobScid2:acme-vtc.example:bob",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -166,7 +165,7 @@ The response describes the reservation. Creation on the forge is asynchronous, a
 ```json
 {
   "id": "urn:uuid:ae64c15d-2cbf-491b-a20a-a04ed80c3603",
-  "type": "https://trusttasks.org/spec/git-ns/repo/create/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/repo/create/0.4",
   "threadId": "urn:uuid:ae64c15d-2cbf-491b-a20a-a04ed80c3603",
   "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/right/revoke/0.3",
+  "$id": "https://trusttasks.org/spec/git-ns/right/revoke/0.4",
   "title": "Git Namespaces — Revoke Right — payload",
   "description": "Revokes one recorded git right and withdraws it from the Trust Registry.",
   "type": "object",
@@ -12,14 +12,14 @@
   ],
   "properties": {
     "subject": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
       "description": "Who holds the right."
     },
     "right": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Right"
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Right"
     },
     "resource": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Resource",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
       "description": "The resource exactly as recorded. Revocation matches the record; it does not revoke a narrower right the subject holds inside this resource."
     },
     "reason": {
@@ -43,7 +43,7 @@
       ],
       "properties": {
         "revoked": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/RightRecord",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RightRecord",
           "description": "The record as it stood when it was revoked."
         },
         "ext": {

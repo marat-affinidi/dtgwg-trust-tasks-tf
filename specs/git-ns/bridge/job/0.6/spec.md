@@ -1,6 +1,6 @@
 ---
 slug: git-ns/bridge/job
-version: "0.5"
+version: "0.6"
 title: "Git Namespaces — Bridge Job"
 summary: "The VTC asks its bridge — the separate service holding the community's forge credentials — to do one convergent piece of forge work: project roles, create, bootstrap, archive or inspect a repository, begin a binding or account link, or close a disallowed pull request."
 status: draft
@@ -67,31 +67,12 @@ This task is the VTC's half: one job, one piece of forge work in one namespace. 
 
 The job vocabulary is forge-neutral. A forge that lacks a capability — a personal GitHub account, where no bot can create repositories — is handled by the VTC not sending that job, and by the bridge refusing it if sent.
 
-## Changes from 0.4
+## Changes from 0.5
 
-One kind is added, and nothing else in a job's meaning changes.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.3`).
 
-1. **`closePullRequest`: the bridge comments on a pull request and closes it.** A community may restrict who may open pull requests on its governed repositories. The bridge reports each pull request opened or reopened as a `pullRequestOpened` event ([`git-ns/bridge/event`](../../../../git-ns/bridge/event/0.4/spec.md) 0.4); when the VTC's pull-request policy does not allow its author, the VTC sends this job, and the bridge posts the community's `message` on pull request `number` of `repo` and then closes it ([Definitions](#definitions)).
-2. **The job is idempotent.** Closing a pull request that is already closed succeeds, and posts no second comment ([Request](#request), step 7).
-3. **It is hygiene, not the merge gate.** The required commit-trust check (`requiredCheck`) stays the control that keeps untrusted commits out. A `closePullRequest` that never runs — the VTC or the bridge is down, the bridge does not take `0.5` — leaves a pull request open, and nothing that check refuses can be merged through it.
-
-The new kind adds two members, `number` and `message`, and the schema requires them together, with `repo` (`dependentRequired`); which kind may carry them is, as for every other member, the kind table's rule. A `0.4` document is a valid `0.5` document with the same meaning. Adding a kind is released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules).
-
-**Which version a VTC sends.** A VTC **MUST NOT** send a `0.5` job to a bridge that has not listed the `0.5` *Type URI* in answer to a [`trust-task-discovery`](/SPEC.md#10-discovery-and-capability-negotiation) request from that VTC, and a bridge that takes `0.5` **MUST** answer one. To a bridge that lists `0.4` and not `0.5`, the VTC keeps sending `0.4` jobs for every other kind, exactly as before — such a bridge is unaffected by this version — and the namespaces it serves have no pull-request gate: the VTC sends it no `closePullRequest`, and **SHOULD** tell its operator that the policy is not enforced there until the bridge is upgraded. A bridge that takes `0.5` **SHOULD** go on accepting `0.4` jobs, which mean the same thing. The rule of `0.4` still holds: a VTC never sends a bridge a version earlier than `0.4`.
-
-### Carried forward: what 0.4 changed from 0.3
-
-
-A namespace admin gets no role on the forge for being one: `git.ns.admin` itself never projects a forge role. A namespace admin may still hold ordinary, non-elevated rights in their own name — `git.repo.maintain`, `git.commit.sign` — which project to non-admin forge roles as anyone's do, and granting those to oneself is an allowed self-grant. `git.ns.admin` is exercised through the VTC and its bridge — binding, adopting, reseating, granting — and never through a forge role: the bridge does not make its holder an owner of the organisation, and gives them no role on any repository for it. Making someone an owner of the organisation on the forge is left to the community, outside the VTC and its bridge. `0.3` said the opposite in two places, which is why this is a new version rather than a correction:
-
-- **`desiredRoles` carries rights held in the person's own name.** In `0.3` each entry carried the person's "highest effective right" on the target, which counts what implication gives: a namespace admin was listed as `git.repo.own` on every repository in the namespace, and the bridge could not tell them from a recorded owner. In `0.4` the right listed is counted only from the rights recorded for that person, and a namespace admin with none of their own on the repository is listed as `git.ns.admin`, which every adapter maps to no role. Each forge account is listed at most once.
-- **There is no namespace-level `projectRoles`.** In `0.3` a `projectRoles` job without `repo` converged "the namespace itself" — its organisation owners, to which only `git.ns.admin` projected. Nothing projects there now, so `repo` is required for `projectRoles`, and a job without it is malformed.
-
-A bridge now refuses a role map under which `git.repo.maintain` or `git.commit.sign` maps to the forge's administrator or owner role ([`desiredRoles`](#definitions)): only `git.repo.own` may. `0.3` left the map entirely to the community, so a maintainer — a right its holder may grant themselves — could be made an administrator of the repository on the forge.
-
-`removeAccounts` may now name an account that `desiredRoles` lists at `git.ns.admin`: that entry asks for no role, and the removal says the same thing more strongly. It still may not name an account listed at any other right.
-
-These are breaking changes, released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). A `0.3` document is a valid `0.4` document exactly when every `projectRoles` job names `repo`, no account appears twice in `desiredRoles`, and no `desiredRoles` entry lists a right the person holds only by implication. A `0.3` bridge would read a `git.ns.admin` entry as ownership — and one that processes later minor versions forward-compatibly ([SPEC §5.2](/SPEC.md#52-compatibility-rules)) would accept a `0.4` job to do so — so a VTC **MUST NOT** send a `0.4` job to a bridge that has not listed the `0.4` *Type URI* in answer to a [`trust-task-discovery`](/SPEC.md#10-discovery-and-capability-negotiation) request from that VTC, and a bridge that takes `0.4` **MUST** answer one. A VTC **MUST NOT** fall back to an earlier version for a bridge that does not list `0.4`: it sends that bridge nothing, and tells its operator to upgrade the bridge. Everything else is unchanged from `0.3` and restated below, so that this version stands on its own.
+Accepting what `0.5` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.5` document is a valid `0.6` document. A producer that also serves `0.5` **MUST NOT** put a resource `0.5` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.5` document: a `0.5` consumer validates against the `0.5` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.5` answer instead. Everything else is unchanged from `0.5` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -168,7 +149,7 @@ The VTC sends the job to its bridge. See the top-level schema in [`payload.schem
 ```json
 {
   "id": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d01",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.5",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.6",
   "threadId": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d01",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
@@ -210,7 +191,7 @@ The VTC sends the job to its bridge. See the top-level schema in [`payload.schem
 ```json
 {
   "id": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d03",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.5",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.6",
   "threadId": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d03",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
@@ -239,7 +220,7 @@ Someone gave `eve-dev`, who has no right on `widgets`, the `write` role on GitHu
 ```json
 {
   "id": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d07",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.5",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.6",
   "threadId": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d07",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
@@ -302,7 +283,7 @@ Someone gave `eve-dev`, who has no right on `widgets`, the `write` role on GitHu
 ```json
 {
   "id": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d05",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.5",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.6",
   "threadId": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d05",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
@@ -334,7 +315,7 @@ The community allows only committers to open pull requests on `widgets`. `eve-de
 ```json
 {
   "id": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d09",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.5",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/job/0.6",
   "threadId": "urn:uuid:95dedda2-126b-419d-a9c5-5babd36f6d09",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",

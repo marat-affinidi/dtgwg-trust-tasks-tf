@@ -1,6 +1,6 @@
 ---
 slug: git-ns/right/break-glass
-version: "0.1"
+version: "0.2"
 title: "Git Namespaces — Break Glass"
 summary: "A member records for themselves an elevated git right they may already grant — the one self-grant separation of duties forbids — with a justification. It takes effect at once, never lapses, and is shown to every other administrator until one ratifies or revokes it."
 status: draft
@@ -96,6 +96,13 @@ This task is the escape hatch. The actor records the elevated right for themselv
 
 The community's policy may disable break-glass or make it harder. It cannot make it quieter.
 
+## Changes from 0.1
+
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
+
+Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
@@ -121,7 +128,7 @@ The `proof` establishes which member is acting; the VTC resolves that DID, after
 
 ## Definitions
 
-**Elevated right** — `git.ns.admin`, `git.repo.create` or `git.repo.own` (`ElevatedRight` in [`git-ns/_shared/0.4`](../../../_shared/0.4/git-ns.schema.json)).
+**Elevated right** — `git.ns.admin`, `git.repo.create` or `git.repo.own` (`ElevatedRight` in [`git-ns/_shared/0.4`](../../../_shared/0.6/git-ns.schema.json)).
 
 **Break-glass record** — a right record carrying `breakGlass`. It is **unratified** while `breakGlass.ratifiedBy` is absent, and **pending** while `breakGlass.effectiveAt` is in the future.
 
@@ -154,7 +161,7 @@ Carol is a namespace admin of `acme`. The repository's two owners are both unrea
 ```json
 {
   "id": "urn:uuid:0b3c9f4e-8a21-4d6b-9e57-3f1a2c4d5e01",
-  "type": "https://trusttasks.org/spec/git-ns/right/break-glass/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/right/break-glass/0.2",
   "threadId": "urn:uuid:0b3c9f4e-8a21-4d6b-9e57-3f1a2c4d5e01",
   "issuer": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -247,7 +254,7 @@ The VTC, now responding, returns the recorded right, per the sub-schema reachabl
     "message": "This community's policy does not allow break-glass of git.repo.own. Ask another owner or namespace admin to grant it.",
     "retryable": false,
     "inResponseTo": {
-      "typeUri": "https://trusttasks.org/spec/git-ns/right/break-glass/0.1",
+      "typeUri": "https://trusttasks.org/spec/git-ns/right/break-glass/0.2",
       "id": "urn:uuid:0b3c9f4e-8a21-4d6b-9e57-3f1a2c4d5e03"
     }
   }

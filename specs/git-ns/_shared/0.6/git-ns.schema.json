@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/_shared/0.5/git-ns",
+  "$id": "https://trusttasks.org/spec/git-ns/_shared/0.6/git-ns",
   "title": "Git Namespaces — shared definitions for the git-ns/* spec family",
-  "description": "Shapes used by more than one git-ns/* task: forge-qualified resources, the five git rights, namespaces, repositories, rights records, forge accounts and drift. 0.5 adds `AdminRightRow` and `RightOrigin`: the row shape the administrator's rights console shows, which is either a `RightRecord` restated with membership facts (`recorded`) or a v0.1 `[hooks.git-trust] grant_on_role` grant that is not a record at all (`roleDerived`) — used by git-ns/right/list and git-ns/right/issued-by-departed. Every other definition is unchanged from 0.4. Not itself a Trust Task specification. A VTC is the source of truth for all of these; the Trust Registry and the forge are projections of them.",
+  "description": "Shapes used by more than one git-ns/* task: forge-qualified resources, the five git rights, namespaces, repositories, rights records, forge accounts and drift. 0.6 admits repositories on forges with nested groups, such as GitLab: a repository resource is `<forge-host>/<owner>/<repo-path>`, where the repository path holds the subgroups between the top-level owner and the project (`gitlab.com/acme/platform/tools/cli`), up to 21 segments; and a segment may be up to 255 characters. The namespace is still the top-level owner alone, so a resource of two segments is a namespace and one of three or more a repository. Every 0.5 document remains valid. Every other definition is unchanged from 0.5. Not itself a Trust Task specification. A VTC is the source of truth for all of these; the Trust Registry and the forge are projections of them.",
   "$defs": {
     "ForgeHost": {
       "title": "ForgeHost",
-      "description": "The lowercased DNS host of a forge: `github.com`, a GitHub Enterprise Server host, `codeberg.org`, or a self-hosted Forgejo instance such as `git.example.org`. No scheme, no port, no path. The host is a segment of every resource, so a right never crosses forges.",
+      "description": "The lowercased DNS host of a forge: `github.com`, a GitHub Enterprise Server host, `codeberg.org`, `gitlab.com`, or a self-hosted Forgejo or GitLab instance such as `git.example.org`. No scheme, no port, no path. The host is a segment of every resource, so a right never crosses forges.",
       "type": "string",
       "minLength": 3,
       "maxLength": 253,
@@ -14,25 +14,25 @@
     },
     "Segment": {
       "title": "Segment",
-      "description": "One lowercased owner or repository name. Forges compare these case-insensitively, so the wire form is always lowercase and a producer lowercases before sending. A leading `.` is refused, which rules out `.` and `..`.",
+      "description": "One lowercased owner, group or repository name. Forges compare these case-insensitively, so the wire form is always lowercase and a producer lowercases before sending. A leading `.` is refused, which rules out `.` and `..`. Up to 255 characters, the longest name GitLab allows; GitHub and Forgejo names are shorter.",
       "type": "string",
       "minLength": 1,
-      "maxLength": 100,
+      "maxLength": 255,
       "pattern": "^[a-z0-9_-][a-z0-9._-]*$"
     },
     "Resource": {
       "title": "Resource",
-      "description": "A forge-qualified resource: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo>` for one repository, all lowercase — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
+      "description": "A forge-qualified resource, all lowercase: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`, and a subgroup such as `gitlab.com/acme/platform` is not a resource. A repository path has 1 to 21 segments (GitLab: 20 levels of subgroup and the project); GitHub and Forgejo repository paths are always one. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
       "type": "string",
-      "maxLength": 455,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+(?:/[a-z0-9_-][a-z0-9._-]{0,99}){1,2}$"
+      "maxLength": 5885,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){0,21}$"
     },
     "RepoResource": {
       "title": "RepoResource",
-      "description": "A forge-qualified resource naming exactly one repository: `<forge-host>/<owner>/<repo>`, lowercase.",
+      "description": "A forge-qualified resource naming exactly one repository: `<forge-host>/<owner>/<repo-path>`, lowercase, where the repository path has 1 to 21 segments (see `Resource`).",
       "type": "string",
-      "maxLength": 455,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,99}/[a-z0-9_-][a-z0-9._-]{0,99}$"
+      "maxLength": 5885,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){1,21}$"
     },
     "Did": {
       "title": "Did",
@@ -81,7 +81,7 @@
     },
     "ForgeId": {
       "title": "ForgeId",
-      "description": "An identifier the forge itself assigns — a repository id, a user or organisation id — carried as a string so a forge whose ids are not numbers needs no new version. GitHub and Forgejo ids are decimal integers written as strings (`\"812736451\"`). Unlike a name, it survives renames and transfers, which is why rights and bindings are keyed by it.",
+      "description": "An identifier the forge itself assigns — a repository id, a user or organisation id — carried as a string so a forge whose ids are not numbers needs no new version. GitHub, Forgejo and GitLab ids are decimal integers written as strings (`\"812736451\"`). Unlike a name, it survives renames and transfers, which is why rights and bindings are keyed by it.",
       "type": "string",
       "minLength": 1,
       "maxLength": 64
@@ -140,7 +140,7 @@
             "organization",
             "user"
           ],
-          "description": "Whether the owner is an organisation or a personal account, as the forge reports it. Present once known: a bridge-mode namespace learns it when binding completes, and a manual-mode namespace MAY never learn it."
+          "description": "Whether the owner is an organisation or a personal account, as the forge reports it; a GitLab top-level group is an `organization`. Present once known: a bridge-mode namespace learns it when binding completes, and a manual-mode namespace MAY never learn it."
         },
         "mode": {
           "type": "string",

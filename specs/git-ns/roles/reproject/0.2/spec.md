@@ -1,6 +1,6 @@
 ---
 slug: git-ns/roles/reproject
-version: "0.1"
+version: "0.2"
 title: "Git Namespaces — Re-project Roles"
 summary: "A community administrator, a namespace admin, or a repository's owner has the VTC send its bridge the complete forge roles of a repository or a whole namespace again, so the forge matches the VTC's rights under the bridge's current role map. No right changes."
 status: draft
@@ -78,6 +78,13 @@ So a change that alters what the rights *mean* on the forge, without altering an
 
 It changes no right and publishes nothing. It sends the bridge exactly what the VTC's records already say.
 
+## Changes from 0.1
+
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.3`).
+
+Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
@@ -132,7 +139,7 @@ Dana, a community administrator, changed the Forgejo bridge's configuration so t
 ```json
 {
   "id": "urn:uuid:5c1d2e7f-8a9b-4c3d-9e2f-1a0b3c4d5e01",
-  "type": "https://trusttasks.org/spec/git-ns/roles/reproject/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/roles/reproject/0.2",
   "threadId": "urn:uuid:5c1d2e7f-8a9b-4c3d-9e2f-1a0b3c4d5e01",
   "issuer": "did:webvh:QmDanaScid8:acme-vtc.example:dana",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -159,7 +166,7 @@ Alice, who owns `widgets`, suspects someone's role on `widgets` was changed by h
 ```json
 {
   "id": "urn:uuid:5c1d2e7f-8a9b-4c3d-9e2f-1a0b3c4d5e03",
-  "type": "https://trusttasks.org/spec/git-ns/roles/reproject/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/roles/reproject/0.2",
   "threadId": "urn:uuid:5c1d2e7f-8a9b-4c3d-9e2f-1a0b3c4d5e03",
   "issuer": "did:webvh:QmAliceScid2:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

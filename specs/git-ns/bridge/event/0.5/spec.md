@@ -1,6 +1,6 @@
 ---
 slug: git-ns/bridge/event
-version: "0.4"
+version: "0.5"
 title: "Git Namespaces — Bridge Event"
 summary: "The bridge tells the VTC what happened on the forge — renames, transfers, unmanaged or deleted repositories, role and protection changes, lost access, completed links and bindings, opened pull requests — with the drift it sees, and reports its role map."
 status: draft
@@ -60,15 +60,12 @@ The bridge tells the VTC that something happened on the forge — translated fro
 
 The VTC is the source of truth, so an event never changes a right directly. It changes what the VTC knows about the forge, and the VTC decides what follows: rewrite rights after a rename, list an unmanaged repository for adoption, re-apply a weakened protection, alert the namespace admins.
 
-## Changes from 0.3
+## Changes from 0.4
 
-One event type is added, and nothing else in an event's meaning changes.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.3`).
 
-1. **`pullRequestOpened`: the bridge reports each pull request opened or reopened on a governed repository.** A community may restrict who may open pull requests on the repositories it governs — anyone, its members, committers, maintainers, or the holders of named VTC roles. The forge cannot enforce that by itself: on GitHub and Forgejo anyone who can read a public repository can open a pull request against it. So the bridge reports each one, the VTC evaluates the community's **pull-request policy** ([Definitions](#definitions)), and when the author is not allowed the VTC sends the bridge a `closePullRequest` job ([`git-ns/bridge/job`](../../../../git-ns/bridge/job/0.5/spec.md) 0.5), which posts the community's message on the pull request and closes it.
-2. **Owners, maintainers and the bridge are always allowed, and a reopen by an owner or maintainer is an override.** Whatever the policy says, the VTC never closes a pull request opened by an account it records as an owner or maintainer of the repository, or by the bridge's own forge account. When an owner or maintainer reopens a pull request the VTC closed, the VTC does not close it again. A reopen by anyone else is checked again, exactly as an opening is ([Request](#request), step 6).
-3. **This is hygiene, not the merge gate.** The required commit-trust check that [`git-ns/bridge/job`](../../../../git-ns/bridge/job/0.5/spec.md) bootstraps (`requiredCheck`) is still what stops untrusted code from being merged, and nothing here weakens or replaces it. If the VTC or the bridge is unavailable, a pull request simply stays open until someone looks at it: the gate fails open, and the security control it sits in front of does not.
-
-The schema still pins [`git-ns/_shared/0.3`](../../../_shared/0.3/git-ns.schema.json); the new variant uses its `ForgeId`, `RepoResource` and `ForgeAccount`. A `0.3` document is a valid `0.4` document with the same meaning. Adding an event type is released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules), because a VTC implementing only `0.3` refuses the new type. A bridge therefore **MUST NOT** send a `0.4` event to a VTC that has not listed the `0.4` *Type URI* in answer to a [`trust-task-discovery`](/SPEC.md#10-discovery-and-capability-negotiation) request from that bridge; to such a VTC it reports every other event as `0.3`, and reports no pull requests. The changes `0.3` made to `0.2` — the `roleMapReported` event and the rules for the role map — are carried forward unchanged in the [Request](#request) section. Everything else is restated unchanged below, so that this version stands on its own.
+Accepting what `0.4` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.4` document is a valid `0.5` document. A producer that also serves `0.4` **MUST NOT** put a resource `0.4` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.4` document: a `0.4` consumer validates against the `0.4` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.4` answer instead. Everything else is unchanged from `0.4` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -206,7 +203,7 @@ A conforming VTC:
 ```json
 {
   "id": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b001",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.4",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.5",
   "threadId": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b001",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -238,7 +235,7 @@ A conforming VTC:
 ```json
 {
   "id": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b007",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.4",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.5",
   "threadId": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b007",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -268,7 +265,7 @@ A conforming VTC:
 ```json
 {
   "id": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b003",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.4",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.5",
   "threadId": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b003",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -306,7 +303,7 @@ A conforming VTC:
 ```json
 {
   "id": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b005",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.4",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.5",
   "threadId": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b005",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -338,7 +335,7 @@ The community's Forgejo bridge now gives maintainers `admin` in `acme` (full rep
 ```json
 {
   "id": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b009",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.4",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.5",
   "threadId": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b009",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -378,7 +375,7 @@ The community allows only committers to open pull requests on `widgets`, and `ev
 ```json
 {
   "id": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b011",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.4",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/event/0.5",
   "threadId": "urn:uuid:a98c01fe-2fd9-457d-ac53-a7900258b011",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

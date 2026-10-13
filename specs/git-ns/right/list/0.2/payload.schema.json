@@ -1,17 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/right/list/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/right/list/0.2",
   "title": "Git Namespaces — List Rights — payload",
   "description": "A community administrator enumerates every git right the VTC knows of, recorded and role-derived alike, across every namespace. The outer document members (id, type, issuer, recipient, issuedAt, expiresAt, proof) are owned by the framework — SPEC §6.3.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
     "resource": {
-      "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Resource",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
       "description": "Only rights on this resource or inside it. Absent: every resource."
     },
     "subject": {
-      "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
       "description": "Only rights held by this DID. Absent: every subject."
     },
     "cursor": {
@@ -42,7 +42,7 @@
         "rights": {
           "type": "array",
           "items": {
-            "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/AdminRightRow"
+            "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/AdminRightRow"
           },
           "description": "Rows matching `resource` and `subject`, ordered by `resource` then `subject`. A break-glass record waiting out a policy delay is included — it is exactly the one other administrators have a window to revoke."
         },

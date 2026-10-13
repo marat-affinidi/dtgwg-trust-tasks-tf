@@ -1,6 +1,6 @@
 ---
 slug: git-ns/right/revoke
-version: "0.3"
+version: "0.4"
 title: "Git Namespaces — Revoke Right"
 summary: "The granter, an authority over the resource, the subject — or, for an unratified break-glass record, any community administrator — revokes one git right. The VTC keeps an owner and an admin in place, and withdraws the right from the registry and the forge."
 status: draft
@@ -66,14 +66,12 @@ related:
 
 Revokes one recorded git right and withdraws it from the VTC's Trust Registry and, through the bridge, from the forge. The counterpart of [`git-ns/right/grant`](../../../../git-ns/right/grant/0.3/spec.md), whose [rights model](../../../../git-ns/right/grant/0.3/spec.md#the-rights-model) this specification relies on.
 
-## Changes from 0.2
+## Changes from 0.3
 
-- **Revoking a break-glass record.** An *unratified* break-glass record — one a member gave themselves with [`git-ns/right/break-glass`](../../break-glass/0.1/spec.md) that no other administrator has yet ratified — may also be revoked by **any community administrator**, whether or not they hold a git right. Otherwise the one community administrator who reseated a headless namespace to themselves could be undone by nobody but themselves.
-- **The invariants count only counting records**, as [fixed rules 3 and 4](../../grant/0.3/spec.md#the-fixed-rules) of `git-ns/right/grant` 0.3 now define them: a record with an `expiresAt`, or an unratified break-glass record, never counts toward the last-owner or last-admin invariant. So revoking an unratified break-glass record is never refused with `git-ns:lastOwner` or `git-ns:lastAdmin`, and revoking the last *counting* record is refused even while such records remain.
-- **Visibility.** Revoking a break-glass record, ratified or not, is told to the same people its break-glass was ([`git-ns/right/break-glass-notice`](../../break-glass-notice/0.1/spec.md)).
-- The schema pins [`git-ns/_shared/0.4`](../../../_shared/0.4/git-ns.schema.json), so the revoked record carries its `breakGlass` member when it has one.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
 
-A `0.2` request is a valid `0.3` request. The changes widen who may revoke one kind of record and state the invariants as `0.2` implementations already had to apply them; they are released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). Everything else is unchanged from `0.2` and restated below, so that this version stands on its own.
+Accepting what `0.3` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.3` document is a valid `0.4` document. A producer that also serves `0.3` **MUST NOT** put a resource `0.3` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.3` document: a `0.3` consumer validates against the `0.3` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.3` answer instead. Everything else is unchanged from `0.3` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -120,7 +118,7 @@ The actor sends the revocation to the VTC. See the top-level schema in [`payload
 ```json
 {
   "id": "urn:uuid:e6110a8b-0429-4714-a8fd-a32011e31201",
-  "type": "https://trusttasks.org/spec/git-ns/right/revoke/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/right/revoke/0.4",
   "threadId": "urn:uuid:e6110a8b-0429-4714-a8fd-a32011e31201",
   "issuer": "did:webvh:QmBobScid2:acme-vtc.example:bob",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

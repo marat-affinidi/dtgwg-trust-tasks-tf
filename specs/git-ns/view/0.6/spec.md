@@ -1,6 +1,6 @@
 ---
 slug: git-ns/view
-version: "0.5"
+version: "0.6"
 title: "Git Namespaces — View"
 summary: "A member reads the namespaces, repositories and git rights they may see, and their own linked forge accounts. An administrator may read everything in the namespaces they administer, and either may narrow the answer to break-glass records."
 status: draft
@@ -56,13 +56,12 @@ related:
 
 A member reads what the VTC governs on the forges: the namespaces bound to it, the repositories in them, and the rights the member is entitled to see — optionally narrowed to one resource — together with the forge accounts the member has linked to their own DID. It is the one read behind every surface that shows git rights: an admin console's repository table, a member's *My repos* panel with its linked-account row, a command-line listing, and the persistent banner that tells every administrator a break-glass is waiting for them.
 
-## Changes from 0.4
+## Changes from 0.5
 
-- **`scope: administrator`** — the administrator's read. The caller receives everything in the namespaces they administer — every namespace, for a holder of the community-administrator capability; those they hold `git.ns.admin` on, for anyone else — with every recorded right, its `reason` and its `breakGlass`. It replaces the bearer-authenticated administrator views VTCs served beside this task, which carried every reason in the community to anyone holding an admin session and no proof of who asked. A caller who administers no namespace within `resource` is refused with `git-ns/view:notAdministrator`.
-- **`breakGlass: true`** narrows the answer to the records carrying `breakGlass`, ratified ones included, and to the namespaces and repositories that contain them. With `scope: administrator` it is the list of break-glass records an administrator reviews and ratifies; with the default scope it is the set of unratified records the caller is entitled to see (item 3 below), which is what an administrator's banner needs.
-- **`notAdministrator` is declared**, the first code this task declares.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../_shared/0.6/git-ns.schema.json) (was `0.4`).
 
-The response is unchanged: a `0.5` response is a valid `0.4` response, and a `0.4` request a valid `0.5` request that asks for the default `scope` without narrowing. Released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). Everything else is unchanged from `0.4` and restated below, so that this version stands on its own.
+Accepting what `0.5` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.5` document is a valid `0.6` document. A producer that also serves `0.5` **MUST NOT** put a resource `0.5` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.5` document: a `0.5` consumer validates against the `0.5` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.5` answer instead. Everything else is unchanged from `0.5` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -137,7 +136,7 @@ A resource that matches nothing the caller may see yields empty lists, not an er
 ```json
 {
   "id": "urn:uuid:4c1f0e52-9d7b-4a0e-8f15-2b6f0d1c7a01",
-  "type": "https://trusttasks.org/spec/git-ns/view/0.5",
+  "type": "https://trusttasks.org/spec/git-ns/view/0.6",
   "threadId": "urn:uuid:4c1f0e52-9d7b-4a0e-8f15-2b6f0d1c7a01",
   "issuer": "did:webvh:QmBobScid2:acme-vtc.example:bob",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -155,7 +154,7 @@ Dana holds the community-administrator capability and no git right. She asks for
 ```json
 {
   "id": "urn:uuid:4c1f0e52-9d7b-4a0e-8f15-2b6f0d1c7a11",
-  "type": "https://trusttasks.org/spec/git-ns/view/0.5",
+  "type": "https://trusttasks.org/spec/git-ns/view/0.6",
   "threadId": "urn:uuid:4c1f0e52-9d7b-4a0e-8f15-2b6f0d1c7a11",
   "issuer": "did:webvh:QmDanaScid8:acme-vtc.example:dana",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

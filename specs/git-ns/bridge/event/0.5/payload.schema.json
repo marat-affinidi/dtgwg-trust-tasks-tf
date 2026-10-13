@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/bridge/event/0.4",
+  "$id": "https://trusttasks.org/spec/git-ns/bridge/event/0.5",
   "title": "Git Namespaces — Bridge Event — payload",
   "description": "The bridge tells the VTC something happened on the forge — translated from the forge's webhook or found by an inspection sweep — together with any drift it now sees; or reports the role map it projects with, or a pull request opened or reopened on a governed repository.",
   "type": "object",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "namespace": {
-      "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/NamespaceId",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
       "description": "The namespace the event happened in."
     },
     "event": {
@@ -20,7 +20,7 @@
     "drift": {
       "type": "array",
       "items": {
-        "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/DriftItem"
+        "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/DriftItem"
       },
       "description": "The complete outstanding drift for each repository the event concerns, replacing what the VTC held for those repositories. Absent: the event changes no repository's drift."
     },
@@ -61,13 +61,13 @@
               "const": "repoRenamed"
             },
             "forgeId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId"
             },
             "from": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             },
             "to": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             }
           }
         },
@@ -86,13 +86,13 @@
               "const": "repoTransferred"
             },
             "forgeId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId"
             },
             "from": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             },
             "to": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             }
           }
         },
@@ -110,10 +110,10 @@
               "const": "repoCreatedUnmanaged"
             },
             "forgeId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId"
             },
             "resource": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             }
           }
         },
@@ -131,10 +131,10 @@
               "const": "repoDeleted"
             },
             "forgeId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId"
             },
             "resource": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             }
           }
         },
@@ -153,13 +153,13 @@
               "const": "roleChanged"
             },
             "forgeId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId"
             },
             "resource": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             },
             "account": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeAccount"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeAccount"
             },
             "role": {
               "$ref": "#/$defs/ForgeRole",
@@ -182,10 +182,10 @@
               "const": "protectionChanged"
             },
             "forgeId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId"
             },
             "resource": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
             },
             "requiredCheck": {
               "type": "boolean",
@@ -224,7 +224,7 @@
               "description": "The beginAccountLink job."
             },
             "account": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeAccount"
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeAccount"
             }
           }
         },
@@ -247,7 +247,7 @@
               "description": "The beginBind job."
             },
             "ownerId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId",
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId",
               "description": "The forge's id for the owner, which survives renames."
             },
             "kind": {
@@ -298,7 +298,7 @@
                 ],
                 "properties": {
                   "resource": {
-                    "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+                    "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
                   },
                   "roleMap": {
                     "$ref": "#/$defs/RoleMap"
@@ -312,7 +312,7 @@
               "uniqueItems": true,
               "description": "Repositories whose forge roles the bridge last projected under a different map from the one it now applies to them. Absent or empty: none.",
               "items": {
-                "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+                "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
               }
             }
           }
@@ -335,11 +335,11 @@
               "const": "pullRequestOpened"
             },
             "forgeId": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeId",
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId",
               "description": "The forge's id for the repository the pull request targets."
             },
             "resource": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource",
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource",
               "description": "The repository the pull request targets (its base repository)."
             },
             "number": {
@@ -357,11 +357,11 @@
               "description": "`opened` — the pull request was just opened. `reopened` — a closed, unmerged pull request was reopened."
             },
             "author": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeAccount",
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeAccount",
               "description": "The account that opened the pull request."
             },
             "actor": {
-              "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeAccount",
+              "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeAccount",
               "description": "The account that performed this action: the author for `opened`, whoever reopened the pull request for `reopened`."
             },
             "draft": {

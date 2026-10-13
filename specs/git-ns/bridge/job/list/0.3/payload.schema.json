@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/bridge/job/list/0.2",
+  "$id": "https://trusttasks.org/spec/git-ns/bridge/job/list/0.3",
   "title": "Git Namespaces — List Bridge Jobs — payload",
   "description": "A namespace's administrators list the bridge jobs queued or run for it — every namespace, for a community administrator — with each job's kind, state and last error. The outer document members (id, type, issuer, recipient, issuedAt, expiresAt, proof) are owned by the framework — SPEC §6.3.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
     "namespace": {
-      "$ref": "../../../../_shared/0.5/git-ns.schema.json#/$defs/NamespaceId",
+      "$ref": "../../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
       "description": "Only jobs in this namespace. Absent: every administered namespace."
     },
     "state": {
@@ -87,10 +87,10 @@
           "$ref": "#/$defs/JobId"
         },
         "namespace": {
-          "$ref": "../../../../_shared/0.5/git-ns.schema.json#/$defs/NamespaceId"
+          "$ref": "../../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId"
         },
         "bridgeDid": {
-          "$ref": "../../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
           "description": "The bridge the job was dispatched to."
         },
         "kind": {
@@ -100,7 +100,7 @@
           "$ref": "#/$defs/JobState"
         },
         "repo": {
-          "$ref": "../../../../_shared/0.5/git-ns.schema.json#/$defs/RepoResource",
+          "$ref": "../../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource",
           "description": "The repository the job acts on. Absent for a namespace-wide `inspect` sweep or a job with no repository (`beginBind`, `beginAccountLink`)."
         },
         "number": {

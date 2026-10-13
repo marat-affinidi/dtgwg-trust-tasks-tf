@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/namespace/bind/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/namespace/bind/0.2",
   "title": "Git Namespaces — Bind Namespace — payload",
   "description": "A VTC administrator binds the VTC to one owner on one forge, so that the VTC governs who may create, own, maintain and commit to repositories under it. In bridge mode the response says where to send the forge owner to prove control; the namespace stays `pending` until that proof arrives.",
   "type": "object",
@@ -12,11 +12,11 @@
   ],
   "properties": {
     "forge": {
-      "$ref": "../../../_shared/0.1/git-ns.schema.json#/$defs/ForgeHost",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeHost",
       "description": "The forge's host, lowercased."
     },
     "owner": {
-      "$ref": "../../../_shared/0.1/git-ns.schema.json#/$defs/Segment",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Segment",
       "description": "The organisation or user on that forge, lowercased."
     },
     "mode": {
@@ -43,7 +43,7 @@
       ],
       "properties": {
         "namespace": {
-          "$ref": "../../../_shared/0.1/git-ns.schema.json#/$defs/GitNamespace"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/GitNamespace"
         },
         "next": {
           "type": "object",

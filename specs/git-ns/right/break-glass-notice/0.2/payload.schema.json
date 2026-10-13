@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/right/break-glass-notice/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/right/break-glass-notice/0.2",
   "title": "Git Namespaces — Break-Glass Notice — payload",
   "description": "The VTC tells an administrator that a member broke the glass on an elevated git right, or that a break-glass record was ratified or revoked. Unsolicited: it answers no request from the recipient.",
   "type": "object",
@@ -23,15 +23,15 @@
       "description": "`breakGlass` — `record.subject` recorded the right for themselves with git-ns/right/break-glass. `ratified` — another administrator ratified it with git-ns/right/ratify. `revoked` — it was revoked with git-ns/right/revoke, before or after ratification."
     },
     "namespace": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/NamespaceId",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
       "description": "The namespace the record's resource lies in."
     },
     "record": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/RightRecord",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RightRecord",
       "description": "The record as it stands after the event — for `revoked`, as it stood when it was revoked. Always carries `breakGlass`, justification included."
     },
     "by": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
       "description": "Who acted: the subject for `breakGlass`, the ratifier for `ratified`, the revoker for `revoked`."
     },
     "at": {

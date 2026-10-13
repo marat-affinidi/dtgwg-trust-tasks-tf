@@ -1,6 +1,6 @@
 ---
 slug: git-ns/namespace/reseat
-version: "0.3"
+version: "0.4"
 title: "Git Namespaces — Reseat Namespace"
 summary: "Recovery for a headless bound namespace, one left with no live git.ns.admin: a community administrator grants git.ns.admin on it to a current member. Refused unless the namespace is headless, and recorded with the administrator's statement of why."
 status: draft
@@ -74,13 +74,12 @@ Every right in a namespace traces back to a `git.ns.admin`. The binding administ
 
 This task is the recovery. A community administrator grants `git.ns.admin` on a headless namespace to a current member. It is refused on a namespace that still has an admin, so it can never be used to go around one.
 
-## Changes from 0.2
+## Changes from 0.3
 
-A namespace admin gets no role on the forge for being one ([`git-ns/bridge/job` 0.4](../../../../git-ns/bridge/job/0.4/spec.md)): `git.ns.admin` itself never projects a forge role. The reseated admin may still hold ordinary, non-elevated rights in their own name — `git.repo.maintain`, `git.commit.sign` — which project to non-admin forge roles as anyone's do, and which they may grant themselves. On a personal account `git.repo.own` and `git.repo.maintain` both map to `write`, so separation of duties is enforced at the VTC, not the forge. `git.ns.admin` is exercised through the VTC and its bridge, and the bridge makes its holder neither an owner of the organisation nor gives them a role on any repository for it. `0.2`'s step 8 had the VTC queue "the namespace-level forge projection as for any `git.ns.admin` grant" — a `projectRoles` job for the namespace itself, listing its admins as the organisation's owners. That job no longer exists. In `0.3` the VTC queues no namespace-level projection; the reseated admin reaches each repository's `desiredRoles` as any namespace admin does, at `git.ns.admin` where they hold no right of their own, which projects to no role.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.3`). Moving to it also brings in what the shared definitions changed since: A `RightRecord` may carry the optional `breakGlass` member `git-ns/_shared/0.4` introduced.
 
-**Separation of duties.** A community administrator **MUST NOT** reseat a namespace to themselves. That is a self-grant of `git.ns.admin`, an elevated right, and it is refused with `git-ns:selfGrantNotAllowed` (step 4), as every self-grant of an elevated right is under the separation-of-duties rule of `git-ns/right/grant` 0.3 (trust-tasks #641). The one way to do it is the explicit, audited `git-ns/right/break-glass`, which another administrator ratifies or revokes — save only where no other administrator could reseat it, in a VTC its host operator has configured for single-administrator operation, which **MAY** apply that rule's [single-administrator waiver](../../../right/grant/0.3/spec.md#the-single-administrator-waiver) instead: on the administrator's operation-bound step-up, audited at the highest severity before the record is written, and marked on the record and in the response's `ext`. A `git.ns.admin` recorded that way counts toward the last-admin invariant. `0.2` said the subject "may be the administrator themselves".
-
-The request and response are otherwise unchanged, and the schema is wire-identical to `0.2`'s. The change is to what the VTC does, which is why it is a new version: a VTC that implements `0.2` queues a job this version forbids. Everything else is unchanged from `0.2` and restated below, so that this version stands on its own.
+Accepting what `0.3` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.3` document is a valid `0.4` document. A producer that also serves `0.3` **MUST NOT** put a resource `0.3` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.3` document: a `0.3` consumer validates against the `0.3` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.3` answer instead. Everything else is unchanged from `0.3` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -147,7 +146,7 @@ Alice, the namespace's only admin, has left the community, and her rights were r
 ```json
 {
   "id": "urn:uuid:7e2b4d18-0c3f-4a95-b6e1-9f8a2c5d3b01",
-  "type": "https://trusttasks.org/spec/git-ns/namespace/reseat/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/namespace/reseat/0.4",
   "threadId": "urn:uuid:7e2b4d18-0c3f-4a95-b6e1-9f8a2c5d3b01",
   "issuer": "did:webvh:QmDanaScid8:acme-vtc.example:dana",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

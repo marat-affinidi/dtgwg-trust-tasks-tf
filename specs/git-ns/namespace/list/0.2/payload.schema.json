@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/namespace/list/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/namespace/list/0.2",
   "title": "Git Namespaces — List Namespaces — payload",
   "description": "An administrator lists the namespaces they administer — every one, for a holder of the community-administrator capability — with each one's admins, repository count, bridge and forge status.",
   "type": "object",
@@ -8,7 +8,7 @@
   "required": [],
   "properties": {
     "namespace": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/NamespaceId",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
       "description": "Only this namespace. It must be one the caller administers; a namespace they do not administer, or one this VTC does not have, is refused with `notAdministrator` alike."
     },
     "ext": {
@@ -142,17 +142,17 @@
       ],
       "properties": {
         "id": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/NamespaceId"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId"
         },
         "forge": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/ForgeHost"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeHost"
         },
         "owner": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Segment",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Segment",
           "description": "The organisation or user on the forge, lowercased."
         },
         "resource": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Resource",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
           "description": "The namespace as a resource: `<forge>/<owner>`."
         },
         "mode": {
@@ -180,15 +180,15 @@
           "description": "Whether the owner is an organisation or a personal account, once the forge has said."
         },
         "ownerId": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/ForgeId",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId",
           "description": "The forge's id for the owner, once the forge has said. Unlike `owner`, it survives a rename."
         },
         "bridgeDid": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
           "description": "The bridge that serves the namespace. Absent in manual mode."
         },
         "boundBy": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
           "description": "Who bound it."
         },
         "requestedAt": {
@@ -205,7 +205,7 @@
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did"
+            "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did"
           },
           "description": "Everyone holding a live, explicitly recorded `git.ns.admin` on the namespace. Each of them can grant anything in it."
         },

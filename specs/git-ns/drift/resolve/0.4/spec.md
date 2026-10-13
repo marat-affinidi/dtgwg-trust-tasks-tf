@@ -1,6 +1,6 @@
 ---
 slug: git-ns/drift/resolve
-version: "0.3"
+version: "0.4"
 title: "Git Namespaces — Resolve Drift"
 summary: "An owner of a repository, or a namespace admin over it, resolves one reported drift item: adopt records the forge-side role as a VTC right for the member the resolver names, as git-ns/right/grant would; revert has the bridge undo the forge-side change."
 status: draft
@@ -94,23 +94,12 @@ In a bridge-mode namespace the bridge compares each repository on the forge with
 
 This task is how an owner of the repository answers a reported item. **`adopt`** accepts the forge-side change by recording it as a VTC right for the member the resolver names, under exactly the rules a [`git-ns/right/grant`](../../../../git-ns/right/grant/0.2/spec.md) would meet, so the projection comes to match the forge. **`revert`** keeps the projection as it is and has the bridge undo the forge-side change with a [`git-ns/bridge/job`](../../../../git-ns/bridge/job/0.3/spec.md). The VTC stays the source of truth either way: adopting changes the truth deliberately, reverting restores the forge to it.
 
-## Changes from 0.2
+## Changes from 0.3
 
-`adopt` names the member who receives the right. A `0.2` adoption did not: the VTC found the member by resolving the item's forge account to whoever had linked it **when the task ran**. A resolver reads the drift item and the account's owner, decides, and signs; in between, the account could be unlinked and linked again — to someone else — through [`git-ns/account/link`](../../../../git-ns/account/link/0.1/spec.md). The signed `0.2` document then granted a right, published to the Trust Registry, to a member the resolver never saw, and nothing in what they signed said otherwise. The `observed` value bounds *which role* an adoption can record; nothing bounded *to whom*.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.3`). Moving to it also brings in what the shared definitions changed since: A `RightRecord` may carry the optional `breakGlass` member `git-ns/_shared/0.4` introduced.
 
-`0.3` adds **`subject`**, the DID of the member the resolver read as linked to the account. It is **required for `adopt`** and absent for `revert`, refused as `malformedRequest` otherwise, as a missing `observed` is. The VTC adopts only while the account is linked to exactly that member — checked where the right is recorded, so no relink can fall between the check and the write — and refuses otherwise with the new **`git-ns/drift/resolve:subjectChanged`**. What the resolver signs now names both halves of the grant it amounts to: the right, through `observed`, and its holder, through `subject`.
-
-`0.3` refuses an adoption that would record `git.repo.own` for the resolver themselves with the new **`git-ns:selfGrantNotAllowed`** ([Adopt](#adopt) step 6): the separation of duties `git-ns/right/grant` 0.3 introduces, which names this task among those it binds. Every elevated right is granted by someone other than its holder, or recorded through `git-ns/right/break-glass` — or, where nobody else could adopt it, under the [single-administrator waiver](../../../right/grant/0.3/spec.md#the-single-administrator-waiver) of a VTC configured for single-administrator operation. Adopting a lower right for oneself stays allowed. A `0.2` adoption of `own` for oneself was accepted; it is refused now — a VTC that still serves `0.1` or `0.2` **MUST** apply the same refusal to them, or the self-grant this version closes stays open through them.
-
-`0.3` also compares a `roleChanged` adoption with the member's **projected right** — the right in their own name that `desiredRoles` lists them at — where `0.2` compared it with their highest *effective* right. A namespace admin projects to no forge role, so under `0.2` their implied `git.repo.own` made every forge role they were given on a repository unadoptable, even one raising what the forge was meant to show for them; now it can be adopted. And it states the projected right of a role for any role map the bridge applies: the lowest right whose role it is.
-
-A `0.2` document is a `0.3` document with no `subject`. That is still a valid `revert`, and it is now a malformed `adopt`, so a `0.2` client can revert through `0.3` but not adopt. Adding a member is backwards-compatible on the wire, but making it required for one action is not, so this is a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). A VTC that serves both **SHOULD NOT** accept a `0.1` or `0.2` `adopt`, because it cannot know whom the resolver meant; see [Security & Privacy](#security--privacy). Everything else is unchanged from `0.2` and restated below, so that this version stands on its own.
-
-## Changes from 0.1
-
-`0.2` pinned [`git-ns/_shared/0.3`](../../../_shared/0.3/git-ns.schema.json), which narrows `Did` to the syntax of [W3C DID Core §3.1](https://www.w3.org/TR/did-core/#did-syntax). `0.1` pinned `_shared/0.2`, whose `Did` accepted anything without whitespace after `did:<method>:` — shell metacharacters, quotes, backticks, `/`, `?` and `#` included — so a value that was not a DID at all validated, and travelled on to every surface that later displayed, logged or quoted it. The members affected here are `right.subject` and `right.grantedBy` in the response. Each now carries a bare DID only: `did:`, a method name of lowercase letters and digits, and a method-specific id of colon-separated segments drawn from `A-Z a-z 0-9 . - _` and percent-encoded octets, the last one non-empty. A DID URL — a path, a query, or a `#` fragment such as a verification-method id — is refused: every one of these members names a party, never a key.
-
-That narrowing, made in `0.2`, is kept.
+Accepting what `0.3` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.3` document is a valid `0.4` document. A producer that also serves `0.3` **MUST NOT** put a resource `0.3` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.3` document: a `0.3` consumer validates against the `0.3` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.3` answer instead. Everything else is unchanged from `0.3` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -134,7 +123,7 @@ The `proof` establishes which DID is acting; the VTC then resolves it to its rig
 
 ## Definitions
 
-**Drift item** — one difference between the forge and the VTC's projection of a repository, as the `DriftItem` shape of [`git-ns/_shared/0.3`](../../../_shared/0.3/git-ns.schema.json) describes it. A repository's **outstanding** drift is the list the VTC holds in its `sync.drift`, which each `git-ns/bridge/event` concerning the repository replaces wholesale.
+**Drift item** — one difference between the forge and the VTC's projection of a repository, as the `DriftItem` shape of [`git-ns/_shared/0.3`](../../../_shared/0.6/git-ns.schema.json) describes it. A repository's **outstanding** drift is the list the VTC holds in its `sync.drift`, which each `git-ns/bridge/event` concerning the repository replaces wholesale.
 
 **`drift`** — the selector naming the item to resolve. Drift items have **no identifier of their own**, and this task deliberately does not give them one: they are recomputed by the bridge from the forge's current state and replaced wholesale by every event, so an identifier would be minted by one comparison and gone at the next, while the thing it named — *this account's role on this repository differs* — is still there. The selector therefore names the item by what makes it distinct:
 
@@ -205,7 +194,7 @@ A revert that removes or lowers the role `git.repo.own` projects to — `admin` 
 ```json
 {
   "id": "urn:uuid:c3a7e0d4-51b2-4f6e-9a8d-0e1f2a3b4c01",
-  "type": "https://trusttasks.org/spec/git-ns/drift/resolve/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/drift/resolve/0.4",
   "threadId": "urn:uuid:c3a7e0d4-51b2-4f6e-9a8d-0e1f2a3b4c01",
   "issuer": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -242,7 +231,7 @@ Alice, a namespace admin, made Bob a maintainer of `widgets` in GitHub's interfa
 ```json
 {
   "id": "urn:uuid:c3a7e0d4-51b2-4f6e-9a8d-0e1f2a3b4c03",
-  "type": "https://trusttasks.org/spec/git-ns/drift/resolve/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/drift/resolve/0.4",
   "threadId": "urn:uuid:c3a7e0d4-51b2-4f6e-9a8d-0e1f2a3b4c03",
   "issuer": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -362,7 +351,7 @@ Had Carol asked to adopt `eve-dev`'s role instead, the VTC would refuse: no memb
     "message": "github.com account 5550123 is not linked to a member; it can only be reverted.",
     "retryable": false,
     "inResponseTo": {
-      "typeUri": "https://trusttasks.org/spec/git-ns/drift/resolve/0.3",
+      "typeUri": "https://trusttasks.org/spec/git-ns/drift/resolve/0.4",
       "id": "urn:uuid:c3a7e0d4-51b2-4f6e-9a8d-0e1f2a3b4c05"
     }
   }
@@ -386,7 +375,7 @@ Had `bob-builds` been unlinked from Bob and linked to Dan between Carol reading 
     "message": "github.com account 9120045 is now linked to another member than the one this adoption names; read the drift item again.",
     "retryable": false,
     "inResponseTo": {
-      "typeUri": "https://trusttasks.org/spec/git-ns/drift/resolve/0.3",
+      "typeUri": "https://trusttasks.org/spec/git-ns/drift/resolve/0.4",
       "id": "urn:uuid:c3a7e0d4-51b2-4f6e-9a8d-0e1f2a3b4c03"
     }
   }
@@ -410,7 +399,7 @@ Had the item been a `roleChanged` to `admin` on Carol's own linked account, `car
     "message": "Adopting this role would record git.repo.own for you, and you cannot grant an elevated right to yourself. Ask another owner or namespace admin to adopt it, or, if nobody else can, use git-ns/right/break-glass.",
     "retryable": false,
     "inResponseTo": {
-      "typeUri": "https://trusttasks.org/spec/git-ns/drift/resolve/0.3",
+      "typeUri": "https://trusttasks.org/spec/git-ns/drift/resolve/0.4",
       "id": "urn:uuid:c3a7e0d4-51b2-4f6e-9a8d-0e1f2a3b4c09"
     }
   }

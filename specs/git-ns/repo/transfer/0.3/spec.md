@@ -1,6 +1,6 @@
 ---
 slug: git-ns/repo/transfer
-version: "0.2"
+version: "0.3"
 title: "Git Namespaces — Transfer Repository Ownership"
 summary: "An owner hands their ownership of a repository to someone else: the recipient becomes an owner and the caller's own record is revoked, atomically."
 status: draft
@@ -65,11 +65,12 @@ related:
 
 An owner hands their ownership of a repository to someone else. `to` is recorded as an owner and the caller's own `git.repo.own` record is revoked, in one step, so the repository never has fewer owners than before. Ownership moves between people; the repository stays where it is on the forge. Moving a repository to another forge owner is a forge operation, which the bridge reports as `repoTransferred` ([`git-ns/bridge/event`](../../../../git-ns/bridge/event/0.2/spec.md)).
 
-## Changes from 0.1
+## Changes from 0.2
 
-The schema pins [`git-ns/_shared/0.3`](../../../_shared/0.3/git-ns.schema.json), which narrows `Did` to the syntax of [W3C DID Core §3.1](https://www.w3.org/TR/did-core/#did-syntax). `0.1` pinned `_shared/0.1`, whose `Did` accepted anything without whitespace after `did:<method>:` — shell metacharacters, quotes, backticks, `/`, `?` and `#` included — so a value that was not a DID at all validated, and travelled on to every surface that later displayed, logged or quoted it. The members affected here are the request's `to`, and `repo.owners` in the response. Each now carries a bare DID only: `did:`, a method name of lowercase letters and digits, and a method-specific id of colon-separated segments drawn from `A-Z a-z 0-9 . - _` and percent-encoded octets, the last one non-empty. A DID URL — a path, a query, or a `#` fragment such as a verification-method id — is refused: every one of these members names a party, never a key.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.3`).
 
-Narrowing a constraint is a breaking change, released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). A `0.1` document is a valid `0.2` document exactly when every DID it carries is well-formed. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+Accepting what `0.2` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.2` document is a valid `0.3` document. A producer that also serves `0.2` **MUST NOT** put a resource `0.2` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.2` document: a `0.2` consumer validates against the `0.2` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.2` answer instead. Everything else is unchanged from `0.2` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 

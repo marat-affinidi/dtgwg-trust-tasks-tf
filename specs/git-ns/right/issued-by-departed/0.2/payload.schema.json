@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/right/issued-by-departed/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/right/issued-by-departed/0.2",
   "title": "Git Namespaces — Rights Issued By Departed Members — payload",
   "description": "A community administrator lists the recorded rights whose granter has since left the community, grouped by granter. The outer document members (id, type, issuer, recipient, issuedAt, expiresAt, proof) are owned by the framework — SPEC §6.3.",
   "type": "object",
@@ -32,13 +32,13 @@
       ],
       "properties": {
         "granter": {
-          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
           "description": "The member who granted these rights and has since left the community."
         },
         "rights": {
           "type": "array",
           "items": {
-            "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/AdminRightRow"
+            "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/AdminRightRow"
           },
           "description": "The rights `granter` issued, still live or awaiting a break-glass ratification. Every row's `origin` is `recorded` and `granterDeparted` is `true` — a role-derived grant has no granter and never appears here."
         }

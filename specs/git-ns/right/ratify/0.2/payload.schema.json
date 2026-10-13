@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/right/ratify/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/right/ratify/0.2",
   "title": "Git Namespaces — Ratify Break-Glass — payload",
   "description": "An administrator other than its subject ratifies one unratified break-glass record, turning it into an ordinary grant: it stops being flagged, and starts counting toward the last-owner and last-admin invariants.",
   "type": "object",
@@ -13,14 +13,14 @@
   ],
   "properties": {
     "subject": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
       "description": "Who broke the glass: the record's subject."
     },
     "right": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/ElevatedRight"
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ElevatedRight"
     },
     "resource": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Resource",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
       "description": "The resource exactly as recorded."
     },
     "breakGlassAt": {
@@ -49,7 +49,7 @@
       ],
       "properties": {
         "right": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/RightRecord",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RightRecord",
           "description": "The record, now carrying `breakGlass.ratifiedBy` and `breakGlass.ratifiedAt`."
         },
         "ext": {

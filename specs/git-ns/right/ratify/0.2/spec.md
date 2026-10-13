@@ -1,6 +1,6 @@
 ---
 slug: git-ns/right/ratify
-version: "0.1"
+version: "0.2"
 title: "Git Namespaces — Ratify Break-Glass"
 summary: "An administrator other than its subject ratifies an unratified break-glass record, turning a self-granted elevated right into an ordinary grant that is no longer flagged and counts toward the last-owner and last-admin invariants."
 status: draft
@@ -68,6 +68,13 @@ A [break-glass](../../break-glass/0.1/spec.md) record is an elevated right its s
 
 Ratification changes nothing about who holds what. It clears the flag, and it makes the record count toward the last-owner and last-admin invariants, which an unratified break-glass record never does.
 
+## Changes from 0.1
+
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
+
+Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
@@ -115,7 +122,7 @@ The registry projection does not change: the right was already published as an o
 ```json
 {
   "id": "urn:uuid:0b3c9f4e-8a21-4d6b-9e57-3f1a2c4d5e11",
-  "type": "https://trusttasks.org/spec/git-ns/right/ratify/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/right/ratify/0.2",
   "threadId": "urn:uuid:0b3c9f4e-8a21-4d6b-9e57-3f1a2c4d5e11",
   "issuer": "did:webvh:QmDanaScid8:acme-vtc.example:dana",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

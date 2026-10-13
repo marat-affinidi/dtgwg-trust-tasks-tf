@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/namespace/reseat/0.3",
+  "$id": "https://trusttasks.org/spec/git-ns/namespace/reseat/0.4",
   "title": "Git Namespaces — Reseat Namespace — payload",
   "description": "A community administrator recovers a headless bound namespace — one with no live git.ns.admin — by granting git.ns.admin on it to a current member. Refused unless the namespace is headless.",
   "type": "object",
@@ -12,11 +12,11 @@
   ],
   "properties": {
     "namespace": {
-      "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/NamespaceId",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
       "description": "The headless namespace."
     },
     "subject": {
-      "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/Did",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
       "description": "The current member who receives git.ns.admin on the namespace. Never the administrator reseating: that is a self-grant of git.ns.admin, refused with git-ns:selfGrantNotAllowed (git-ns/right/break-glass is the way to do it)."
     },
     "statement": {
@@ -41,7 +41,7 @@
       ],
       "properties": {
         "right": {
-          "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RightRecord",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RightRecord",
           "description": "The git.ns.admin record the reseat created. It never carries `expiresAt`."
         },
         "ext": {

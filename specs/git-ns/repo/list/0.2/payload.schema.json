@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/repo/list/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/repo/list/0.2",
   "title": "Git Namespaces — List Repositories — payload",
   "description": "An administrator lists the repositories recorded in the namespaces they administer — every one, for a holder of the community-administrator capability — with owners, right counts, bootstrap, sync and forge status.",
   "type": "object",
@@ -8,7 +8,7 @@
   "required": [],
   "properties": {
     "namespace": {
-      "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/NamespaceId",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
       "description": "Only the repositories in this namespace. It must be one the caller administers; a namespace they do not administer, or one this VTC does not have, is refused with `notAdministrator` alike."
     },
     "ext": {
@@ -139,18 +139,18 @@
           "description": "The VTC's identifier for the repository record."
         },
         "namespace": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/NamespaceId",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
           "description": "The namespace it was recorded in. For a `detached` repository, possibly one no longer bound."
         },
         "resource": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/RepoResource"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
         },
         "forgeId": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/ForgeId",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId",
           "description": "The forge's repository id, once confirmed."
         },
         "visibility": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/RepoVisibility"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoVisibility"
         },
         "state": {
           "type": "string",
@@ -168,7 +168,7 @@
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did"
+            "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did"
           },
           "description": "The DIDs holding a live, explicitly recorded `git.repo.own` on it."
         },
@@ -183,7 +183,7 @@
           "description": "How many live records of `git.commit.sign` it has. Implied rights are not counted."
         },
         "bootstrap": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Bootstrap"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Bootstrap"
         },
         "syncState": {
           "type": "string",
@@ -218,7 +218,7 @@
           "description": "What the bridge said when that step failed."
         },
         "createdBy": {
-          "$ref": "../../../_shared/0.4/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
           "description": "Who created it through the VTC. Absent for an adopted or unmanaged repository."
         },
         "createdAt": {

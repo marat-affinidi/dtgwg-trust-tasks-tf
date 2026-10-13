@@ -1,6 +1,6 @@
 ---
 slug: git-ns/bridge/result
-version: "0.1"
+version: "0.2"
 title: "Git Namespaces — Bridge Job Result"
 summary: "The bridge reports how a job ended — succeeded, failed or partial, per step — and the repository's forge id, so the VTC can activate it, record its bootstrap status, or retry."
 status: draft
@@ -51,6 +51,13 @@ related:
 
 The bridge reports how a job sent with [`git-ns/bridge/job`](../../../../git-ns/bridge/job/0.1/spec.md) ended: the outcome, the repository it touched as the forge now identifies it, and the outcome of each step. The VTC uses it to move a repository from `pendingCreate` to `active`, to record its forge id and bootstrap status, and to decide whether to send the job again.
 
+## Changes from 0.1
+
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.1`). Moving to it also brings in what the shared definitions changed since: `Did` is the DID Core form `git-ns/_shared/0.3` introduced: a method-specific id of colon-separated segments drawn from `A-Z a-z 0-9 . - _` and percent-encoded octets, where `0.1` accepted any non-whitespace.
+
+Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
@@ -91,7 +98,7 @@ The bridge sends the result to the VTC. See the top-level schema in [`payload.sc
 ```json
 {
   "id": "urn:uuid:fb9517a4-8ef8-41df-aef3-380e7fa51f01",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/result/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/result/0.2",
   "threadId": "urn:uuid:fb9517a4-8ef8-41df-aef3-380e7fa51f01",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -148,7 +155,7 @@ Every step but the last applied. The repository is protected, but its required c
 ```json
 {
   "id": "urn:uuid:fb9517a4-8ef8-41df-aef3-380e7fa51f03",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/result/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/result/0.2",
   "threadId": "urn:uuid:fb9517a4-8ef8-41df-aef3-380e7fa51f03",
   "issuer": "did:webvh:QmBridgeScid5:bridge.acme-vtc.example",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

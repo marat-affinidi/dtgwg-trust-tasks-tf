@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/bridge/result/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/bridge/result/0.2",
   "title": "Git Namespaces — Bridge Job Result — payload",
   "description": "The bridge reports how a job ended. Exactly one result is sent per job; the VTC updates the repository's state, bootstrap status and forge id from it.",
   "type": "object",
@@ -35,10 +35,10 @@
       "description": "The repository the job touched, as the forge now reports it. Present whenever the job reached a repository.",
       "properties": {
         "resource": {
-          "$ref": "../../../_shared/0.1/git-ns.schema.json#/$defs/RepoResource"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
         },
         "forgeId": {
-          "$ref": "../../../_shared/0.1/git-ns.schema.json#/$defs/ForgeId"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeId"
         }
       }
     },

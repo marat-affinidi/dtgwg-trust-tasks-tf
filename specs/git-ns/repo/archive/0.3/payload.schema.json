@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/repo/archive/0.2",
+  "$id": "https://trusttasks.org/spec/git-ns/repo/archive/0.3",
   "title": "Git Namespaces — Archive Repository — payload",
   "description": "An owner archives a repository. The forge makes it read-only, and every `git.commit.sign` right recorded on it is revoked and withdrawn from the Trust Registry.",
   "type": "object",
@@ -10,7 +10,7 @@
   ],
   "properties": {
     "resource": {
-      "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource",
       "description": "The repository to archive."
     },
     "ext": {
@@ -30,7 +30,7 @@
       ],
       "properties": {
         "repo": {
-          "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoSummary",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoSummary",
           "description": "The repository, now `archived`."
         },
         "rightsRevoked": {

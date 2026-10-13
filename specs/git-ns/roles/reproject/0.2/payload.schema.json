@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/roles/reproject/0.1",
+  "$id": "https://trusttasks.org/spec/git-ns/roles/reproject/0.2",
   "title": "Git Namespaces — Re-project Roles — payload",
   "description": "A community administrator, a namespace admin, or (for one repository) its owner has the VTC send its bridge the complete forge roles of one repository, or of every repository in a namespace, again — so the forge comes to match the VTC's rights under the role map the bridge now applies. No right changes.",
   "type": "object",
@@ -10,7 +10,7 @@
   ],
   "properties": {
     "resource": {
-      "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/Resource",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
       "description": "A namespace (`<forge>/<owner>`): every active or orphaned repository in it. A repository (`<forge>/<owner>/<repo>`): that repository only."
     },
     "reason": {
@@ -39,7 +39,7 @@
           "maxItems": 10000,
           "uniqueItems": true,
           "items": {
-            "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource"
+            "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource"
           },
           "description": "Each repository a projectRoles job was queued for, with its complete desiredRoles. Empty: the namespace has no active or orphaned repository."
         },

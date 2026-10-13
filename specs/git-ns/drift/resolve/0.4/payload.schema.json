@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trusttasks.org/spec/git-ns/drift/resolve/0.3",
+  "$id": "https://trusttasks.org/spec/git-ns/drift/resolve/0.4",
   "title": "Git Namespaces — Resolve Drift — payload",
   "description": "An owner of a repository, or a namespace admin over it, resolves one reported drift item: `adopt` records the forge-side role as a VTC right for the member the resolver names, under the same rules as git-ns/right/grant; `revert` has the bridge undo the forge-side change.",
   "type": "object",
@@ -12,7 +12,7 @@
   ],
   "properties": {
     "resource": {
-      "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RepoResource",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RepoResource",
       "description": "The repository whose drift is resolved."
     },
     "drift": {
@@ -27,7 +27,7 @@
       "description": "`adopt` — record the forge-side role as a VTC right, so the projection comes to match the forge. `revert` — have the bridge make the forge match the projection again."
     },
     "subject": {
-      "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/Did",
+      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
       "description": "For `adopt`: the member who receives the right, as the resolver read it — the DID linked to the item's account when they decided. REQUIRED for `adopt` and absent for `revert`. The VTC adopts nothing unless the account is still linked to exactly this member, so a link changed between reading and signing never grants to someone the resolver did not name."
     },
     "reason": {
@@ -50,10 +50,10 @@
       ],
       "properties": {
         "type": {
-          "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/DriftType"
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/DriftType"
         },
         "account": {
-          "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/ForgeAccount",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/ForgeAccount",
           "description": "The account whose role differs, as the drift item reports it. Required for `roleAdded`, `roleRemoved` and `roleChanged`, and absent for every other type. Matched by `forge` and `id`; `login` is display only."
         },
         "observed": {
@@ -83,11 +83,11 @@
           "description": "The action taken, as requested."
         },
         "right": {
-          "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/RightRecord",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/RightRecord",
           "description": "For `adopt`: the recorded right — newly recorded, or the live record that already existed. Absent for `revert`."
         },
         "sync": {
-          "$ref": "../../../_shared/0.3/git-ns.schema.json#/$defs/Sync",
+          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Sync",
           "description": "The repository's sync after the resolution. The resolved item is no longer outstanding; the state is `drift` while other items remain, and otherwise `pending` until the bridge confirms the forge matches."
         },
         "ext": {

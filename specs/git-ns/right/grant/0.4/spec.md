@@ -1,6 +1,6 @@
 ---
 slug: git-ns/right/grant
-version: "0.3"
+version: "0.4"
 title: "Git Namespaces — Grant Right"
 summary: "A member grants one git right on one forge-qualified resource — an elevated one only to someone else. The VTC checks it against the actor's own rights and fixed rules no policy can loosen, separation of duties among them, records it, and publishes it to its Trust Registry."
 status: draft
@@ -93,16 +93,12 @@ This task grants one right. The VTC checks the grant against the rights the acto
 
 This specification also carries the family's **rights model**, which every other `git-ns` task refers to.
 
-## Changes from 0.2
+## Changes from 0.3
 
-- **Separation of duties** — new [fixed rule 7](#the-fixed-rules). An actor **MUST NOT** grant themselves an *elevated* right: `git.ns.admin`, `git.repo.create` or `git.repo.own`. It is refused with the new family code `git-ns:selfGrantNotAllowed`, whose message names the escape hatch. Self-grants of `git.repo.maintain` and `git.commit.sign` stay allowed. The rule binds every task that records a right on the actor's own authority, not only this one ([Tasks the rule binds](#tasks-the-separation-of-duties-rule-binds)).
-- **Single-administrator waiver** — a VTC its host operator has configured for single-administrator operation **MAY** waive rule 7 where nobody but the actor could make the grant, on the actor's operation-bound step-up, audited before the write and marked on the record and the response ([The single-administrator waiver](#the-single-administrator-waiver)). With any other eligible party, rule 7 applies unchanged.
-- **Break-glass records** — the explicit, audited self-grant is the new [`git-ns/right/break-glass`](../../break-glass/0.1/spec.md), ratified by another administrator with the new [`git-ns/right/ratify`](../../ratify/0.1/spec.md). An *unratified* break-glass record is a live right, but it does not count toward the last-owner and last-admin invariants (fixed rules 3 and 4).
-- **Expiring records and the invariants** — fixed rules 3 and 4 now state what [`git-ns/namespace/reseat`](../../../namespace/reseat/0.2/spec.md#the-last-admin-invariant-and-expiring-records) required of every implementation: a record with an `expiresAt` does not count toward them.
-- **Elevated rights are for members** — [fixed rule 5](#the-fixed-rules) now covers `git.repo.own` as well as `git.ns.admin` and `git.repo.create`, requires the subject to hold standing in the VTC's access-control records, and requires the actor to be a member. It closes granting an elevated right to a second, unknown DID the actor controls.
-- The schema pins [`git-ns/_shared/0.4`](../../../_shared/0.4/git-ns.schema.json), whose `RightRecord` carries the optional `breakGlass` member. A record granted through this task never carries it.
+- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
+- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
 
-Refusing a request `0.2` accepted is a breaking change, released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). A `0.2` request is a valid `0.3` request; it is refused under `0.3` exactly when it is an elevated self-grant. A VTC that implements this version **SHOULD NOT** keep serving earlier versions of this task, since doing so would leave the self-grant `0.3` closes open through them; where it does, it **MUST** apply fixed rule 7 to them as well. Everything else is unchanged from `0.2` and restated below, so that this version stands on its own.
+Accepting what `0.3` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.3` document is a valid `0.4` document. A producer that also serves `0.3` **MUST NOT** put a resource `0.3` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.3` document: a `0.3` consumer validates against the `0.3` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.3` answer instead. Everything else is unchanged from `0.3` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -198,7 +194,7 @@ One task records an elevated right for the actor by design and is **not** a self
 
 ### Resources
 
-Resources are forge-qualified and lowercase — `<forge-host>/<owner>` or `<forge-host>/<owner>/<repo>` — and are never accepted without their forge. A producer lowercases before sending, because forges compare owner and repository names case-insensitively and the registry compares by exact string. Rights on a repository are keyed internally by the forge's repository id, so that when the forge renames a repository the VTC moves its rights to the new resource, and a new repository later created at the old name inherits nothing.
+Resources are forge-qualified and lowercase — `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — and are never accepted without their forge. The owner is always one segment: the organisation or user, or on a forge with nested groups the top-level group. The repository path is the rest of the repository's path on the forge: one segment on GitHub and Forgejo, and on GitLab the subgroups between the top-level group and the project followed by the project, 1 to 21 segments (`gitlab.com/acme/platform/tools/cli`). A resource with one segment after its forge host is therefore a namespace, and one with two or more a repository; a subgroup (`gitlab.com/acme/platform`) is neither, and no right is held on one. Each segment is 1 to 255 characters. A producer lowercases before sending, because forges compare owner and repository names case-insensitively and the registry compares by exact string. Rights on a repository are keyed internally by the forge's repository id, so that when the forge renames a repository the VTC moves its rights to the new resource, and a new repository later created at the old name inherits nothing.
 
 ## Definitions
 
@@ -229,7 +225,7 @@ During a migration from unqualified `owner/repo` resources, a VTC **MAY** also p
 ```json
 {
   "id": "urn:uuid:6f992ea5-95bf-40b9-a6be-b7dec24cbf01",
-  "type": "https://trusttasks.org/spec/git-ns/right/grant/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/right/grant/0.4",
   "threadId": "urn:uuid:6f992ea5-95bf-40b9-a6be-b7dec24cbf01",
   "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -258,7 +254,7 @@ Whether Dan, who is not a member, may hold `git.commit.sign` at all is the commu
 ```json
 {
   "id": "urn:uuid:6f992ea5-95bf-40b9-a6be-b7dec24cbf03",
-  "type": "https://trusttasks.org/spec/git-ns/right/grant/0.3",
+  "type": "https://trusttasks.org/spec/git-ns/right/grant/0.4",
   "threadId": "urn:uuid:6f992ea5-95bf-40b9-a6be-b7dec24cbf03",
   "issuer": "did:webvh:QmBobScid2:acme-vtc.example:bob",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -365,7 +361,7 @@ Alice is a namespace admin of `acme`, so she has an owner's authority on `widget
     "message": "git.repo.own is an elevated right, and you cannot grant it to yourself. Ask another owner or namespace admin to grant it, or, if nobody else can, use git-ns/right/break-glass.",
     "retryable": false,
     "inResponseTo": {
-      "typeUri": "https://trusttasks.org/spec/git-ns/right/grant/0.3",
+      "typeUri": "https://trusttasks.org/spec/git-ns/right/grant/0.4",
       "id": "urn:uuid:6f992ea5-95bf-40b9-a6be-b7dec24cbf05"
     }
   }
