@@ -31,6 +31,36 @@ consumer should read it.
 
 ## [Unreleased]
 
+## [0.31.0](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-rs-v0.30.2...trust-tasks-rs-v0.31.0) — 2026-10-13
+
+
+### Specifications
+
+- **vtc**: A vta-account storage config names the account's context as well as its identifier ([#758](https://github.com/trustoverip/dtgwg-trust-tasks-tf/pull/758))
+
+`StorageAuth`'s `vta-account` variant named only `account`, but a VTA names an
+  external account by the context that owns it and its identifier there: the
+  `external/credentials/issue` task the community sends requires both. A
+  community could only fill the gap from something outside the config, which
+  makes a config mean something only on the host that stored it, confines every
+  account a community uses to one context, and leaves each implementation to
+  fill the gap its own way.
+
+  `vta-account` now requires `context` (`ExternalAccountContextId`, the issue
+  task's `AccountContextId` form), and `CredentialState` carries it beside
+  `account`. Naming a context grants nothing: the VTA issues only to a consumer
+  bound to the account and holding `external-auth-use` in that context.
+  `vtc/storage/configs/create` item 5 addresses the account by that pair and
+  never by an identifier resolved against a context of the community's own
+  choosing; `unknownAccount` on create and update says so. A new invalid
+  example covers a missing context.
+
+  Breaking for the generated types: a new required member. No community could
+  create a `vta-account` config before this (the one implementation refused
+  every kind but `local`), so no stored config lacks it.
+
+
+
 ## [0.30.2](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-rs-v0.30.1...trust-tasks-rs-v0.30.2) — 2026-10-13
 
 
