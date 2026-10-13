@@ -32,7 +32,7 @@ exposure:
   ingests: metadata
   actsAsSubject: false
   rationale: >-
-    The request carries settings, an authentication mode and an external account name — never a secret. The response echoes the stored config.
+    The request carries settings, an authentication mode and an external account's context and name — never a secret. The response echoes the stored config.
 retention:
   class: durable
   rationale: >-
@@ -76,7 +76,7 @@ errorCodes:
     meaning: "`auth` does not fit the config's kind; see vtc/storage/configs/create."
     retryable: false
   - code: vtc/storage/configs/update:unknownAccount
-    meaning: "`auth.account` names no external account at the community's VTA that the community is bound to use."
+    meaning: "`auth.context` and `auth.account` name no external account at the community's VTA that the community is bound to use."
     retryable: false
   - code: vtc/storage/configs/update:notActive
     meaning: "The config is `draining` or `retired`; only its label can be changed."
@@ -145,6 +145,7 @@ A room-hosting administrator (`issuer`) sends the community (`recipient`) a docu
     "configId": "eu-s3-primary",
     "auth": {
       "mode": "vta-account",
+      "context": "northwind",
       "account": "eu-s3-primary"
     },
     "capacityBytes": 2199023255552,
@@ -178,6 +179,7 @@ When the update executes, the community answers on the request's `threadId` with
       },
       "auth": {
         "mode": "vta-account",
+        "context": "northwind",
         "account": "eu-s3-primary"
       },
       "capacityBytes": 2199023255552,

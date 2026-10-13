@@ -688,6 +688,10 @@ export type ExpiresAt = string;
  */
 export type ExtCritical = [string, ...string[]];
 /**
+ * The context at the community's VTA that owns an external account. The VTA names an account by its context and its identifier, and decides who may use it by act scope in that context: the community must hold `external-auth-use` there, and be bound to the account, for the account to issue it anything. Naming a context grants nothing; the VTA's binding is the gate.
+ */
+export type ExternalAccountContextId = string;
+/**
  * The identifier of an external account held by the community's VTA (the external/accounts/* family), which issues the community short-lived, room-scoped credentials and holds the long-lived authority itself.
  */
 export type ExternalAccountId = string;
@@ -1222,7 +1226,7 @@ export type Slot = string;
 /**
  * How the community authenticates to a config's backend. Absent on a `local` config, which needs none.
  *
- * `vta-account` (RECOMMENDED): an external account in the community's VTA. The VTA holds the long-lived authority; the community holds nothing that outlives a credential lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs its storage transactions.
+ * `vta-account` (RECOMMENDED): an external account in the community's VTA, named by the context that owns it and its identifier there. The VTA holds the long-lived authority; the community holds nothing that outlives a credential lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs its storage transactions.
  *
  * `ambient`: the cloud identity of the machine the community runs on (an instance role, workload identity), downscoped to one room's prefix by the community itself. Not audited or rate-limited by the VTA, and usable by anything on that machine that reaches the metadata endpoint. Not valid for `walrus`.
  *
@@ -1231,6 +1235,7 @@ export type Slot = string;
 export type StorageAuth =
   | {
       mode: "vta-account";
+      context: ExternalAccountContextId;
       account: ExternalAccountId;
     }
   | {
@@ -4884,6 +4889,10 @@ export interface CredentialScopeCeiling {
  */
 export interface CredentialState {
   status: "vta-account" | "ambient" | "sealed" | "required" | "none";
+  /**
+   * Present with `vta-account`.
+   */
+  context?: ExternalAccountContextId;
   /**
    * Present with `vta-account`.
    */

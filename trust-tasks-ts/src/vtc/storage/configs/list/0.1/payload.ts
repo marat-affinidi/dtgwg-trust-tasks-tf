@@ -3,7 +3,7 @@
  * Source: specs/vtc/storage/configs/list/0.1/payload.schema.json
  */
 
-import type { ConfigState, CredentialState, DigestMultibase, Ext, ExternalAccountId, GcsSettings, LocalSettings, ObjectPrefix, S3Settings, StorageAuth, StorageConfig, StorageConfigFacts, StorageConfigId, StorageHealth, StorageKind, StorageSettings, WalrusSettings } from "../../../../../_shared/components.js";
+import type { ConfigState, CredentialState, DigestMultibase, Ext, ExternalAccountContextId, ExternalAccountId, GcsSettings, LocalSettings, ObjectPrefix, S3Settings, StorageAuth, StorageConfig, StorageConfigFacts, StorageConfigId, StorageHealth, StorageKind, StorageSettings, WalrusSettings } from "../../../../../_shared/components.js";
 
 
 /**
@@ -42,7 +42,7 @@ export interface ConfigItem {
 }
 
 /** Shared definitions this specification references, re-exported under the names it used to declare them with. */
-export type { ConfigState, CredentialState, DigestMultibase, Ext, ExternalAccountId, GcsSettings, LocalSettings, ObjectPrefix, S3Settings, StorageAuth, StorageConfig, StorageConfigFacts, StorageConfigId, StorageHealth, StorageKind, StorageSettings, WalrusSettings };
+export type { ConfigState, CredentialState, DigestMultibase, Ext, ExternalAccountContextId, ExternalAccountId, GcsSettings, LocalSettings, ObjectPrefix, S3Settings, StorageAuth, StorageConfig, StorageConfigFacts, StorageConfigId, StorageHealth, StorageKind, StorageSettings, WalrusSettings };
 
 /** Trust Task type URI. */
 export const TYPE_URI = "https://trusttasks.org/spec/vtc/storage/configs/list/0.1" as const;
@@ -257,6 +257,10 @@ export const PAYLOAD_SCHEMA = {
             "none"
           ]
         },
+        "context": {
+          "$ref": "#/$defs/ExternalAccountContextId",
+          "description": "Present with `vta-account`."
+        },
         "account": {
           "$ref": "#/$defs/ExternalAccountId",
           "description": "Present with `vta-account`."
@@ -284,6 +288,13 @@ export const PAYLOAD_SCHEMA = {
       "maxLength": 64,
       "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
       "description": "The identifier of an external account held by the community's VTA (the external/accounts/* family), which issues the community short-lived, room-scoped credentials and holds the long-lived authority itself."
+    },
+    "ExternalAccountContextId": {
+      "title": "ExternalAccountContextId",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "The context at the community's VTA that owns an external account. The VTA names an account by its context and its identifier, and decides who may use it by act scope in that context: the community must hold `external-auth-use` there, and be bound to the account, for the account to issue it anything. Naming a context grants nothing; the VTA's binding is the gate."
     },
     "DigestMultibase": {
       "title": "DigestMultibase",
@@ -368,18 +379,22 @@ export const PAYLOAD_SCHEMA = {
     },
     "StorageAuth": {
       "title": "StorageAuth",
-      "description": "How the community authenticates to a config's backend. Absent on a `local` config, which needs none.\n\n`vta-account` (RECOMMENDED): an external account in the community's VTA. The VTA holds the long-lived authority; the community holds nothing that outlives a credential lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs its storage transactions.\n\n`ambient`: the cloud identity of the machine the community runs on (an instance role, workload identity), downscoped to one room's prefix by the community itself. Not audited or rate-limited by the VTA, and usable by anything on that machine that reaches the metadata endpoint. Not valid for `walrus`.\n\n`sealed` (discouraged): a long-lived credential stored by the community, set with vtc/storage/credentials/set. Protects against every administrator through every surface the community offers; does not protect against whoever operates the machine.",
+      "description": "How the community authenticates to a config's backend. Absent on a `local` config, which needs none.\n\n`vta-account` (RECOMMENDED): an external account in the community's VTA, named by the context that owns it and its identifier there. The VTA holds the long-lived authority; the community holds nothing that outlives a credential lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs its storage transactions.\n\n`ambient`: the cloud identity of the machine the community runs on (an instance role, workload identity), downscoped to one room's prefix by the community itself. Not audited or rate-limited by the VTA, and usable by anything on that machine that reaches the metadata endpoint. Not valid for `walrus`.\n\n`sealed` (discouraged): a long-lived credential stored by the community, set with vtc/storage/credentials/set. Protects against every administrator through every surface the community offers; does not protect against whoever operates the machine.",
       "oneOf": [
         {
           "type": "object",
           "additionalProperties": false,
           "required": [
             "mode",
+            "context",
             "account"
           ],
           "properties": {
             "mode": {
               "const": "vta-account"
+            },
+            "context": {
+              "$ref": "#/$defs/ExternalAccountContextId"
             },
             "account": {
               "$ref": "#/$defs/ExternalAccountId"
@@ -757,6 +772,10 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
             "none"
           ]
         },
+        "context": {
+          "$ref": "#/$defs/ExternalAccountContextId",
+          "description": "Present with `vta-account`."
+        },
         "account": {
           "$ref": "#/$defs/ExternalAccountId",
           "description": "Present with `vta-account`."
@@ -784,6 +803,13 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
       "maxLength": 64,
       "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
       "description": "The identifier of an external account held by the community's VTA (the external/accounts/* family), which issues the community short-lived, room-scoped credentials and holds the long-lived authority itself."
+    },
+    "ExternalAccountContextId": {
+      "title": "ExternalAccountContextId",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "The context at the community's VTA that owns an external account. The VTA names an account by its context and its identifier, and decides who may use it by act scope in that context: the community must hold `external-auth-use` there, and be bound to the account, for the account to issue it anything. Naming a context grants nothing; the VTA's binding is the gate."
     },
     "DigestMultibase": {
       "title": "DigestMultibase",
@@ -868,18 +894,22 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
     },
     "StorageAuth": {
       "title": "StorageAuth",
-      "description": "How the community authenticates to a config's backend. Absent on a `local` config, which needs none.\n\n`vta-account` (RECOMMENDED): an external account in the community's VTA. The VTA holds the long-lived authority; the community holds nothing that outlives a credential lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs its storage transactions.\n\n`ambient`: the cloud identity of the machine the community runs on (an instance role, workload identity), downscoped to one room's prefix by the community itself. Not audited or rate-limited by the VTA, and usable by anything on that machine that reaches the metadata endpoint. Not valid for `walrus`.\n\n`sealed` (discouraged): a long-lived credential stored by the community, set with vtc/storage/credentials/set. Protects against every administrator through every surface the community offers; does not protect against whoever operates the machine.",
+      "description": "How the community authenticates to a config's backend. Absent on a `local` config, which needs none.\n\n`vta-account` (RECOMMENDED): an external account in the community's VTA, named by the context that owns it and its identifier there. The VTA holds the long-lived authority; the community holds nothing that outlives a credential lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs its storage transactions.\n\n`ambient`: the cloud identity of the machine the community runs on (an instance role, workload identity), downscoped to one room's prefix by the community itself. Not audited or rate-limited by the VTA, and usable by anything on that machine that reaches the metadata endpoint. Not valid for `walrus`.\n\n`sealed` (discouraged): a long-lived credential stored by the community, set with vtc/storage/credentials/set. Protects against every administrator through every surface the community offers; does not protect against whoever operates the machine.",
       "oneOf": [
         {
           "type": "object",
           "additionalProperties": false,
           "required": [
             "mode",
+            "context",
             "account"
           ],
           "properties": {
             "mode": {
               "const": "vta-account"
+            },
+            "context": {
+              "$ref": "#/$defs/ExternalAccountContextId"
             },
             "account": {
               "$ref": "#/$defs/ExternalAccountId"
