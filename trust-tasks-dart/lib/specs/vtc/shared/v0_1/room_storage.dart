@@ -31,6 +31,13 @@ extension type const StorageKind(String value) {
 /// credentials and holds the long-lived authority itself.
 typedef ExternalAccountId = String;
 
+/// The context at the community's VTA that owns an external account. The VTA names an
+/// account by its context and its identifier, and decides who may use it by act scope
+/// in that context: the community must hold `external-auth-use` there, and be bound to
+/// the account, for the account to issue it anything. Naming a context grants nothing;
+/// the VTA's binding is the gate.
+typedef ExternalAccountContextId = String;
+
 /// A key prefix inside the bucket, ending in `/`, under which the config's `rooms/`
 /// tree is placed. Restricted to the S3 safe-character set so that it can be placed in
 /// a downscoped policy without escaping.
@@ -195,18 +202,19 @@ typedef StorageSettings = Object?;
 
 /// How the community authenticates to a config's backend. Absent on a `local` config,
 /// which needs none. `vta-account` (RECOMMENDED): an external account in the
-/// community's VTA. The VTA holds the long-lived authority; the community holds
-/// nothing that outlives a credential lifetime, and asks for credentials scoped to one
-/// room's prefix for at most 15 minutes, every issuance audited at the VTA. Required
-/// for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer`
-/// account signs its storage transactions. `ambient`: the cloud identity of the
-/// machine the community runs on (an instance role, workload identity), downscoped to
-/// one room's prefix by the community itself. Not audited or rate-limited by the VTA,
-/// and usable by anything on that machine that reaches the metadata endpoint. Not
-/// valid for `walrus`. `sealed` (discouraged): a long-lived credential stored by the
-/// community, set with vtc/storage/credentials/set. Protects against every
-/// administrator through every surface the community offers; does not protect against
-/// whoever operates the machine.
+/// community's VTA, named by the context that owns it and its identifier there. The
+/// VTA holds the long-lived authority; the community holds nothing that outlives a
+/// credential lifetime, and asks for credentials scoped to one room's prefix for at
+/// most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config
+/// other than a `sealed` one, since the VTA's `sui-signer` account signs its storage
+/// transactions. `ambient`: the cloud identity of the machine the community runs on
+/// (an instance role, workload identity), downscoped to one room's prefix by the
+/// community itself. Not audited or rate-limited by the VTA, and usable by anything on
+/// that machine that reaches the metadata endpoint. Not valid for `walrus`. `sealed`
+/// (discouraged): a long-lived credential stored by the community, set with
+/// vtc/storage/credentials/set. Protects against every administrator through every
+/// surface the community offers; does not protect against whoever operates the
+/// machine.
 typedef StorageAuth = Object?;
 
 /// `active`: accepts new rooms and new uploads. `draining`: retired by an
@@ -286,6 +294,7 @@ extension type const CredentialStateStatus(String value) {
 class CredentialState {
   const CredentialState({
     required this.status,
+    this.context,
     this.account,
     this.fingerprint,
     this.setAt,
@@ -296,6 +305,7 @@ class CredentialState {
   factory CredentialState.fromJson(Map<String, dynamic> json) =>
       CredentialState(
         status: CredentialStateStatus(json['status'] as String),
+        context: json['context'] as String?,
         account: json['account'] as String?,
         fingerprint: json['fingerprint'] as String?,
         setAt: json['setAt'] as String?,
@@ -303,6 +313,9 @@ class CredentialState {
       );
 
   final CredentialStateStatus status;
+
+  /// Present with `vta-account`.
+  final ExternalAccountContextId? context;
 
   /// Present with `vta-account`.
   final ExternalAccountId? account;
@@ -323,6 +336,7 @@ class CredentialState {
   /// Serialize to a JSON-encodable map, omitting absent members.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'status': status.value,
+        if (context != null) 'context': context!,
         if (account != null) 'account': account!,
         if (fingerprint != null) 'fingerprint': fingerprint!,
         if (setAt != null) 'setAt': setAt!,

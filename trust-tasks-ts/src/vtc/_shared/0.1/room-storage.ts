@@ -14,4 +14,4 @@ export interface VTCSharedRoomStorageDefinitions {
  * The definitions this shared schema publishes, hoisted to one declaration each.
  * See "../../../_shared/components.js".
  */
-export type { ConfigState, CredentialState, EffectiveLimits, ExternalAccountId, GcsSettings, HostedRoom, LimitSource, LimitTarget, LocalSettings, ObjectPrefix, S3Settings, StorageAuth, StorageConfig, StorageConfigFacts, StorageConfigId, StorageHealth, StorageKind, StorageSettings, WalrusSettings } from "../../../_shared/components.js";
+export type { ConfigState, CredentialState, EffectiveLimits, ExternalAccountContextId, ExternalAccountId, GcsSettings, HostedRoom, LimitSource, LimitTarget, LocalSettings, ObjectPrefix, S3Settings, StorageAuth, StorageConfig, StorageConfigFacts, StorageConfigId, StorageHealth, StorageKind, StorageSettings, WalrusSettings } from "../../../_shared/components.js";

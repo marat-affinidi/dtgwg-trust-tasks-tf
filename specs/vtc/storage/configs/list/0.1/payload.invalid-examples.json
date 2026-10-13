@@ -22,6 +22,7 @@
             },
             "auth": {
               "mode": "vta-account",
+              "context": "northwind",
               "account": "eu-s3-primary"
             },
             "capacityBytes": 1099511627776,
@@ -37,6 +38,7 @@
             "pendingDeleteBytes": 9437184,
             "credential": {
               "status": "vta-account",
+              "context": "northwind",
               "account": "eu-s3-primary",
               "roomsHoldingCredentials": 3
             },

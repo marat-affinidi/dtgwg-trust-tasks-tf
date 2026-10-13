@@ -31,6 +31,13 @@ const (
 // credentials and holds the long-lived authority itself.
 type ExternalAccountID = string
 
+// ExternalAccountContextID The context at the community's VTA that owns an external
+// account. The VTA names an account by its context and its identifier, and decides who
+// may use it by act scope in that context: the community must hold `external-auth-use`
+// there, and be bound to the account, for the account to issue it anything. Naming a
+// context grants nothing; the VTA's binding is the gate.
+type ExternalAccountContextID = string
+
 // ObjectPrefix A key prefix inside the bucket, ending in `/`, under which the config's
 // `rooms/` tree is placed. Restricted to the S3 safe-character set so that it can be
 // placed in a downscoped policy without escaping.
@@ -103,17 +110,18 @@ type StorageSettings = json.RawMessage
 
 // StorageAuth How the community authenticates to a config's backend. Absent on a `local`
 // config, which needs none. `vta-account` (RECOMMENDED): an external account in the
-// community's VTA. The VTA holds the long-lived authority; the community holds nothing
-// that outlives a credential lifetime, and asks for credentials scoped to one room's
-// prefix for at most 15 minutes, every issuance audited at the VTA. Required for a
-// `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs
-// its storage transactions. `ambient`: the cloud identity of the machine the community
-// runs on (an instance role, workload identity), downscoped to one room's prefix by the
-// community itself. Not audited or rate-limited by the VTA, and usable by anything on
-// that machine that reaches the metadata endpoint. Not valid for `walrus`. `sealed`
-// (discouraged): a long-lived credential stored by the community, set with
-// vtc/storage/credentials/set. Protects against every administrator through every surface
-// the community offers; does not protect against whoever operates the machine.
+// community's VTA, named by the context that owns it and its identifier there. The VTA
+// holds the long-lived authority; the community holds nothing that outlives a credential
+// lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes,
+// every issuance audited at the VTA. Required for a `walrus` config other than a `sealed`
+// one, since the VTA's `sui-signer` account signs its storage transactions. `ambient`:
+// the cloud identity of the machine the community runs on (an instance role, workload
+// identity), downscoped to one room's prefix by the community itself. Not audited or
+// rate-limited by the VTA, and usable by anything on that machine that reaches the
+// metadata endpoint. Not valid for `walrus`. `sealed` (discouraged): a long-lived
+// credential stored by the community, set with vtc/storage/credentials/set. Protects
+// against every administrator through every surface the community offers; does not
+// protect against whoever operates the machine.
 type StorageAuth = json.RawMessage
 
 // ConfigState `active`: accepts new rooms and new uploads. `draining`: retired by an
@@ -148,6 +156,9 @@ const (
 // a restore, which carries no credential); `none` is a `local` config.
 type CredentialState struct {
 	Status CredentialStateStatus `json:"status"`
+
+	// Present with `vta-account`.
+	Context *ExternalAccountContextID `json:"context,omitempty"`
 
 	// Present with `vta-account`.
 	Account *ExternalAccountID `json:"account,omitempty"`

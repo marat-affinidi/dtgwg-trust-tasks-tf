@@ -32,7 +32,7 @@ exposure:
   ingests: metadata
   actsAsSubject: false
   rationale: >-
-    The request carries backend settings, an authentication mode and the name of an external account — never a secret; a `sealed` credential is set separately with vtc/storage/credentials/set. The response echoes the stored config.
+    The request carries backend settings, an authentication mode and the context and name of an external account — never a secret; a `sealed` credential is set separately with vtc/storage/credentials/set. The response echoes the stored config.
 retention:
   class: durable
   rationale: >-
@@ -59,7 +59,7 @@ errorCodes:
     meaning: "`auth` does not fit the kind: present on a `local` config, absent on any other, or `ambient` on a `walrus` config (Walrus storage is paid for by a signer, which no ambient cloud identity provides)."
     retryable: false
   - code: vtc/storage/configs/create:unknownAccount
-    meaning: "`auth.account` names no external account at the community's VTA that the community is bound to use."
+    meaning: "`auth.context` and `auth.account` name no external account at the community's VTA that the community is bound to use."
     retryable: false
 
 related:
@@ -77,7 +77,7 @@ The **VTC Storage — Configs — Create** Trust Task adds a storage config: one
 
 **The request never carries a secret.** Authentication is one of three modes:
 
-- **`vta-account`** (RECOMMENDED) names an external account at the community's VTA. The VTA holds the long-lived authority, and issues the community credentials scoped to one room's prefix for at most 15 minutes, every issuance audited there. The community holds nothing an administrator could take home. Creating and changing that account is consented at the VTA, by approvers signing with their own DIDs.
+- **`vta-account`** (RECOMMENDED) names an external account at the community's VTA, by the context that owns it and its identifier there — the pair the VTA names an account by. Naming a context grants nothing: the VTA issues only to a consumer bound to the account and holding `external-auth-use` in that context. The VTA holds the long-lived authority, and issues the community credentials scoped to one room's prefix for at most 15 minutes, every issuance audited there. The community holds nothing an administrator could take home. Creating and changing that account is consented at the VTA, by approvers signing with their own DIDs.
 - **`ambient`** uses the cloud identity of the machine the community runs on, which the community downscopes to one room's prefix itself.
 - **`sealed`** (discouraged) stores a long-lived credential on the community, set afterwards with [`vtc/storage/credentials/set`](../../../../../vtc/storage/credentials/set/0.1/spec.md). Until then the config reports its credential as `required` and cannot be assigned.
 
@@ -97,7 +97,7 @@ A conforming **community** (`recipient`):
 2. **MUST** refuse an identifier in use, or ever used, with `exists`.
 3. **MUST** refuse with `authNotAllowed` an `auth` that does not fit the kind (see the error code).
 4. **MUST** validate `settings` beyond the schema — that a `local` root is a directory it can create owner-only files in, that an endpoint is reachable — and refuse with `invalidSettings` naming the member.
-5. With `vta-account`, **SHOULD** confirm with its VTA that the account exists and that the community is bound to use it, and **MUST** refuse with `unknownAccount` when the VTA says it does not.
+5. With `vta-account`, **SHOULD** confirm with its VTA that the account named by `auth.context` and `auth.account` exists and that the community is bound to use it, and **MUST** refuse with `unknownAccount` when the VTA says it does not. It **MUST** address the account by that pair exactly, never by an identifier alone resolved against a context of its own choosing.
 6. **MUST** store the config `active`, with `createdBy` and `createdAt`; and, when `isDefault` is true, **MUST** clear the flag on the previous default in the same write.
 7. **MUST NOT** accept a credential through this task in any member, `ext` included.
 8. **SHOULD** run [`vtc/storage/configs/probe`](../../../../../vtc/storage/configs/probe/0.1/spec.md) once the config exists and record the result in its health, and **SHOULD** let approvers see a probe of the proposed settings before they decide.
@@ -139,6 +139,7 @@ A room-hosting administrator (`issuer`) sends the community (`recipient`) a docu
     },
     "auth": {
       "mode": "vta-account",
+      "context": "northwind",
       "account": "eu-s3-primary"
     },
     "capacityBytes": 1099511627776,
@@ -169,6 +170,7 @@ A room-hosting administrator (`issuer`) sends the community (`recipient`) a docu
     },
     "auth": {
       "mode": "vta-account",
+      "context": "northwind",
       "account": "walrus-signer"
     },
     "reason": "For public-interest rooms that want replicated storage."
@@ -201,6 +203,7 @@ When the creation executes, the community answers on the request's `threadId` wi
       },
       "auth": {
         "mode": "vta-account",
+        "context": "northwind",
         "account": "eu-s3-primary"
       },
       "capacityBytes": 1099511627776,
@@ -217,7 +220,7 @@ When the creation executes, the community answers on the request's `threadId` wi
 
 ### Data carried
 
-A config identifier, a label, backend settings, an authentication mode with an external account name, an optional capacity and a reason. No secret: a producer **MUST NOT** place a credential in any member, and a community refuses one rather than storing it.
+A config identifier, a label, backend settings, an authentication mode with an external account's context and name, an optional capacity and a reason. No secret: a producer **MUST NOT** place a credential in any member, and a community refuses one rather than storing it.
 
 ### Correlation
 

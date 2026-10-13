@@ -3,7 +3,7 @@
  * Source: specs/vtc/storage/credentials/set/0.1/payload.schema.json
  */
 
-import type { CredentialState, DigestMultibase, Ext, ExternalAccountId, StorageConfigId } from "../../../../../_shared/components.js";
+import type { CredentialState, DigestMultibase, Ext, ExternalAccountContextId, ExternalAccountId, StorageConfigId } from "../../../../../_shared/components.js";
 
 
 /**
@@ -36,7 +36,7 @@ export interface VTCStorageCredentialsSetResponsePayload {
 }
 
 /** Shared definitions this specification references, re-exported under the names it used to declare them with. */
-export type { CredentialState, DigestMultibase, Ext, ExternalAccountId, StorageConfigId };
+export type { CredentialState, DigestMultibase, Ext, ExternalAccountContextId, ExternalAccountId, StorageConfigId };
 
 /** Trust Task type URI. */
 export const TYPE_URI = "https://trusttasks.org/spec/vtc/storage/credentials/set/0.1" as const;
@@ -152,6 +152,10 @@ export const PAYLOAD_SCHEMA = {
             "none"
           ]
         },
+        "context": {
+          "$ref": "#/$defs/ExternalAccountContextId",
+          "description": "Present with `vta-account`."
+        },
         "account": {
           "$ref": "#/$defs/ExternalAccountId",
           "description": "Present with `vta-account`."
@@ -179,6 +183,13 @@ export const PAYLOAD_SCHEMA = {
       "maxLength": 64,
       "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
       "description": "The identifier of an external account held by the community's VTA (the external/accounts/* family), which issues the community short-lived, room-scoped credentials and holds the long-lived authority itself."
+    },
+    "ExternalAccountContextId": {
+      "title": "ExternalAccountContextId",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "The context at the community's VTA that owns an external account. The VTA names an account by its context and its identifier, and decides who may use it by act scope in that context: the community must hold `external-auth-use` there, and be bound to the account, for the account to issue it anything. Naming a context grants nothing; the VTA's binding is the gate."
     },
     "DigestMultibase": {
       "title": "DigestMultibase",
@@ -260,6 +271,10 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
             "none"
           ]
         },
+        "context": {
+          "$ref": "#/$defs/ExternalAccountContextId",
+          "description": "Present with `vta-account`."
+        },
         "account": {
           "$ref": "#/$defs/ExternalAccountId",
           "description": "Present with `vta-account`."
@@ -287,6 +302,13 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
       "maxLength": 64,
       "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$",
       "description": "The identifier of an external account held by the community's VTA (the external/accounts/* family), which issues the community short-lived, room-scoped credentials and holds the long-lived authority itself."
+    },
+    "ExternalAccountContextId": {
+      "title": "ExternalAccountContextId",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "The context at the community's VTA that owns an external account. The VTA names an account by its context and its identifier, and decides who may use it by act scope in that context: the community must hold `external-auth-use` there, and be bound to the account, for the account to issue it anything. Naming a context grants nothing; the VTA's binding is the gate."
     },
     "DigestMultibase": {
       "title": "DigestMultibase",

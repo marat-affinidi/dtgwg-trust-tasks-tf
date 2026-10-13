@@ -8,7 +8,7 @@
 use trust_tasks_rs::specs::vtc::storage::configs::create::v0_1 as spec;
 #[test]
 fn request_example_1() {
-    const JSON: &str = "{\n  \"id\": \"urn:uuid:00000000-0000-4000-8000-000000000001\",\n  \"type\": \"https://trusttasks.org/spec/vtc/storage/configs/create/0.1#request\",\n  \"issuer\": \"did:example:administrator\",\n  \"recipient\": \"did:example:community\",\n  \"issuedAt\": \"2026-10-10T10:00:00Z\",\n  \"threadId\": \"urn:uuid:00000000-0000-4000-8000-0000000008ff\",\n  \"payload\": {\n    \"id\": \"eu-s3-primary\",\n    \"label\": \"EU — S3 (main account)\",\n    \"settings\": {\n      \"kind\": \"s3\",\n      \"region\": \"eu-west-1\",\n      \"bucket\": \"northwind-rooms-eu\"\n    },\n    \"auth\": {\n      \"mode\": \"vta-account\",\n      \"account\": \"eu-s3-primary\"\n    },\n    \"capacityBytes\": 1099511627776,\n    \"reason\": \"Board rooms must stay in the EU.\"\n  }\n}\n";
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:00000000-0000-4000-8000-000000000001\",\n  \"type\": \"https://trusttasks.org/spec/vtc/storage/configs/create/0.1#request\",\n  \"issuer\": \"did:example:administrator\",\n  \"recipient\": \"did:example:community\",\n  \"issuedAt\": \"2026-10-10T10:00:00Z\",\n  \"threadId\": \"urn:uuid:00000000-0000-4000-8000-0000000008ff\",\n  \"payload\": {\n    \"id\": \"eu-s3-primary\",\n    \"label\": \"EU — S3 (main account)\",\n    \"settings\": {\n      \"kind\": \"s3\",\n      \"region\": \"eu-west-1\",\n      \"bucket\": \"northwind-rooms-eu\"\n    },\n    \"auth\": {\n      \"mode\": \"vta-account\",\n      \"context\": \"northwind\",\n      \"account\": \"eu-s3-primary\"\n    },\n    \"capacityBytes\": 1099511627776,\n    \"reason\": \"Board rooms must stay in the EU.\"\n  }\n}\n";
     let doc: trust_tasks_rs::TrustTask<spec::Payload> =
         serde_json::from_str(JSON).expect("deserialize request example");
     let rendered = serde_json::to_value(&doc).expect("re-serialize");
@@ -17,7 +17,7 @@ fn request_example_1() {
 }
 #[test]
 fn request_example_2() {
-    const JSON: &str = "{\n  \"id\": \"urn:uuid:00000000-0000-4000-8000-000000000002\",\n  \"type\": \"https://trusttasks.org/spec/vtc/storage/configs/create/0.1#request\",\n  \"issuer\": \"did:example:administrator\",\n  \"recipient\": \"did:example:community\",\n  \"issuedAt\": \"2026-10-10T10:00:00Z\",\n  \"threadId\": \"urn:uuid:00000000-0000-4000-8000-0000000008fe\",\n  \"payload\": {\n    \"id\": \"walrus-main\",\n    \"label\": \"Walrus — public ciphertext\",\n    \"settings\": {\n      \"kind\": \"walrus\",\n      \"relayUrl\": \"https://relay.walrus.example\",\n      \"aggregatorUrl\": \"https://aggregator.walrus.example\",\n      \"epochs\": 26,\n      \"extendBeforeEpochs\": 2\n    },\n    \"auth\": {\n      \"mode\": \"vta-account\",\n      \"account\": \"walrus-signer\"\n    },\n    \"reason\": \"For public-interest rooms that want replicated storage.\"\n  }\n}\n";
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:00000000-0000-4000-8000-000000000002\",\n  \"type\": \"https://trusttasks.org/spec/vtc/storage/configs/create/0.1#request\",\n  \"issuer\": \"did:example:administrator\",\n  \"recipient\": \"did:example:community\",\n  \"issuedAt\": \"2026-10-10T10:00:00Z\",\n  \"threadId\": \"urn:uuid:00000000-0000-4000-8000-0000000008fe\",\n  \"payload\": {\n    \"id\": \"walrus-main\",\n    \"label\": \"Walrus — public ciphertext\",\n    \"settings\": {\n      \"kind\": \"walrus\",\n      \"relayUrl\": \"https://relay.walrus.example\",\n      \"aggregatorUrl\": \"https://aggregator.walrus.example\",\n      \"epochs\": 26,\n      \"extendBeforeEpochs\": 2\n    },\n    \"auth\": {\n      \"mode\": \"vta-account\",\n      \"context\": \"northwind\",\n      \"account\": \"walrus-signer\"\n    },\n    \"reason\": \"For public-interest rooms that want replicated storage.\"\n  }\n}\n";
     let doc: trust_tasks_rs::TrustTask<spec::Payload> =
         serde_json::from_str(JSON).expect("deserialize request example");
     let rendered = serde_json::to_value(&doc).expect("re-serialize");
@@ -26,7 +26,7 @@ fn request_example_2() {
 }
 #[test]
 fn response_example_1() {
-    const JSON: &str = "{\n  \"id\": \"urn:uuid:00000000-0000-4000-8000-000000000003\",\n  \"type\": \"https://trusttasks.org/spec/vtc/storage/configs/create/0.1#response\",\n  \"issuer\": \"did:example:community\",\n  \"recipient\": \"did:example:administrator\",\n  \"issuedAt\": \"2026-10-10T10:00:01Z\",\n  \"threadId\": \"urn:uuid:00000000-0000-4000-8000-0000000008ff\",\n  \"payload\": {\n    \"config\": {\n      \"id\": \"eu-s3-primary\",\n      \"label\": \"EU — S3 (main account)\",\n      \"settings\": {\n        \"kind\": \"s3\",\n        \"region\": \"eu-west-1\",\n        \"bucket\": \"northwind-rooms-eu\"\n      },\n      \"auth\": {\n        \"mode\": \"vta-account\",\n        \"account\": \"eu-s3-primary\"\n      },\n      \"capacityBytes\": 1099511627776,\n      \"state\": \"active\",\n      \"isDefault\": false,\n      \"createdBy\": \"did:example:administrator\",\n      \"createdAt\": \"2026-10-01T09:00:00Z\"\n    }\n  }\n}\n";
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:00000000-0000-4000-8000-000000000003\",\n  \"type\": \"https://trusttasks.org/spec/vtc/storage/configs/create/0.1#response\",\n  \"issuer\": \"did:example:community\",\n  \"recipient\": \"did:example:administrator\",\n  \"issuedAt\": \"2026-10-10T10:00:01Z\",\n  \"threadId\": \"urn:uuid:00000000-0000-4000-8000-0000000008ff\",\n  \"payload\": {\n    \"config\": {\n      \"id\": \"eu-s3-primary\",\n      \"label\": \"EU — S3 (main account)\",\n      \"settings\": {\n        \"kind\": \"s3\",\n        \"region\": \"eu-west-1\",\n        \"bucket\": \"northwind-rooms-eu\"\n      },\n      \"auth\": {\n        \"mode\": \"vta-account\",\n        \"context\": \"northwind\",\n        \"account\": \"eu-s3-primary\"\n      },\n      \"capacityBytes\": 1099511627776,\n      \"state\": \"active\",\n      \"isDefault\": false,\n      \"createdBy\": \"did:example:administrator\",\n      \"createdAt\": \"2026-10-01T09:00:00Z\"\n    }\n  }\n}\n";
     let doc: trust_tasks_rs::TrustTask<spec::Response> =
         serde_json::from_str(JSON).expect("deserialize response example");
     let rendered = serde_json::to_value(&doc).expect("re-serialize");
@@ -49,11 +49,15 @@ fn rejects_invalid_examples() {
         ),
         (
             "vta-account authentication without the account.",
-            "{\n  \"auth\": {\n    \"mode\": \"vta-account\"\n  },\n  \"id\": \"eu-s3-primary\",\n  \"label\": \"EU\",\n  \"reason\": \"New bucket.\",\n  \"settings\": {\n    \"bucket\": \"northwind-rooms-eu\",\n    \"kind\": \"s3\",\n    \"region\": \"eu-west-1\"\n  }\n}",
+            "{\n  \"auth\": {\n    \"context\": \"northwind\",\n    \"mode\": \"vta-account\"\n  },\n  \"id\": \"eu-s3-primary\",\n  \"label\": \"EU\",\n  \"reason\": \"New bucket.\",\n  \"settings\": {\n    \"bucket\": \"northwind-rooms-eu\",\n    \"kind\": \"s3\",\n    \"region\": \"eu-west-1\"\n  }\n}",
+        ),
+        (
+            "vta-account authentication without the context that owns the account: the VTA names an account by both.",
+            "{\n  \"auth\": {\n    \"account\": \"eu-s3-primary\",\n    \"mode\": \"vta-account\"\n  },\n  \"id\": \"eu-s3-primary\",\n  \"label\": \"EU\",\n  \"reason\": \"New bucket.\",\n  \"settings\": {\n    \"bucket\": \"northwind-rooms-eu\",\n    \"kind\": \"s3\",\n    \"region\": \"eu-west-1\"\n  }\n}",
         ),
         (
             "A plain-HTTP Walrus relay.",
-            "{\n  \"auth\": {\n    \"account\": \"walrus-signer\",\n    \"mode\": \"vta-account\"\n  },\n  \"id\": \"walrus-main\",\n  \"label\": \"Walrus\",\n  \"reason\": \"Walrus.\",\n  \"settings\": {\n    \"aggregatorUrl\": \"https://aggregator.walrus.example\",\n    \"epochs\": 26,\n    \"extendBeforeEpochs\": 2,\n    \"kind\": \"walrus\",\n    \"relayUrl\": \"http://relay.walrus.example\"\n  }\n}",
+            "{\n  \"auth\": {\n    \"account\": \"walrus-signer\",\n    \"context\": \"northwind\",\n    \"mode\": \"vta-account\"\n  },\n  \"id\": \"walrus-main\",\n  \"label\": \"Walrus\",\n  \"reason\": \"Walrus.\",\n  \"settings\": {\n    \"aggregatorUrl\": \"https://aggregator.walrus.example\",\n    \"epochs\": 26,\n    \"extendBeforeEpochs\": 2,\n    \"kind\": \"walrus\",\n    \"relayUrl\": \"http://relay.walrus.example\"\n  }\n}",
         ),
         (
             "A relative local root.",

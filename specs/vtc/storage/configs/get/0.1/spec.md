@@ -119,6 +119,7 @@ The community answers with the sub-schema reachable via `$anchor: "response"`. A
       },
       "auth": {
         "mode": "vta-account",
+        "context": "northwind",
         "account": "eu-s3-primary"
       },
       "capacityBytes": 1099511627776,
@@ -134,6 +135,7 @@ The community answers with the sub-schema reachable via `$anchor: "response"`. A
       "pendingDeleteBytes": 9437184,
       "credential": {
         "status": "vta-account",
+        "context": "northwind",
         "account": "eu-s3-primary",
         "roomsHoldingCredentials": 3
       },
