@@ -277,6 +277,34 @@ Whether Dan, who is not a member, may hold `git.commit.sign` at all is the commu
 }
 ```
 
+### Carol, owner of a GitLab project two subgroups deep, lets Erin sign commits there
+
+`gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`: the repository path holds the subgroups `platform` and `tools` and the project `cli`. A grant on the subgroup `gitlab.com/acme/platform` itself would be refused, since a subgroup is not a resource.
+
+```json
+{
+  "id": "urn:uuid:3c1f7a52-8d0e-4b6a-9f2e-5a7d1c9e4b03",
+  "type": "https://trusttasks.org/spec/git-ns/right/grant/0.4",
+  "threadId": "urn:uuid:3c1f7a52-8d0e-4b6a-9f2e-5a7d1c9e4b03",
+  "issuer": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
+  "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
+  "issuedAt": "2026-10-13T09:00:00Z",
+  "payload": {
+    "subject": "did:webvh:QmErinScid5:acme-vtc.example:erin",
+    "right": "git.commit.sign",
+    "resource": "gitlab.com/acme/platform/tools/cli"
+  },
+  "proof": {
+    "type": "DataIntegrityProof",
+    "cryptosuite": "eddsa-jcs-2022",
+    "verificationMethod": "did:webvh:QmCarolScid3:acme-vtc.example:carol#key-1",
+    "created": "2026-10-13T09:00:00Z",
+    "proofPurpose": "authentication",
+    "proofValue": "z3FXQjecWufY46yg5abdVZsXqLhxhueuSoZgNSARiKBk9czhSePTFehP8c3PGfb6a22gkfUKKuxvFpXXHdXpLpVkj"
+  }
+}
+```
+
 ## Response
 
 The VTC, now responding, returns the record, per the sub-schema reachable via `$anchor: "response"` in [`payload.schema.json`](payload.schema.json). Refusals use `trust-task-error` with `permissionDenied` or one of this specification's codes.

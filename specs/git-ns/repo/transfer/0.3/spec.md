@@ -108,7 +108,7 @@ The owner sends the request to the VTC. See the top-level schema in [`payload.sc
 ```json
 {
   "id": "urn:uuid:71a75dfb-a35b-43b3-ab76-df9cbb52db01",
-  "type": "https://trusttasks.org/spec/git-ns/repo/transfer/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/repo/transfer/0.3",
   "threadId": "urn:uuid:71a75dfb-a35b-43b3-ab76-df9cbb52db01",
   "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",

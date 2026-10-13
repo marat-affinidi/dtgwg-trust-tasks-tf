@@ -113,7 +113,7 @@ The actor sends the request to the VTC. See the top-level schema in [`payload.sc
 ```json
 {
   "id": "urn:uuid:dfc51dc9-7f8e-497d-a198-3b85a75c6a01",
-  "type": "https://trusttasks.org/spec/git-ns/repo/adopt/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/repo/adopt/0.3",
   "threadId": "urn:uuid:dfc51dc9-7f8e-497d-a198-3b85a75c6a01",
   "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
@@ -132,6 +132,35 @@ The actor sends the request to the VTC. See the top-level schema in [`payload.sc
     "created": "2026-09-23T10:00:00Z",
     "proofPurpose": "authentication",
     "proofValue": "zLnCQGPuHG1wbA87XMKy7riryLHbPdwqoTSxN2DXECSFEEyPBkDU8UCc1epQdPWxM33xrr9PbbsJe7jGC1fXuqF"
+  }
+}
+```
+
+### Adopting a GitLab project that sits in subgroups
+
+A project under subgroups is adopted at its full path; it belongs to the namespace of its top-level group, `gitlab.com/acme`.
+
+```json
+{
+  "id": "urn:uuid:8b2e4d17-6c3a-4f59-a1d0-7e9c5b3f2a16",
+  "type": "https://trusttasks.org/spec/git-ns/repo/adopt/0.3",
+  "threadId": "urn:uuid:8b2e4d17-6c3a-4f59-a1d0-7e9c5b3f2a16",
+  "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
+  "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
+  "issuedAt": "2026-10-13T08:30:00Z",
+  "payload": {
+    "resource": "gitlab.com/acme/platform/tools/cli",
+    "owners": [
+      "did:webvh:QmCarolScid3:acme-vtc.example:carol"
+    ]
+  },
+  "proof": {
+    "type": "DataIntegrityProof",
+    "cryptosuite": "eddsa-jcs-2022",
+    "verificationMethod": "did:webvh:QmAliceScid1:acme-vtc.example:alice#key-1",
+    "created": "2026-10-13T08:30:00Z",
+    "proofPurpose": "authentication",
+    "proofValue": "z4ma7bNz5S6fHPaHDYyXhpmkLiSaqRw8ZQ4WGW1VR6BpX5qEcLJMaJ9X3wRv8fNYHq3pAAdJsC8kXZb2ytT5Ufmm"
   }
 }
 ```

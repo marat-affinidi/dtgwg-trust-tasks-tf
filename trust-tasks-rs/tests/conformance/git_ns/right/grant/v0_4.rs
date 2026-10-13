@@ -24,6 +24,15 @@ fn request_example_2() {
     let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
     assert_eq!(rendered, expected, "request example failed round-trip");
 }
+#[test]
+fn request_example_3() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:3c1f7a52-8d0e-4b6a-9f2e-5a7d1c9e4b03\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/right/grant/0.4\",\n  \"threadId\": \"urn:uuid:3c1f7a52-8d0e-4b6a-9f2e-5a7d1c9e4b03\",\n  \"issuer\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol\",\n  \"recipient\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"issuedAt\": \"2026-10-13T09:00:00Z\",\n  \"payload\": {\n    \"subject\": \"did:webvh:QmErinScid5:acme-vtc.example:erin\",\n    \"right\": \"git.commit.sign\",\n    \"resource\": \"gitlab.com/acme/platform/tools/cli\"\n  },\n  \"proof\": {\n    \"type\": \"DataIntegrityProof\",\n    \"cryptosuite\": \"eddsa-jcs-2022\",\n    \"verificationMethod\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol#key-1\",\n    \"created\": \"2026-10-13T09:00:00Z\",\n    \"proofPurpose\": \"authentication\",\n    \"proofValue\": \"z3FXQjecWufY46yg5abdVZsXqLhxhueuSoZgNSARiKBk9czhSePTFehP8c3PGfb6a22gkfUKKuxvFpXXHdXpLpVkj\"\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Payload> =
+        serde_json::from_str(JSON).expect("deserialize request example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "request example failed round-trip");
+}
 /// Each fixture in `payload.invalid-examples.json` MUST be
 /// rejected by at least one of: serde deserialization, or
 /// JSON-Schema validation under the `validate` feature. The
@@ -77,6 +86,22 @@ fn rejects_invalid_examples() {
         (
             "`subject` is a DID, whose method name is lowercase letters and digits only; `did:WebVH:` is not `did:webvh:`, and DIDs are compared by exact string.",
             "{\n  \"resource\": \"github.com/acme/widgets\",\n  \"right\": \"git.commit.sign\",\n  \"subject\": \"did:WebVH:QmBobScid2:acme-vtc.example:bob\"\n}",
+        ),
+        (
+            "A repository path has at most 21 segments (GitLab: 20 levels of subgroup and the project); this one has 22.",
+            "{\n  \"resource\": \"gitlab.com/acme/g1/g2/g3/g4/g5/g6/g7/g8/g9/g10/g11/g12/g13/g14/g15/g16/g17/g18/g19/g20/g21/cli\",\n  \"right\": \"git.commit.sign\",\n  \"subject\": \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n}",
+        ),
+        (
+            "A segment is at most 255 characters, the longest name GitLab allows.",
+            "{\n  \"resource\": \"gitlab.com/acme/platform/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"right\": \"git.commit.sign\",\n  \"subject\": \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n}",
+        ),
+        (
+            "Every segment of a repository path is non-empty: no doubled `/`.",
+            "{\n  \"resource\": \"gitlab.com/acme/platform//cli\",\n  \"right\": \"git.commit.sign\",\n  \"subject\": \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n}",
+        ),
+        (
+            "No segment of a repository path starts with `.`, which rules out `.` and `..` at every depth.",
+            "{\n  \"resource\": \"gitlab.com/acme/.platform/cli\",\n  \"right\": \"git.commit.sign\",\n  \"subject\": \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n}",
         ),
     ];
     for (i, (note, raw)) in fixtures.iter().enumerate() {

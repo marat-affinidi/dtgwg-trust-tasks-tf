@@ -6,6 +6,15 @@
 //! `git-ns/repo/transfer/0.3`
 #[allow(unused_imports)]
 use trust_tasks_rs::specs::git_ns::repo::transfer::v0_3 as spec;
+#[test]
+fn request_example_1() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:71a75dfb-a35b-43b3-ab76-df9cbb52db01\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/repo/transfer/0.3\",\n  \"threadId\": \"urn:uuid:71a75dfb-a35b-43b3-ab76-df9cbb52db01\",\n  \"issuer\": \"did:webvh:QmAliceScid1:acme-vtc.example:alice\",\n  \"recipient\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"issuedAt\": \"2026-09-23T10:00:00Z\",\n  \"payload\": {\n    \"resource\": \"github.com/acme/widgets\",\n    \"to\": \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n  },\n  \"proof\": {\n    \"type\": \"DataIntegrityProof\",\n    \"cryptosuite\": \"eddsa-jcs-2022\",\n    \"verificationMethod\": \"did:webvh:QmAliceScid1:acme-vtc.example:alice#key-1\",\n    \"created\": \"2026-09-23T10:00:00Z\",\n    \"proofPurpose\": \"authentication\",\n    \"proofValue\": \"zTMFRSHsScYJV8oiMWKqHeXQ9eCjdAirGE9ANQGgue74WuCj6D6VMSoL6wGqy6x6PWtPy4WcTAcQLcSSefc8irf\"\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Payload> =
+        serde_json::from_str(JSON).expect("deserialize request example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "request example failed round-trip");
+}
 /// Each fixture in `payload.invalid-examples.json` MUST be
 /// rejected by at least one of: serde deserialization, or
 /// JSON-Schema validation under the `validate` feature. The

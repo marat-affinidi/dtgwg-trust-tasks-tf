@@ -6,6 +6,24 @@
 //! `git-ns/repo/adopt/0.3`
 #[allow(unused_imports)]
 use trust_tasks_rs::specs::git_ns::repo::adopt::v0_3 as spec;
+#[test]
+fn request_example_1() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:dfc51dc9-7f8e-497d-a198-3b85a75c6a01\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/repo/adopt/0.3\",\n  \"threadId\": \"urn:uuid:dfc51dc9-7f8e-497d-a198-3b85a75c6a01\",\n  \"issuer\": \"did:webvh:QmAliceScid1:acme-vtc.example:alice\",\n  \"recipient\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"issuedAt\": \"2026-09-23T10:00:00Z\",\n  \"payload\": {\n    \"resource\": \"github.com/acme/widgets\",\n    \"owners\": [\n      \"did:webvh:QmAliceScid1:acme-vtc.example:alice\",\n      \"did:webvh:QmCarolScid3:acme-vtc.example:carol\"\n    ]\n  },\n  \"proof\": {\n    \"type\": \"DataIntegrityProof\",\n    \"cryptosuite\": \"eddsa-jcs-2022\",\n    \"verificationMethod\": \"did:webvh:QmAliceScid1:acme-vtc.example:alice#key-1\",\n    \"created\": \"2026-09-23T10:00:00Z\",\n    \"proofPurpose\": \"authentication\",\n    \"proofValue\": \"zLnCQGPuHG1wbA87XMKy7riryLHbPdwqoTSxN2DXECSFEEyPBkDU8UCc1epQdPWxM33xrr9PbbsJe7jGC1fXuqF\"\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Payload> =
+        serde_json::from_str(JSON).expect("deserialize request example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "request example failed round-trip");
+}
+#[test]
+fn request_example_2() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:8b2e4d17-6c3a-4f59-a1d0-7e9c5b3f2a16\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/repo/adopt/0.3\",\n  \"threadId\": \"urn:uuid:8b2e4d17-6c3a-4f59-a1d0-7e9c5b3f2a16\",\n  \"issuer\": \"did:webvh:QmAliceScid1:acme-vtc.example:alice\",\n  \"recipient\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"issuedAt\": \"2026-10-13T08:30:00Z\",\n  \"payload\": {\n    \"resource\": \"gitlab.com/acme/platform/tools/cli\",\n    \"owners\": [\n      \"did:webvh:QmCarolScid3:acme-vtc.example:carol\"\n    ]\n  },\n  \"proof\": {\n    \"type\": \"DataIntegrityProof\",\n    \"cryptosuite\": \"eddsa-jcs-2022\",\n    \"verificationMethod\": \"did:webvh:QmAliceScid1:acme-vtc.example:alice#key-1\",\n    \"created\": \"2026-10-13T08:30:00Z\",\n    \"proofPurpose\": \"authentication\",\n    \"proofValue\": \"z4ma7bNz5S6fHPaHDYyXhpmkLiSaqRw8ZQ4WGW1VR6BpX5qEcLJMaJ9X3wRv8fNYHq3pAAdJsC8kXZb2ytT5Ufmm\"\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Payload> =
+        serde_json::from_str(JSON).expect("deserialize request example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "request example failed round-trip");
+}
 /// Each fixture in `payload.invalid-examples.json` MUST be
 /// rejected by at least one of: serde deserialization, or
 /// JSON-Schema validation under the `validate` feature. The
@@ -47,6 +65,18 @@ fn rejects_invalid_examples() {
         (
             "Each of `owners` is a DID, whose method name is lowercase letters and digits only; `did:WebVH:` is not `did:webvh:`, and DIDs are compared by exact string.",
             "{\n  \"owners\": [\n    \"did:WebVH:QmBobScid2:acme-vtc.example:bob\"\n  ],\n  \"resource\": \"github.com/acme/widgets\"\n}",
+        ),
+        (
+            "A repository path has at most 21 segments (GitLab: 20 levels of subgroup and the project); this one has 22.",
+            "{\n  \"owners\": [\n    \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n  ],\n  \"resource\": \"gitlab.com/acme/g1/g2/g3/g4/g5/g6/g7/g8/g9/g10/g11/g12/g13/g14/g15/g16/g17/g18/g19/g20/g21/cli\"\n}",
+        ),
+        (
+            "A segment is at most 255 characters, the longest name GitLab allows.",
+            "{\n  \"owners\": [\n    \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n  ],\n  \"resource\": \"gitlab.com/acme/platform/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n}",
+        ),
+        (
+            "Every segment of a repository path is non-empty: no doubled `/`.",
+            "{\n  \"owners\": [\n    \"did:webvh:QmBobScid2:acme-vtc.example:bob\"\n  ],\n  \"resource\": \"gitlab.com/acme/platform//cli\"\n}",
         ),
     ];
     for (i, (note, raw)) in fixtures.iter().enumerate() {

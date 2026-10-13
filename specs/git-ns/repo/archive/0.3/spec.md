@@ -106,7 +106,7 @@ This specification defines no task that reverses an archive. A repository unarch
 ```json
 {
   "id": "urn:uuid:201fbb2f-2ce8-495b-a1be-a9d86a385301",
-  "type": "https://trusttasks.org/spec/git-ns/repo/archive/0.1",
+  "type": "https://trusttasks.org/spec/git-ns/repo/archive/0.3",
   "threadId": "urn:uuid:201fbb2f-2ce8-495b-a1be-a9d86a385301",
   "issuer": "did:webvh:QmAliceScid1:acme-vtc.example:alice",
   "recipient": "did:webvh:QmVtcScid7:acme-vtc.example",
