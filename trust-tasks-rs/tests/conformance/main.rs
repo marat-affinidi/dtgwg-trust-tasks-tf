@@ -1129,6 +1129,9 @@ mod rooms {
             mod create {
                 mod v0_1;
             }
+            mod remove {
+                mod v0_1;
+            }
         }
         mod invite {
             mod v0_1;
@@ -1667,9 +1670,11 @@ mod vtc {
         mod events {
             mod event {
                 mod v0_1;
+                mod v0_2;
             }
             mod subscribe {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod invites {
@@ -2028,6 +2033,28 @@ mod vtc {
         }
     }
     mod rooms {
+        mod community {
+            mod create {
+                mod v0_1;
+            }
+            mod get {
+                mod v0_1;
+            }
+            mod list {
+                mod v0_1;
+            }
+            mod members {
+                mod add {
+                    mod v0_1;
+                }
+                mod list {
+                    mod v0_1;
+                }
+                mod remove {
+                    mod v0_1;
+                }
+            }
+        }
         mod get {
             mod v0_1;
         }
@@ -2038,6 +2065,14 @@ mod vtc {
         }
         mod list {
             mod v0_1;
+        }
+        mod offers {
+            mod accept {
+                mod v0_1;
+            }
+            mod list {
+                mod v0_1;
+            }
         }
         mod storage {
             mod assign {
