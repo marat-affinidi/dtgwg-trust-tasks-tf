@@ -1921,6 +1921,9 @@ mod vtc {
         mod purge {
             mod v0_1;
         }
+        mod registry_consent {
+            mod v0_1;
+        }
         mod removal_notice {
             mod v0_1;
         }
