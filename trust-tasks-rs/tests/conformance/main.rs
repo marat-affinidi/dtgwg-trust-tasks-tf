@@ -1104,6 +1104,14 @@ mod rooms {
             mod v0_1;
             mod v0_2;
         }
+        mod profile {
+            mod read {
+                mod v0_1;
+            }
+            mod write {
+                mod v0_1;
+            }
+        }
         mod read {
             mod v0_1;
         }
@@ -2078,6 +2086,7 @@ mod vtc {
             mod create {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod get {
                 mod v0_1;
@@ -2101,6 +2110,7 @@ mod vtc {
             }
             mod update {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod get {
