@@ -1639,12 +1639,15 @@ mod vta {
     mod witness {
         mod accept {
             mod v0_1;
+            mod v0_2;
         }
         mod open {
             mod v0_1;
+            mod v0_2;
         }
         mod present {
             mod v0_1;
+            mod v0_2;
         }
         mod request {
             mod v0_1;
@@ -1910,6 +1913,7 @@ mod vtc {
         mod personhood {
             mod assert {
                 mod v0_1;
+                mod v0_2;
             }
             mod challenge {
                 mod v0_1;
@@ -2304,7 +2308,9 @@ mod witness {
     mod session {
         mod submit {
             mod v0_1;
+            mod v0_2;
         }
         mod v0_1;
+        mod v0_2;
     }
 }
