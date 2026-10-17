@@ -1786,6 +1786,14 @@ mod vtc {
                 mod v0_1;
             }
         }
+        mod theme {
+            mod show {
+                mod v0_1;
+            }
+            mod update {
+                mod v0_1;
+            }
+        }
     }
     mod config {
         mod export {
