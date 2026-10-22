@@ -1281,6 +1281,9 @@ mod vault {
         mod get {
             mod v0_1;
         }
+        mod present {
+            mod v0_1;
+        }
         mod purge {
             mod v0_1;
         }
