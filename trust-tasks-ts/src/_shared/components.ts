@@ -2277,50 +2277,6 @@ export interface AcceptsCriterion_VtcV0_2 {
   createdByDid: string;
 }
 /**
- * The mediator's view of one served account.
- */
-export interface Account {
-  /**
-   * The account's controlling DID, or — for privacy, and for mediators that key accounts by a one-way hash and never hold the full DID — a stable hash of that DID (see `Vid`). Whichever form is used, it is the opaque account identifier the other `account/*`, `acl/*`, and `access-list/*` tasks accept.
-   */
-  did: Vid;
-  accountType: AccountType;
-  acl: MediatorAcl;
-  queueLimits?: QueueLimits;
-  /**
-   * Current count of queued send messages.
-   */
-  sendQueueCount?: number;
-  /**
-   * Current byte size of queued send messages.
-   */
-  sendQueueBytes?: number;
-  /**
-   * Current count of queued receive messages.
-   */
-  receiveQueueCount?: number;
-  /**
-   * Current byte size of queued receive messages.
-   */
-  receiveQueueBytes?: number;
-  /**
-   * Number of entries in the account's access list.
-   */
-  accessListCount?: number;
-  /**
-   * Unix epoch seconds at which the mediator last accepted a message addressed to this account. Present only when the request set `includeActivity` and the mediator has recorded such a message; MAY lag the true time by up to 60 seconds.
-   */
-  lastReceivedAt?: number;
-  /**
-   * Unix epoch seconds at which this account last completed authentication with the mediator, over any transport. Present only when the request set `includeActivity` and the mediator has recorded an authentication.
-   */
-  lastAuthenticatedAt?: number;
-  /**
-   * Lifetime counters the mediator keeps for this account. Present only when the request set `includeStats`.
-   */
-  stats?: AccountStats;
-}
-/**
  * Who may use an account, and how far. One binding per consumer per account. A binding is checked before anything is signed: the caller must be `consumer`, proven by the request's own proof; the request must sit inside `scopeCeiling`; its TTL must not exceed `maxTtlSeconds`; and the binding's rate must not be exhausted.
  */
 export interface AccountBinding {
@@ -4005,6 +3961,94 @@ export interface AccountStats {
    */
   sentByProtocol?: ProtocolCounts;
 }
+/**
+ * The mediator's view of one served account.
+ */
+export interface Account_MessagingV0_1 {
+  /**
+   * The account's controlling DID, or — for privacy, and for mediators that key accounts by a one-way hash and never hold the full DID — a stable hash of that DID (see `Vid`). Whichever form is used, it is the opaque account identifier the other `account/*`, `acl/*`, and `access-list/*` tasks accept.
+   */
+  did: Vid;
+  accountType: AccountType;
+  acl: MediatorAcl;
+  queueLimits?: QueueLimits;
+  /**
+   * Current count of queued send messages.
+   */
+  sendQueueCount?: number;
+  /**
+   * Current byte size of queued send messages.
+   */
+  sendQueueBytes?: number;
+  /**
+   * Current count of queued receive messages.
+   */
+  receiveQueueCount?: number;
+  /**
+   * Current byte size of queued receive messages.
+   */
+  receiveQueueBytes?: number;
+  /**
+   * Number of entries in the account's access list.
+   */
+  accessListCount?: number;
+  /**
+   * Unix epoch seconds at which the mediator last accepted a message addressed to this account. Present only when the request set `includeActivity` and the mediator has recorded such a message; MAY lag the true time by up to 60 seconds.
+   */
+  lastReceivedAt?: number;
+  /**
+   * Unix epoch seconds at which this account last completed authentication with the mediator, over any transport. Present only when the request set `includeActivity` and the mediator has recorded an authentication.
+   */
+  lastAuthenticatedAt?: number;
+  /**
+   * Lifetime counters the mediator keeps for this account. Present only when the request set `includeStats`.
+   */
+  stats?: AccountStats;
+}
+/**
+ * The mediator's view of one served account.
+ */
+export interface Account_MessagingV0_2 {
+  /**
+   * The account's controlling DID, or — for privacy, and for mediators that key accounts by a one-way hash and never hold the full DID — a stable hash of that DID (see `Vid`). Whichever form is used, it is the opaque account identifier the other `account/*`, `acl/*`, and `access-list/*` tasks accept.
+   */
+  did: Vid;
+  accountType: AccountType;
+  acl: MediatorAcl;
+  queueLimits?: QueueLimits;
+  /**
+   * Current count of queued send messages.
+   */
+  sendQueueCount?: number;
+  /**
+   * Current byte size of queued send messages.
+   */
+  sendQueueBytes?: number;
+  /**
+   * Current count of queued receive messages.
+   */
+  receiveQueueCount?: number;
+  /**
+   * Current byte size of queued receive messages.
+   */
+  receiveQueueBytes?: number;
+  /**
+   * Number of entries in the account's access list.
+   */
+  accessListCount?: number;
+  /**
+   * The instant at which the mediator last accepted a message addressed to this account. Present only when the request set `includeActivity` and the mediator has recorded such a message; MAY lag the true time by up to 60 seconds.
+   */
+  lastReceivedAt?: string;
+  /**
+   * The instant at which this account last completed authentication with the mediator, over any transport. Present only when the request set `includeActivity` and the mediator has recorded an authentication.
+   */
+  lastAuthenticatedAt?: string;
+  /**
+   * Lifetime counters the mediator keeps for this account. Present only when the request set `includeStats`.
+   */
+  stats?: AccountStats;
+}
 export interface AclChangedEvent_SyncV0_1 {
   kind: "acl.changed";
   seq: number;
@@ -4482,7 +4526,7 @@ export interface AdmittedMembership {
 /**
  * An agent name bound to a DID. A name is only ever authoritative in the DID→name direction: the DID document's `alsoKnownAs` is what proves the binding, because anyone controlling a domain can point a name at somebody else's DID.
  */
-export interface AgentNameEntry {
+export interface AgentNameEntry_VtaV0_1 {
   /**
    * The name, without the host — the full form is `<host>/@<name>`.
    */
@@ -4495,6 +4539,24 @@ export interface AgentNameEntry {
    * Unix epoch seconds.
    */
   createdAt?: number;
+  ext?: Ext;
+}
+/**
+ * An agent name bound to a DID. A name is only ever authoritative in the DID→name direction: the DID document's `alsoKnownAs` is what proves the binding, because anyone controlling a domain can point a name at somebody else's DID.
+ */
+export interface AgentNameEntry_VtaV0_7 {
+  /**
+   * The name, without the host — the full form is `<host>/@<name>`.
+   */
+  name: string;
+  /**
+   * Whether the name currently resolves. A disabled name is still held — it is not available for anyone else to take.
+   */
+  enabled: boolean;
+  /**
+   * When the entry was created (RFC 3339).
+   */
+  createdAt?: string;
   ext?: Ext;
 }
 /**
@@ -5516,7 +5578,7 @@ export interface CommunityProfileView {
  * One room the community owns, as its administrators see it.
  */
 export interface CommunityRoom {
-  room: HostedRoom;
+  room: HostedRoom_VtcV0_1;
   label: RoomLabel;
   /**
    * The storage config receiving the room's new uploads.
@@ -5542,8 +5604,51 @@ export interface CommunityRoom {
 /**
  * What vtc/rooms/community/{create,get,list}/0.2 and vtc/rooms/community/update/0.1 return: `CommunityRoom` plus the details an administrator keeps track of a room by — `description`, `tags`, and who last changed them and when. A separate definition, not a change to `CommunityRoom`, so that the 0.1 versions of those tasks keep the exact shape they published. The room's creation is `room.createdAt` and `createdBy`.
  */
-export interface CommunityRoomV2 {
-  room: HostedRoom;
+export interface CommunityRoomV2_VtcV0_1 {
+  room: HostedRoom_VtcV0_1;
+  label: RoomLabel;
+  /**
+   * Absent when the room has none.
+   */
+  description?: RoomDescription;
+  /**
+   * Absent or empty when the room has none.
+   */
+  tags?: RoomTags;
+  /**
+   * The storage config receiving the room's new uploads.
+   */
+  storageConfig?: StorageConfigId;
+  /**
+   * Members in state `admitted`.
+   */
+  admitted: number;
+  /**
+   * Offers not yet accepted or withdrawn.
+   */
+  offered: number;
+  /**
+   * When the community's own `admin` authority over the room expires. A room whose owner's authority lapses can no longer advance its epoch, admit or remove; a community SHOULD renew it well before.
+   */
+  ownerAuthorityValidUntil?: string;
+  /**
+   * The administrator who created it.
+   */
+  createdBy?: string;
+  /**
+   * When `label`, `description` or `tags` last changed. Absent until the first change after creation. Distinct from `room.updatedAt`, which is the host record's and moves with the room's epoch and lifecycle.
+   */
+  detailsUpdatedAt?: string;
+  /**
+   * The administrator who made that change. Present exactly when `detailsUpdatedAt` is. The earlier values and who set them are in the community's audit trail, not here.
+   */
+  detailsUpdatedBy?: string;
+}
+/**
+ * What vtc/rooms/community/{create,get,list}/0.2 and vtc/rooms/community/update/0.1 return: `CommunityRoom` plus the details an administrator keeps track of a room by — `description`, `tags`, and who last changed them and when. A separate definition, not a change to `CommunityRoom`, so that the 0.1 versions of those tasks keep the exact shape they published. The room's creation is `room.createdAt` and `createdBy`.
+ */
+export interface CommunityRoomV2_VtcV0_3 {
+  room: HostedRoom_VtcV0_3;
   label: RoomLabel;
   /**
    * Absent when the room has none.
@@ -6415,6 +6520,69 @@ export interface DidTemplateRecord_VtaV0_2 {
    * UTC unix-epoch seconds of the last write.
    */
   updatedAt: number;
+  /**
+   * DID of the admin who last wrote the template.
+   */
+  createdBy: string;
+}
+/**
+ * A persisted template. The DidTemplate fields are flattened at the top level alongside the resolved scope and provenance metadata. Same shape returned by get/create/update and carried per-item by list.
+ */
+export interface DidTemplateRecord_VtaV0_7 {
+  /**
+   * Template schema version. 1 is the historical shape, whose keys are implicitly an Ed25519 signing key and an X25519 key-agreement key. 2 adds the `keys` block, which makes those explicit and allows others.
+   */
+  schemaVersion: 1 | 2;
+  name: string;
+  kind: string;
+  description?: string | null;
+  methods?: string[];
+  requiredVars?: string[];
+  optionalVars?: {
+    [k: string]: unknown | undefined;
+  };
+  defaults?: {
+    [k: string]: unknown | undefined;
+  };
+  /**
+   * The keys this template needs, by slot name. REQUIRES `schemaVersion` 2.
+   *
+   * A slot's name becomes a document placeholder by an explicit rule — uppercase, `-` to `_`, suffix `_KEY_MB` — so slot `signing` is rendered into `{SIGNING_KEY_MB}` and slot `ka` into `{KA_KEY_MB}`. Those are the two names a `schemaVersion` 1 template already uses, which is deliberate: a v1 template is exactly a v2 template whose `keys` block is `{signing: [ed25519], ka: [x25519]}`, so an implementation can read both through one path and raising the version cannot change how a v1 template renders.
+   *
+   * An implementation MUST refuse a template that declares a slot whose placeholder never appears in `document` — the key would be minted and never published, so verifiers would continue to see only the keys that are, while the operator believes the template migrated. It MUST likewise refuse a slot placeholder in `document` that no slot declares, which would render as an unsubstituted literal.
+   */
+  keys?: {
+    [k: string]:
+      | {
+          /**
+           * What the key is for. Deliberately coarser than DID Core's five verification relationships: the template says what the key is, and the `document` body says where it appears. Encoding the relationship here as well would let the two disagree.
+           */
+          purpose: "signing" | "keyAgreement";
+          /**
+           * Acceptable algorithms, MOST PREFERRED FIRST. A list rather than a single value because a fleet does not migrate atomically: `["mldsa44", "ed25519"]` means mint ML-DSA-44 where the implementation can and Ed25519 otherwise, so one template serves a VTA with post-quantum support and one without. An implementation MUST NOT substitute an algorithm absent from this list; running out of candidates is an error, never a silent downgrade — a deployment intended to be post-quantum would otherwise ship classical keys with nothing reporting it. `minItems: 1` for the same reason: an empty list would express no preference and inherit whatever the implementation defaulted to.
+           *
+           * @minItems 1
+           */
+          algorithms: [
+            "ed25519" | "x25519" | "p256" | "mldsa44" | "mldsa65",
+            ...("ed25519" | "x25519" | "p256" | "mldsa44" | "mldsa65")[]
+          ];
+        }
+      | undefined;
+  };
+  document: {};
+  /**
+   * Resolved scope of the stored template.
+   */
+  scope: Scope_VtaV0_1;
+  /**
+   * When the template was first stored (RFC 3339).
+   */
+  createdAt: string;
+  /**
+   * When the template was last written (RFC 3339).
+   */
+  updatedAt: string;
   /**
    * DID of the admin who last wrote the template.
    */
@@ -7697,7 +7865,7 @@ export interface HistogramBucket {
 /**
  * One room, as its host holds it — member for member the `HostedRoom` of vtc/rooms/list/0.1, which defines it inside its own payload schema. Nothing derived from the room's contents, and no member list: the host has none.
  */
-export interface HostedRoom {
+export interface HostedRoom_VtcV0_1 {
   roomId: string;
   ownerDid: string;
   visibility: Visibility;
@@ -7709,6 +7877,22 @@ export interface HostedRoom {
   mirrorOf?: string;
   createdAt: number;
   updatedAt: number;
+}
+/**
+ * One room, as its host holds it — member for member the `HostedRoom` of vtc/rooms/list/0.2, which defines it inside its own payload schema. Nothing derived from the room's contents, and no member list: the host has none.
+ */
+export interface HostedRoom_VtcV0_3 {
+  roomId: string;
+  ownerDid: string;
+  visibility: Visibility;
+  retentionPolicy: RetentionPolicy;
+  epoch: number;
+  lifecycle: "live" | "lapsed" | "dormant" | "reclaimable";
+  epochExpiresAt?: string;
+  retentionDays: number;
+  mirrorOf?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 /**
  * OpenPGP-style ASCII-armored HPKE bundle — the existing OpenVTC sealed-transfer wire form (X25519-HKDF-SHA256 KEM + ChaCha20-Poly1305 AEAD, framed in armor with Bundle-Id / Digest-Algo headers and a CRC24 checksum). Producer assertion (`did-signed` / `attested` / `pinned-only`) is the integrity / authenticity anchor.
@@ -12125,7 +12309,7 @@ export interface WitnessKey {
 /**
  * The outcome of one write within a `vta/app-state/put-many` batch. Per-record rather than per-batch, because the default batch mode applies each write on its own merits: a caller flushing ten unrelated edits needs to know which one conflicted, not merely that something did.
  */
-export interface WriteResult {
+export interface WriteResult_VtaV0_1 {
   key: Key_VtaV0_1;
   /**
    * `written`: applied, and `version` carries the new value. `conflict`: `expectedVersion` did not match; `currentVersion`, `currentValue` and `currentDeleted` carry the maintainer's view so the caller can resolve without a re-read. `tooLarge`: the value exceeded the per-record cap; `limitBytes` and `actualBytes` say by how much. `notFound`: a `mergePatch` write named an address with no live record. `skipped`: atomic mode only — this write was not attempted because another in the batch failed.
@@ -12139,6 +12323,46 @@ export interface WriteResult {
    * On `written`: true when no live record existed at the address beforehand.
    */
   created?: boolean;
+  /**
+   * On `conflict`: the version the maintainer actually holds. Absent when the conflict is that no record exists (`expectedVersion` was positive and the address is empty).
+   */
+  currentVersion?: Version_VtaV0_1;
+  /**
+   * On `conflict`: the value the maintainer actually holds, returned WITH the rejection rather than left for the caller to re-read. A bare rejection has no fixed point under contention — between the rejection and the re-read the record can change again — so returning the winner's view removes the race rather than narrowing it. Absent when `currentDeleted` is true or no record exists.
+   */
+  currentValue?: {
+    [k: string]: unknown | undefined;
+  };
+  /**
+   * On `conflict`: true when the address holds a tombstone rather than a live record.
+   */
+  currentDeleted?: boolean;
+  /**
+   * On `tooLarge`: the maintainer's per-record cap in bytes.
+   */
+  limitBytes?: number;
+  /**
+   * On `tooLarge`: the size of the rejected value in bytes.
+   */
+  actualBytes?: number;
+}
+/**
+ * The outcome of one write within a `vta/app-state/put-many` batch. Per-record rather than per-batch, because the default batch mode applies each write on its own merits: a caller flushing ten unrelated edits needs to know which one conflicted, not merely that something did.
+ */
+export interface WriteResult_VtaV0_7 {
+  key: Key_VtaV0_1;
+  /**
+   * `written`: applied, and `version` carries the new value. `conflict`: `expectedVersion` did not match; `currentVersion`, `currentValue` and `currentDeleted` carry the maintainer's view so the caller can resolve without a re-read. `tooLarge`: the value exceeded the per-record cap; `limitBytes` and `actualBytes` say by how much. `notFound`: a `mergePatch` write named an address with no live record. `skipped`: atomic mode only — this write was not attempted because another in the batch failed.
+   */
+  outcome: "written" | "conflict" | "tooLarge" | "notFound" | "skipped";
+  /**
+   * The new version, on `written`.
+   */
+  version?: Version_VtaV0_1;
+  /**
+   * On `written`: true when no live record existed at the address beforehand.
+   */
+  wasCreated?: boolean;
   /**
    * On `conflict`: the version the maintainer actually holds. Absent when the conflict is that no record exists (`expectedVersion` was positive and the address is empty).
    */
