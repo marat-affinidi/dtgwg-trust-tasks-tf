@@ -11,6 +11,1771 @@ The package versions over **its own API** — what a consumer compiles against �
 not over `SPEC.md`. Below 1.0 a breaking change bumps the leading non-zero
 component.
 
+## 0.27.3 — 2026-10-23
+
+## 0.27.2 — 2026-10-22
+
+
+### Added
+
+- **vault/credentials/present**: Present a held credential to a verifier the client names, bound to its nonce, disclosing only the named claims (#871)
+
+* feat(vault/credentials/present): present a held credential to a verifier the client names, bound to its nonce, disclosing only the named claims
+
+  A client that holds no holder key (a browser wallet, a phone) could not
+  carry a presentation to a verifier that takes one inside its own request
+  document, such as vtc/directory/card/present: credential-exchange/present
+  answers only a verifier that asks the agent. The maintainer now signs as the
+  credential's subject for a named audience and nonce, refuses over-disclosure
+  of a credential without selective disclosure (wouldOverDisclose), records the
+  disclosure before answering, and conflates custody failures as notFound.
+
+- **vta/webvh/dids/create**: 1.2 chooses the did:scid identity and the alsoKnownAs alias (#862)
+
+* feat(vta/webvh/dids/create): 1.2 chooses the did:scid identity and the alsoKnownAs alias
+
+  A did:webvh log can be presented as its did:scid:vh:1 DID, an identity
+  the same log verifies but which does not name its host (VTI-KEY-160 to
+  VTI-KEY-166 of the VTI specification). 1.2's request may name `didMethod`
+  (`webvh` or `scid`) and `scidAlsoKnownAs`. Each falls back to the VTA's
+  configuration, then to `webvh` and `true`.
+
+  The response REQUIRES both as applied, plus `webvhDid` (the log) and
+  `scidDidUrl` (the did:scid with the `src` a recipient needs to resolve it).
+  `did` is the identity in the applied form, the bare did:scid DID when
+  `didMethod` is `scid`, and the family's other tasks accept either `did` or
+  `webvhDid`.
+
+  Asking for the did:scid identity when the alias cannot be listed (refused by
+  the request, forbidden by the template, or absent from a supplied log) is
+  refused with the new `scidAliasRequired` code.
+
+  1.2 is a new version because 1.1's response refuses unknown members. The
+  request members are additive, but a 1.1 client would refuse the response.
+
+  Bindings regenerated (Rust, TS, Go, Dart).
+
+- **rooms/records/prune**: A room states how long it keeps its records, and an administrator prunes what that rule makes eligible (#868)
+
+Records only had room-level lifecycle: a room could not keep a meeting note
+  for a month and a decision for years, and nothing ever removed a retracted
+  record's tombstone.
+
+  - rooms/_shared/0.1 (in place, additive): RecordRetention ({tombstoneDays,
+    recordDays}, by host-visible updatedAt; pinned records exempt from
+    recordDays; absent or {} means nothing is eligible) and RecordPrune (the
+    mark a prune leaves: version, time, count — never which records or what
+    they said). HeadVersion answers the note it carried about erasure: a prune
+    takes the next version, and on a pruned room headVersion is the higher of
+    the highest record version and the latest prune's, so two roots straddling
+    a prune never share a version.
+  - rooms/records/prune 0.1 (new): admin only, never curate; kinds retracted |
+    aged; required reason; dryRun. Removes eligible records outright, releases
+    their blobs, records lastPrune. noRetention when the room states no rule
+    for the kinds asked. Hosts never prune on their own. Audit keeps the mark,
+    reason, requester where the tier discloses one, and the retention applied,
+    never content; a reader holding an earlier listing can check every
+    disappearance against the reported retention.
+  - rooms/records/retention/set 0.1 (new): admin replaces the retention whole,
+    with a reason and an optional expectedRetention precondition.
+  - rooms/create 0.2: recordRetention at creation. rooms/info 0.2: serves
+    recordRetention and lastPrune to every reader. rooms/records/list 0.3 and
+    rooms/keys/browse 0.2: lastPrune on every page; a reader synced below it
+    rebuilds and drops what is gone.
+  - rooms/records/curate 0.1: editorial pointer to the prune.
+  - Rust, TypeScript, Go and Dart bindings regenerated.
+
+  Refs OpenVTC/verifiable-trust-infrastructure#2118.
+
+- **vtc/rooms/storage**: Migrate 0.2 and rooms/get 0.2 — reassignment, retry ownership, resume without re-consent, orphans, pause reporting, queueing (#867)
+
+migrate/0.2 fixes a migration's toConfig at approval and keeps it if the room
+  is reassigned (new uploads go to the new assignment; a second migration may
+  follow); makes the community the one retry owner (capped exponential backoff
+  with jitter before `paused`); answers a request for a room with a migration in
+  progress at once, resuming a paused one, without parking it for consent again;
+  does not migrate or count orphaned blobs; reports `pausedCause`, `lastError`
+  and `nextAttemptAt`; and permits one migration at a time with a `queued`
+  state.
+
+  rooms/get/0.2 reports the same migration through the new shared component
+  vtc/_shared/0.1/room-migration, and adds the required `toConfig`.
+
+- **vtc/storage**: Ambient and sealed storage auth — roleArn, room-scoped credential rules, sealed cleartext schema, host gating (#866)
+
+vtc/_shared/0.2/room-storage adds `roleArn` to `ambient` auth (S3 only), the
+  `notAllowed` credential status, and `SealedStorageCredential` — the cleartext a
+  `sealed` credential is carried in (s3 access-key pair with optional session
+  token, gcs service-account key file, walrus suiprivkey), naming its configId
+  inside the seal.
+
+  vtc/storage/configs/{create,update,get,list}/0.2 re-pin to it. create/0.2 makes
+  room-scoped credentials normative for ambient (and sealed where the backend can
+  mint them): one per (config, room), limited to the room prefix
+  `rooms/<32 hex of SHA-256(roomId)>/` and the object actions needed, built by a
+  JSON encoder / CEL builder and never by interpolation, at most 15 minutes,
+  never used for another room. A host MAY refuse ambient or sealed by
+  configuration (`authNotAllowed`, now with `details.reason`), and SHOULD label
+  sealed as offering no protection against the machine's operator.
+
+  vtc/storage/credentials/set/0.2 requires the sealed cleartext to be a
+  SealedStorageCredential for the request's config, and refuses sealed when the
+  host does not permit it.
+
+- **vtc/admin/events**: 0.4 adds a communityRooms topic — the owner's view of the rooms the community owns (#864)
+
+The console's Community rooms tab polls every 60 s, because no topic covers
+  it: `rooms` is the host's view (storage, limits, lifecycle) for holders of
+  `vtc.rooms.admin`, carries no room's details, and is not readable by a
+  `vtc.rooms.manage` holder who lacks `vtc.rooms.admin`.
+
+  - vtc/admin/events/_shared/0.4: Topic gains `communityRooms` (10 topics).
+  - vtc/admin/events/subscribe/0.4: `topics` maxItems 10; "What 0.4 adds";
+    Authorization row — holders of `vtc.rooms.manage`, prompting
+    vtc/rooms/community/list 0.2, get 0.2 and members/list 0.1;
+    `vtc.rooms.admin` alone does not qualify.
+  - vtc/admin/events/event/0.4: producer rules 8–9 — hint when anything those
+    reads show changes (a room created or its label, description or tags
+    changed; an admission offered, withdrawn, accepted or renewed; a removal
+    owed, retried, settled or failed, including on departure; the profile
+    write's state; the authority-renewal state). No room, member, DID, offer,
+    credential or record identifier in any member, ext included. Not a count
+    topic. Coalescing, standing re-checks and stream-ending on a shrink are
+    unchanged.
+  - vtc/rooms/community/update 0.1 and 0.2 (draft, editorial in place):
+    "Live updates" now points at `communityRooms` in events 0.4 instead of
+    "a later version".
+
+  0.1, 0.2 and 0.3 are unchanged; a community serving several versions answers
+  each subscription at its own.
+
+
+
+### Fixed
+
+- A replay record is kept until the skew-extended window closes, so a late replay cannot execute twice (#872)
+
+Freshness accepts a document until issuedAt + maxAge + skew, but the replay
+  record was retained only until issuedAt + maxAge. A replay arriving in the
+  final skew interval (60s under the consequential defaults) passed freshness,
+  found its record already dropped, and executed again — the double execution
+  SPEC §7.2 item 11 forbids, and a break of the "same bound" rule the record
+  expiry documents.
+
+  recordExpiry now returns issuedAt + maxAge + skew in Rust, TypeScript, Go and
+  Dart. The expiresAt branch is unchanged: expiry is checked without skew, so it
+  was already exact. Rust and TS gain a regression test at the boundary.
+
+
+
+### Specifications
+
+- **rooms/epoch/prune**: 0.2 — the host keeps the room's epoch floor, and members' key holders forget what they hold below it (#869)
+
+* spec(rooms/epoch/prune): 0.2 — the host keeps the room's epoch floor, and members' key holders forget what they hold below it
+
+  Each member's key holder keeps its own copy of a room's epoch chain, so
+  erasing the host's rungs left every key holder able to derive what the owner
+  had decided nobody should.
+
+  - rooms/_shared/0.1 (in place, additive): EpochFloor — the earliest epoch
+    whose key the room still lets anybody derive; monotonic. Hosts keep it,
+    never store or serve a rung at or below it, and serve it. A member's key
+    holder that learns a higher floor discards rungs at or below it and every
+    storage, file or cached key below it (including keys derived in passing
+    while catching up), never stores them again from any source, refuses to
+    derive below it (beyondChain), and keeps the floor. States plainly that
+    nothing already read, decrypted or exported is recalled, and that the
+    floor is honoured, not enforced.
+  - rooms/epoch/prune 0.2: the host raises the floor to beforeEpoch − 1 (also
+    where nothing is dropped: a gap, a fromJoin room) and returns it as the
+    required epochFloor. beforeEpoch keeps 0.1's meaning; the off-by-one is
+    stated with a table, and two 0.1 misstatements are corrected.
+  - rooms/epoch/chain 0.2: epochFloor on every response once pruned; never a
+    rung at or below it.
+  - rooms/keys/chain 0.2: the member relays the floor (alone if need be); the
+    key holder applies it. rooms/keys/backfill 0.2: fetches with epoch/chain
+    0.2, applies and reports the floor.
+  - Editorial pointers in rooms/keys/open 0.2, rooms/keys/file-key 0.2,
+    rooms/keys/read 0.1 and rooms/epoch/prune 0.1.
+  - Rust, TypeScript, Go and Dart bindings regenerated.
+
+  Refs OpenVTC/verifiable-trust-infrastructure#2118.
+
+- **rooms/records**: A record says what kind of claim it is, what it cites, what it may be used for, and when it lapses (#865)
+
+A sealed record proves who wrote it and whether a member or an agent did,
+  but not what kind of claim it is: an agent's inference read the same as an
+  observed fact or a credential-backed statement. And records could not
+  expire individually — a meeting note and a decision lived equally long.
+
+  - rooms/_shared/0.1 (in place, additive, as `roomProfile` was):
+    SealedRecordBody gains optional `basis` (declared | observed | verified |
+    inferred), `confidence` (0–1), `evidence` (record or credential
+    citations, discriminated by `kind`), `validFor` (purposes as IRIs plus a
+    plain-text note) and `validUntil`, all inside the author's signature.
+    Provenance is display and weighting only, never authority; writers
+    SHOULD set `basis`, agent writers that do not know SHOULD write
+    `inferred`. Readers hide a record past its `validUntil` from default
+    listings, search and recall and MAY show it on explicit request; no host
+    enforces it and nothing about it is in the clear on sealed tiers.
+    Records written before verify unchanged; readers that predate the
+    members refuse bodies carrying them by rule (1), showing nothing rather
+    than something wrong.
+  - rooms/records/put 0.3 (new): an open room's `cleartext` carries the same
+    five members, stored and served as received, never acted on by the
+    host. `sealed` writes are unchanged.
+  - Rust, TypeScript, Go and Dart bindings regenerated.
+
+  Refs OpenVTC/verifiable-trust-infrastructure#2117, #2118.
+
+## 0.27.1 — 2026-10-21
+
+
+### Fixed
+
+- **voting**: Trustees and voters act only on signed evidence; the community authorizes decryption; the key needs t dealers; ballots bind their tag (#860)
+
+* fix(voting): trustees and voters act only on signed evidence; the community authorizes what is decrypted; the key needs t dealers; ballots bind their tag; the board is in order
+
+  An adversarial review of community voting found that a dishonest ballot box could take the
+  trustees' place, and a single corrupt trustee could hold the election key.
+
+  - **The box could feed the trustees' VTAs.** They acted on values voting/trustees/status reported,
+    which carry no trustee's proof. The box could:
+    - substitute transport keys, and open the shares sealed to them;
+    - invent complaints, and collect the shares revealed in answer;
+    - replace dealings, and overwrite a key share;
+    - list one voter's ciphertexts as a "total", or a cast before the close, and collect honest
+      trustees' partials of it.
+  - **One trustee could hold the key.** The key formed from a single qualified dealer, so a corrupt
+    trustee complaining of every other dealer at the last moment was left holding it alone.
+  - **The voter's VTA took any key.** It encrypted under whatever key it was handed, so a community
+    could give one member a key it held.
+  - **Ballots could be copied.** Nothing bound a ballot to its cast: a voter could re-cast another's
+    encrypted ballot verbatim under their own tag (Cortier–Smyth).
+  - **Certification ignored the lifecycle.** It accepted casts after close, a result before it, and
+    an early close a manifest forbade.
+
+  The changes:
+
+  - **vta/pcs/trustee/{deal,keys,justify,decrypt}/0.2 and vta/pcs/vote-encrypted/0.2** (the 0.1
+    versions retire) take the ceremony as its signed steps, which status now carries as `steps`. The
+    VTA verifies each step itself (CONVENTIONS §9.6). In particular:
+    - deal pins the transport keys it dealt to;
+    - justify needs the complainant's own confirm;
+    - keys never replaces a held share;
+    - the voter's VTA forms the key itself;
+    - vtc/elections/show carries `ceremony` for it.
+  - **voting/trustees/authorize/0.1 (new).** After close the community computes the decryption
+    targets from the board it checked, and signs their digest under the closing head. The box
+    accepts it only if its own targets match, and appends a `decryptionAuthorized` entry. A
+    trustee's VTA decrypts only an authorized set, once (decrypt/0.2). The box refuses partials
+    before an authorization.
+  - **CONVENTIONS §9.6 item 5:** the key forms only from at least t qualified dealers, with at least
+    t confirmations.
+  - **§9.3/§9.4:** an encrypted form's proofs, and a sealed form's AAD, bind the cast's tag. The box
+    refuses a form whose ciphertexts are already on the board under another tag.
+  - **§3.9 (new):** the board's order — opened, casts, close, authorization, partials, one result
+    whose head is the board before it — enforced at certification (`orderInvalid`,
+    `ceremonyInvalid` appended to boardInconsistent's faults).
+
+## 0.27.0 — 2026-10-21
+
+
+### Added
+
+- **persona**: Star a directory member whose DID you have not been shown — persona/contact/put/1.1 linking form (#858)
+
+A community directory shows members' DIDs to other members only where each member chooses to, so most entries a holder reads carry no DID to file a contact under, and persona/contact/put/1.1 required one (subjectDid) to keep a star, a petname or a list on anyone.
+
+  put/1.1 gains a third form, LINKING: directoryRef + knownByPersona, without contactId, subjectDid, document or credentialRefs. The agent finds the contact it keeps for that directory entry and persona, or makes one (rev 1, an empty document, no subjectDid), and appends no revision. A later filing naming the member's DID is a contact of its own and is not merged with the linked one (item 4, extended). Two invalid examples pin the form's edges.
+
+  get/1.1 and list/1.1 responses: subjectDid is no longer required — absent for a linked contact.
+
+## 0.26.29 — 2026-10-21
+
+
+### Added
+
+- **voting**: Vta/pcs/trustee/read, and trustees read voting/election/show on any board (#855)
+
+A trustee could not run its part of a sealed or tallied-encrypted election on a private board
+  from a client: the trustee tasks take the manifest, which voting/election/show answers only to
+  the community and the auditors there; and a trustee's client, which holds no trustee key, had no
+  way to sign the reads a private board answers only to a trustee.
+
+  - vta/pcs/trustee/read/0.1 (new): the VTA signs voting/trustees/status or voting/election/show
+    as the trustee, addressed to the ballot box — the trustee's counterpart of vta/pcs/voter/read.
+    Its payload is fixed to { community, electionId }; `read` is closed. Gated on pcsTrustee.
+  - voting/election/show answers every trustee the manifest names on any board (CONVENTIONS §4
+    gains its own row; §9.6's "Who reads the ceremony" names both reads).
+  - vta/pcs/trustee/decrypt: `closedAt` is the board's close entry, or for a client that cannot
+    read the board any time at or after the close and not in the future — the election's summary,
+    which the field used to point at, carries no close time.
+
+## 0.26.28 — 2026-10-21
+
+
+### Fixed
+
+- **voting**: Each trustee step on the board is the trustee's signed request (#853)
+
+The board recorded each step of the trustees' ceremony as its payload alone, so nothing on it
+  showed who took a step. A ballot box could enrol or deal in a trustee's name — a polynomial of its
+  own choosing, with matching shares sealed to that trustee's transport key — and every check the
+  community, the trustees and certification run would pass while the ballot box held the election
+  key, able to open sealed ballots before close. The defence was only that the ballot box runs
+  honestly, which VTI-VOT-062 does not let a deployment assume.
+
+  - A new board entry, `trusteeStep` (appended), carries the trustee's `voting/trustees/enrol`,
+    `deal`, `confirm` or `justify` request exactly as the ballot box received it, proof included.
+    The `transportKey`, `dealing`, `confirmation` and `justification` kinds are no longer appended,
+    and a consumer refuses a board holding one.
+  - CONVENTIONS §9.6: whoever replays the ceremony takes a step only when its type, community and
+    election are right, its issuer is the trustee the manifest names at the payload's index, and
+    its proof is the issuer's. A `partials` entry needs no signature: its Chaum–Pedersen proofs
+    already tie it to the trustee's share. `voting/trustees/status` is never evidence of who took a
+    step.
+  - `vtc/elections/show` item 6: the community forms the key itself by replaying the ceremony from
+    the board (open to it on any board), never from `voting/trustees/status`.
+  - `vtc/elections/certify` item 8 states the encrypted levels' recount: ceremony, casts and
+    partials, from the board alone.
+
+## 0.26.27 — 2026-10-21
+
+
+### Added
+
+- **vtc/config**: Did-hosting/list 0.1 — the hosting servers the community's VTA can publish its identities through (#849)
+
+A community's administrator chooses where the identities it mints (its groups'
+  and its own rooms') are published. The community either serves each `did:webvh`
+  log itself, or has its VTA publish it on a hosting server registered there.
+  Without a list of those servers the choice is typed blind.
+
+  - vtc/config/did-hosting/list/0.1: for holders of `vtc.config.admin`. The
+    community asks its own VTA (`vta/webvh/servers/list`), as itself, over the
+    link it keeps to it. It answers with each server's `id`, `did` and `label`,
+    and nothing else of the VTA's record. A server whose id the configuration
+    could not name is left out.
+  - Codes: noKeyHolder (no VTA link), keyHolderUnavailable (no answer,
+    retryable), keyHolderRefused (the VTA's own code and message in `details`).
+
+
+
+### Fixed
+
+- **voting**: Encrypted elections on a private board — trustees read their ceremony, voters get the key from vtc/elections/show (#852)
+
+On a private board the ballot box answered voting/trustees/status only to the community and
+  its auditors, so no trustee could take its next step (transport keys, dealings and targets are
+  read from status) and no voter could obtain the election key: a sealed or tallied-encrypted
+  election on a private board could not run.
+
+  - CONVENTIONS §4 gains the rows the trustee tasks were missing; voting/trustees/status
+    answers every trustee the manifest names on any board. Nothing the ceremony publishes is
+    secret (§9.6, "Who reads the ceremony").
+  - vtc/elections/show carries electionKey (optional, appended) once formed, read from the
+    ballot box and refused unless the qualified dealings in the same answer form it. A voter
+    gets it from the community it already asks for its ticket.
+
+## 0.26.26 — 2026-10-20
+
+
+### Added
+
+- **rooms**: Rooms/keys/read repairs before refusing — catches up on commits and fetches links, then cannotOpen with a reason (#848)
+
+A key holder misses an epoch key in two ordinary ways — behind by a commit after any
+  membership change, or joined late and holding nothing older — and the member's surface
+  reaches only their agent, so the agent is the one party that can repair either.
+
+  The recipient now SHOULD, before answering cannotOpen, fetch the commits the host relays
+  (rooms/epoch/commits) and apply them in order, or fetch the epoch links as backfill does,
+  from the same host, as the same principal, under the same read grant; at most once per
+  request, serialised per member, never for a removed principal. cannotOpen carries
+  details.reason (notDelivered / beyondChain / removed) in rooms/keys/open 0.2's words.
+  sideEffects becomes mutating: the room is unchanged, the recipient's key state is not.
+
+- **voting**: Sealed and tallied-encrypted elections — trustees, encrypted casts, VTA trustee role (#845)
+
+* feat(voting): sealed and tallied-encrypted elections — voting/trustees/*, voting/ballot/cast-encrypted, vta/pcs/trustee/* and vta/pcs/vote-encrypted
+
+  The encrypted secrecy levels (VTI-VOT-060 – 064). CONVENTIONS §9 fixes the
+  cryptography: Ristretto255, exponential ElGamal under a threshold key, and
+  Fiat–Shamir Schnorr, Chaum–Pedersen and disjunctive proofs with their domains.
+
+  The trustees generate the election key on the board (Pedersen DKG with
+  Belenios-style complaints): enrol a transport key, deal (Feldman commitments
+  plus every share sealed to its recipient), confirm or complain, and a dealer
+  complained of justifies by revealing the share. The key forms from the
+  qualified dealers. After close, each trustee publishes partial decryptions of
+  every sealed cast's KEM, or of every option's homomorphic total, with
+  Chaum–Pedersen proofs; voting/trustees/status tells everyone what is left.
+
+  voting/ballot/cast-encrypted admits a cast whose attestation binds the sealed
+  payload or the encrypted ballot, the latter with 0/1 proofs per option and a
+  proof that each question's count is admissible.
+
+  vta/pcs/trustee/{enrol,deal,keys,justify,decrypt} make the trustee's VTA the
+  custodian of its transport key and key share, signing only the task's own
+  document as the trustee; vta/pcs/vote-encrypted is vta/pcs/vote for the
+  encrypted levels. The new capability pcsTrustee / pcs-trustee is appended to
+  both device/_shared Capability enums.
+
+
+
+### Fixed
+
+- **vtc/elections**: Create serves the encrypted levels a community certifies (#847)
+
+* fix(vtc/elections): create serves the encrypted levels a community certifies, and holds them to their trustee rules
+
+  Item 3: unsupportedSecrecy names a level the community does not serve; a community serving sealed or talliedEncrypted refuses a manifest that breaks the trustee rules with invalidManifest.
+
+## 0.26.25 — 2026-10-20
+
+
+### Added
+
+- **vtc/rooms/offers**: List 0.3 — renewals of the admissions a member holds; rooms/keys/act 0.6 completes it; groups bindings refuse an unserved kind (#843)
+
+A group's room binding says the community renews each admission it made "while
+  the member stays in the group". Nothing defined how an already-admitted member
+  receives renewed credentials. `offers/list` carries only an offer's three
+  credentials, and `memberships/list` carries none by design. So an admission
+  could only be carried past its `validUntil` by an administrator removing and
+  re-admitting the member.
+
+  - vtc/rooms/offers/list/0.3: the response gains `renewals`. For an admission the
+    caller holds, it lists the room's fresh membership and authority credentials,
+    granting the same actions until a later `validUntil`. `renews` names the
+    expiry of the ones they replace. There is no invitation: a renewal is never a
+    second way in.
+    The community issues a renewal through the room's key holder before
+    recording it, and lists only the latest one per admission. A renewal stays
+    listed on the first page until what it renews expires, the member is removed,
+    or a later renewal supersedes it. The community records the renewed
+    `validUntil` as the admission's own.
+    A surface stores a renewal in place of the credentials it renews, never
+    beside them, and treats storing it twice as success. It never accepts a
+    renewal.
+  - vtc/_shared/0.1/community-room: `Renewal` and `RenewalCredentials`, additive.
+  - rooms/keys/act/0.6: the table adds vtc/rooms/offers/list/0.3, in the offer
+    types' row and on their terms. 0.5's table is closed, so a 0.5 key holder
+    refuses 0.3 with `typeNotActable`.
+  - vtc/groups/bindings/add/0.1: item 6 renews a room binding's admissions
+    through offers/list 0.3. New code `kindNotServed` (item 7): a community that
+    serves room bindings only may refuse a grants or role binding after item 1,
+    and never records a binding it does not provision.
+  - vtc/rooms/memberships/list/0.1: a row for an admitted room with a renewal
+    listed, which the surface stores before anything else it offers.
+  - RoomBindingSpec's description points at the renewal path.
+
+## 0.26.24 — 2026-10-20
+
+
+### Added
+
+- **vta/pcs/voter**: The engine signs the voter's requests to the community as the member — register's ticketDocument, and voter/read (#841)
+
+* spec(vta/pcs/voter/register): the engine signs the ticket request as the member (optional `member`, `ticketDocument`)
+
+  A voter's membership DID usually lives in their VTA, so a client could not sign vtc/elections/tickets/issue as the member without a general signing oracle. The request may now name `member`; the engine then also returns `ticketDocument`, the tickets/issue request already signed as that DID for `authentication`, with exactly this response's payload, to send unchanged. The engine signs only that document type with only that payload — `member` confers no other signature — under pcsVoter and standing to act as the member, as vta/pcs/vote signs the cast.
+
+  On a repeat the engine returns the document it kept for that member, unchanged, so the community answers a resend with its first answer rather than as a second request. New code `memberNotHeld`, checked before anything is allocated. Additive: both members optional; trust-tasks-rs semver-checks report no update required.
+
+## 0.26.23 — 2026-10-20
+
+
+### Fixed
+
+- **auth/oob**: A same-device reader may enter the number it reads from the starter's page (#839)
+
+The prose said the number is the digits the member typed. A reader on the
+  same device that received the link from the member's activation on the
+  verified portal (VTI-LNK-056, VTI-LNK-105) may read the number from that
+  page and enter it (VTI-LNK-106). The service's check is unchanged: identify
+  still carries enteredNumber and prove still compares it. Prose only; no
+  schema or wire change.
+
+## 0.26.22 — 2026-10-19
+
+
+### Fixed
+
+- **device**: Register pcs-voter in device/_shared 0.1 too — appended, as the 0.2 pcsVoter is (#836)
+
+device/list/0.1 and device/register/0.1 reference device/_shared/0.1, whose Capability enum (kebab-case) is the one a VTA publishing device/list 0.1 checks a capability against. #834 registered the voter capability in 0.2 only, so a VTA listed pcs-voter under ext as unregistered. Appended at the end: cargo semver-checks against 0.32.3 reports no semver update required.
+
+## 0.26.21 — 2026-10-19
+
+
+### Added
+
+- **voting**: Community voting — voting/* (the ballot box), vtc/elections/* (the registrar) and vta/pcs/voter/* + vta/pcs/vote (the voter's agent) (#834)
+
+* feat(voting): community voting — voting/* (the ballot box), vtc/elections/* (the registrar) and vta/pcs/voter/* + vta/pcs/vote (the voter's agent)
+
+  Twenty-one draft 0.1 tasks for VTI-VOT-001 – 100 (dtgwg-vti-spec, Community
+  Voting chapter). A member proves only that they may vote, never who they are,
+  and anyone permitted to read the board can recount it.
+
+  - voting/_shared/0.1: CONVENTIONS.md (separation of registrar and ballot box,
+    the exact cryptographic binding — deployment label, ticket class
+    voter/<electionId>, hash-to-G1 election point, framed ballot context, cast,
+    admission, RFC 9162 board hashing — authorization, VTA custody, privacy,
+    shared error local parts, retry safety) and voting.schema.json (Manifest,
+    Question, Ballot, Cast, BoardHead, BoardEntry, MerklePath, ElectionResult,
+    ElectionSummary, VotingParameters, Disclosure …).
+  - voting/*: election/{register,show,close,cancel}, ballot/cast (HTTPS binding
+    always accepted, one-time did:key issuer, signed receipt, idempotent),
+    board/{head,read,inclusion,consistency}, result/show. 0.1 serves open
+    elections only; sealed and tallied-encrypted await the trustee tasks.
+  - vtc/elections/*: create (binding elections park for a second
+    administrator), list, show (disclosure, kept checkpoints, certified result),
+    close, cancel, certify (the VTC verifies the board itself), tickets/issue
+    (blind, one per eligible party, recorded before answering).
+  - vta/pcs/voter/{register,accept,receipt} and vta/pcs/vote: a voter key per
+    election, the blinded ticket request, the signed cast document the client
+    sends itself, receipt keeping and inclusion checking. New capability
+    `pcsVoter` in device/_shared/0.2 Capability.
+
+  Bindings regenerated (Rust, TypeScript, Go, Dart); check-bindings agrees and
+  the Rust conformance suite passes. Reference implementation of the binding:
+  vti-voting in verifiable-trust-infrastructure.
+
+- **vtc/groups**: Appointing group managers — vtc/groups/managers/{add,remove}/0.1; create refuses an unserved dynamic group (#833)
+
+* feat(vtc/groups): appointing group managers — vtc/groups/managers/{add,remove}/0.1; create refuses an unserved dynamic group
+
+  The groups family made a manager an access-control resource grant,
+  `vtc.groups.manage` qualified `group:<groupId>`, "never this record". But no
+  task wrote that grant. The general `acl/grant` caps a grant by the holder's
+  role ceiling, so only an administrator could ever manage a group.
+
+  - vtc/groups/managers/add/0.1: a manager of the group, or a holder of the
+    unqualified capability, appoints an active member. The appointment is a
+    resource grant on the appointee's entry, delegated by the signer, which sits
+    beside the role and never inside its ceiling, so a member with no
+    administrative role may hold it. The signer must cover the grant. It is
+    reviewed like any delegated grant when its granter departs, and withdrawn
+    with the group or the holder's departure. The group's record never decides
+    who manages it. Codes: notFound, entryNotFound, alreadyManager.
+  - vtc/groups/managers/remove/0.1: a manager steps down, or a holder of the
+    unqualified capability removes another manager's appointment. Managers of
+    one group do not remove one another. Codes: notFound, notManager.
+  - vtc/groups/create: `kindNotServed` lets a community that serves only static
+    groups refuse a dynamic one after checking its rule. It never stores a
+    dynamic group it does not compute.
+  - group.schema.json: `managers` points at the new task.
+
+
+
+### Fixed
+
+- **device**: PcsVoter is appended to Capability, not inserted — no existing variant moves (#835)
+- **vtc/directory/card/present**: A Data Integrity presentation binds through its signed nonce and domain (#831)
+
+Producer conformance required a Data Integrity presentation's proof to carry `challenge` equal to the document's `id` and `domain` equal to the community's DID. Neither member is signed by the Data Integrity libraries the implementations use: a proof stating them either fails to verify or carries them unsigned, where they bind nothing. The presentations this ecosystem already produces for a verifier (`vta_sdk::vp::build_di_vp`, the OpenID4VP DI path, the personhood assertion) put `nonce` and `domain` on the presentation itself, which the holder's proof covers.
+
+  The binding is now the presentation's own `nonce` (this document's `id`) and `domain` (the community's DID), signed by the holder proof; a proof that also states `challenge` or `domain` must state the same values. The consumer's item 3 is unchanged: it verifies "the binding above".
+
+  No schema change beyond the presentation's description; the generated libraries carry the new text in their documentation.
+
+## 0.26.20 — 2026-10-19
+
+
+### Fixed
+
+- **vtc/directory/images/upload**: TooLarge also refuses a picture beyond the decoding bound (#829)
+
+images/upload declared `tooLarge` for `data` that decodes to more than 262144 bytes, and item 2 refuses it before decoding. But the payload schema already bounds `data` to exactly 262144 bytes, so a conforming community could never send the code. The schema answers malformedRequest first.
+
+  The bound that matters is the other one. A PNG of a few kilobytes can claim tens of thousands of pixels across, which is a decompression bomb, and nothing in the specification told a community to stop it. Item 2 now requires a community to bound what it decodes, the pixels a picture may claim and the memory its decoding may take, and to refuse a picture beyond either with `tooLarge`. The code's meaning says the same.
+
+  No schema change; the generated Rust carries the new meaning in its documentation.
+
+- **vtc/directory/card/publish**: The card names its signer as issuer, so an agent-held key can sign it (#830)
+
+card/publish allowed a card no members but `@type`, `version`, `uid`, `kind`, `updated` and `proof` besides its values. That left a member whose key their agent holds, the usual case, with no way to sign it: keys/sign-document signs a document only as the DID it names in `issuer` or `controller`, and the card could name neither.
+
+  The card now carries `issuer`, the membership DID, as a required member that carries no directory value. Item 4 checks it is the member's DID. The mapping section says why it is there, and a card/public reader checks it names the DID that signed. It adds no identifier: the proof's verificationMethod already names the DID, and the recognition record the card hangs from names it too. The correlation paragraph is corrected to say so.
+
+  The examples gain `issuer`, and their cardDigest is recomputed (zQmcjRKZd1TExLaEuMVv5xe2tTx4a1YkRQ58zwVrnByxYS4). The PublishedCard description in the shared schema lists `issuer` among the members a consumer checks; the bindings are regenerated for that description.
+
+- **vtc/directory/card/publish**: Pin the JSContact mapping, and withdraw without waiting on the registry (#827)
+
+card/publish item 4 compares a member's card with their public values "mapped as JSContactCard maps them", but JSContactCard names only where each base field lands, not its shape: not the map identifiers, not how a link list is laid out, and not what the avatar's `uri` is. Two conforming wallets could sign different bytes for the same values, and a community could not tell which was right.
+
+  *Mapping the public values* fixes it: one JSContact member per field, fixed map identifiers (k1, m1, p1, n1, l1…), the avatar as `media.m1` with `uri` `urn:vtc-directory:<entryId>:avatar:<sha256>` (what a reader sends to images/get), and every other field as a member named by its key. Item 4 now compares against that table, and lists `proof` among the members that carry no directory value.
+
+  Item 9 said to remove the registry pointer first, then stop serving the card. That kept a card the member had withdrawn on public view until the registry answered, which can be an hour when it is down. A withdrawal now stops serving and erases the card at once and removes the pointer, retried until it lands. A pointer read in the meantime names a card card/public answers notFound, which tells the reader nothing. card/update item 7 and the retention note follow.
+
+  Prose only: no schema or generated binding changes.
+
+## 0.26.19 — 2026-10-19
+
+
+### Added
+
+- **vtc/directory**: Pictures and external cards — images/upload, images/get, card/publish, card/public (#826)
+
+The two parts of the member directory that had no Trust Task.
+
+- **vtc/directory**: Disclosure — the statement of what a community's directory discloses, and to whom; join manifest 0.4 carries it (#823)
+
+A community offering a member directory must publish a statement of what it discloses and to whom, generated from its configuration, and show it to applicants before they apply (VTI-DIR-130). No task carried one.
+
+  vtc/directory/disclosure/0.1 returns it. The request carries nothing; any reader the community answers vtc/join-requests/manifest for may read it, with or without a proof. The statement (`DirectoryDisclosure`, in directory/_shared/0.1/disclosure-statement.schema.json) lists every active field with its source, ceiling, default visibility and whether it is searchable or a facet; what a new card gets (listing, search, and introductions where the community delivers them); how far a member's membership DID can reach; whether administrators keep notes; whether the community has groups, and how long their membership credentials last; and whether a card can be published beyond the community. Every audience is an upper bound, since policy only narrows. It names itself with a statementDigest (JCS without the digest, SHA-256 multihash), so an applicant can record which statement it was shown. It carries no timestamp, so the digest changes exactly when what it says changes.
+
+  vtc/join-requests/manifest/0.4 adds one optional response member, directoryDisclosure: the same statement, present exactly where the community offers a directory, outside every criterion, so no requirementsDigest moves. Nothing else changes from 0.3.
+
+
+
+### Specifications
+
+- **rooms/owner/group**: Add 0.3 and renew 0.2 settle a pending removal by remove 0.3 item 8 (#824)
+
+rooms/owner/group/remove 0.3 item 8 settles a pending removal "at a later
+  request — of this task or of any other that settles the room's pending
+  advance", and has that other task refuse with its own hostRefused carrying
+  {member, code, listKept}. add and renew are those other tasks, and neither
+  said so: their item 6 knew only the epoch check (read alone, it never
+  redelivers the removal's revocation list), and their hostRefused meant "the
+  host declined the epoch advance; nothing was changed" with no details shape.
+  OpenVTC/verifiable-trust-infrastructure #2191 implements remove 0.3 item 8
+  before add and renew at every version, so that implementation diverged from
+  the add and renew specifications it serves.
+
+  rooms/owner/group/add 0.3 and rooms/owner/group/renew 0.2:
+  - item 6.1 settles a pending removal by remove 0.3 item 8, in full and before
+    the request's own work; item 6.2 is the old epoch check for every other
+    pending advance (and now says an unanswered rooms/info is hostUnreachable);
+  - add earlierRemovalRefused {member, code, listKept}, the same code and
+    details remove 0.3 uses, so all three tasks report it alike;
+  - hostUnreachable gains details.stage (revocation | advance) as remove 0.3;
+    hostRefused gains a bounded details {code, reason} and means only that the
+    host declined this request's own advance.
+  Payload and response schemas unchanged.
+
+  Earlier versions (add 0.1/0.2, renew 0.1) are untouched. The new versions'
+  compatibility notes say what a recipient answers there, which is what remove
+  0.3 item 8 already requires: hostRefused carrying {member, code, listKept}
+  (their hostRefused declares no details shape) and hostUnreachable with no
+  details.
+
+  remove 0.3 item 8 is edited in place, errata-style: its "at another task"
+  clauses now name add 0.3 / renew 0.2's earlierRemovalRefused and stage, and
+  keep hostRefused for versions declaring no such code. No pre-existing
+  version's wire behaviour changes.
+
+## 0.26.18 — 2026-10-18
+
+
+### Added
+
+- **vtc/directory**: The member directory — fields, cards, entries, introductions, admin notes, export — and community groups (#817)
+
+Rebuilt on main after #815, #819, #820 and #821. Groups: dynamic-group opt-out, issuance through keys/sign-document, the vtc-group template shape, a 30-day credential default. card/update admits a key delegated under auth/oob/grant/0.2, except for widening to public or turning on external listing. Shared defs named FieldVisibility, CardBlobRef and GroupJoinRequest so they do not collide with the rooms family's Visibility and BlobRef or the existing JoinRequest in generated bindings.
+
+- **auth/oob**: A sign-in grant may delegate signing of named task families to the starter key for the session (#820)
+
+prove/0.2, grant/0.2 and respond/0.2. Step 2 may offer a `signingScope`
+  (task families as slug prefixes); the grant copies it, so the member's
+  assertionMethod signature over the grant is the delegation: the starter
+  key K_b may sign documents of those families as the member, for the
+  session redeem creates, and no longer. The service checks the scope at
+  respond against what step 2 offered.
+
+  grant/0.2 states what a delegated key may never sign, whatever the
+  scope: anything needing an assertionMethod proof or a gesture; anything
+  that confers or withdraws authority (role, capability, ACL entry,
+  membership, credential, key, delegation, session — asking for a
+  credential the member's own agent accepts as an offer, or ending its
+  renewal, is not that, so plain group join/leave is allowed); a consent or a
+  publication beyond the service's members; or an identifier asserted in
+  the member's name to another party. Authority is the member's standing
+  read at execution time, on the session's own surface only.
+
+  Motivated by the VTC member directory (#817): the member portal signs
+  vtc/directory and vtc/groups documents with its sign-in key.
+
+- **keys**: Sign-document — a Data Integrity proof from a held key, as the DID the document names (#819)
+
+A VTC issues DTG credentials as its community DID and as each group's
+  DID, but the keys behind those DIDs are held by its VTA and never leave
+  it. keys/sign cannot produce a Data Integrity proof at a custodian that
+  frames its general oracle, and keys/derive-and-sign-document signs as a
+  derived path, not as a DID with a key record.
+
+  keys/sign-document/0.1 is a narrow sibling of sign-jws and sign-csr:
+
+  - The producer names a key and sends a document without a proof; the
+    custodian canonicalises it (RFC 8785), writes the proof configuration
+    (cryptosuite, verificationMethod, created) and signs only the
+    eddsa-jcs-2022 hash data. No caller-supplied signing input.
+  - Issuer binding: the document's issuer (or issuer.id) and/or controller
+    must name a DID the key is a verification method of, compared
+    verbatim, and that DID's document must list the key under the
+    requested proofPurpose (assertionMethod or authentication only). A
+    document naming neither is refused, as is one already carrying a
+    proof (never stripped, never extended into a set).
+  - Ed25519 / eddsa-jcs-2022 only: the P-256 keys custodians hold are
+    bound to foreign protocols that fix the curve, and none is an
+    issuer's.
+  - Gated on its own signDocument capability (sign-document in 0.1),
+    registered in device/_shared; sign is neither required nor accepted.
+  - An unknown key and one outside the producer's scope are the same
+    keys:notFound.
+
+  Bindings regenerated (Rust, TS, Go, Dart); no version bumps.
+
+- **persona/contact**: Stars, petnames, lists and directory links kept only by the holder's agent; admin events 0.3 add directory and groups (#815)
+
+A member directory needs the four things a member keeps about others — a
+  star, a private nickname, a personal list, a link to a directory entry — and
+  none of them may live at the community: a VTC that stored them would hold the
+  graph of who watches whom. They go in the member's own agent, beside the
+  contact they are about.
+
+  - persona/_shared/0.1/contact-annotations (new): Petname (<= 64, one line),
+    ListId, ListIds, ListName, ListColour, ListOrder, DirectoryEntryId (opaque,
+    pattern + maxLength only) and DirectoryRef {vtcDid, entryId}, ContactList.
+  - persona/contact/put 1.1: starred, petname, lists, directoryRef (+ notes)
+    as contact-level annotations, never part of a revision. A second,
+    annotating form (contactId, no document) changes them without appending a
+    revision; each given replaces, removeX removes, absent is unchanged. New
+    codes notFound and listUnknown.
+  - persona/contact/get 1.1: returns the contact's current annotations with any
+    revision; `starred` always present.
+  - persona/contact/list 1.1: annotations on every summary (not notes);
+    filters starred, listId and directoryVtcDid; listUnknown.
+  - persona/contact/lists/{list,show,put,delete} 1.0 (new): the holder's
+    lists, context-scoped. Membership is set on the contact, so it has one
+    writer; delete takes every contact off the list and deletes no contact.
+  - Every one says the annotations never leave the holder's agent, and that
+    being on a list, starred or given a petname must not be inferable by the
+    person annotated or by any community — including through what the
+    holder's client reads from a directory.
+  - vtc/admin/events/{subscribe,event} 0.3 + _shared/0.3: topics `directory`
+    (holders of vtc.directory.admin or vtc.directory.notes) and `groups`
+    (holders of vtc.groups.manage, per qualified group). Hints only: no
+    record, record id or DID in any member, ext included. Otherwise 0.2.
+
+  1.0 and 0.2 are unchanged. Design: VTI docs/05-design-notes/vtc-member-directory.md
+  §6, §7.3, §10.2, §11.3.
+
+
+
+### Specifications
+
+- **rooms/owner**: Register 0.2 reports the room's revocation list; group/remove 0.3 settles a refused redelivery (#821)
+
+Two gaps found implementing room revocation (#804) in OpenVTC/verifiable-trust-infrastructure.
+
+  rooms/owner/register 0.2. rooms/owner/revoke requires a key holder to deliver
+  the room's revocation list to a host before answering a registration, and
+  register 0.1 declared no outcome for "registered, but the list did not reach
+  the host". 0.2 answers success (the registration took effect) and adds a
+  `revocation` response member: the list's head and `status` inForce / pending /
+  refused (+ the host's `code`). hostUnreachable / hostRefused now report the
+  registration only. The recipient SHOULD keep delivering a pending list on its
+  own and MUST NOT repeat a refused one; a caller MUST treat anything but
+  inForce as a room served without its withdrawals, MAY redeliver with
+  rooms/owner/revoke (no withdraw), and MUST NOT re-register to repair it.
+  Retention moves to durable for the outstanding delivery only. A 0.1 request in
+  that state SHOULD still be refused with a message saying the room is
+  registered — the least harmful answer 0.1 can give.
+
+  rooms/owner/group/remove 0.3. 0.2 item 8 redelivers a pending removal's list
+  and did not say what to do when the host refuses the repeat. Discarding it as
+  item 6 does is unsafe here: the first delivery's outcome is unknown, so a
+  `stale` (host accepted a later list) or `permissionDenied` refusal may come
+  from a host enforcing this very list, and dropping the list would make the
+  key holder's next list fail notAppendOnly or collide at a sequence the host
+  holds. Item 8 now: listInvalid / entryNotPermitted / sequenceConflict discard
+  the whole removal (list only while still held), as item 6; stale with a later
+  held list delivers that list and confirms through it; anything else discards
+  the advance and keeps the list. Whatever is discarded, the settling request
+  is refused with the new code earlierRemovalRefused {member, code, listKept}
+  (at another task, its own hostRefused), so a removal reported pending never
+  vanishes inside a later success. Schemas unchanged.
+
+- **rooms**: A curated record keeps the version its body was sealed at (#816)
+
+Curation MUST assign a record a new version (rooms/records/curate/0.1),
+  and every curation but a retraction keeps the body. But a sealed body is
+  bound — by the AEAD's associated data and by its author's signature
+  (SealedRecordBody, rule 3) — to the version it was sealed at, and nothing
+  in a stored or served record remembered that version. So archiving,
+  restoring or pinning a record on an `attributed` or `private` room left it
+  opening for nobody: every reader opened it at the new version. Two halves
+  of the rooms family were contradicting each other.
+
+  - SealedRecord gains an optional `version`: the version the ciphertext was
+    sealed at, where that is no longer the record's own. A host records it
+    when it stores a body, never changes it while the body is kept, and MUST
+    serve it whenever it differs from the record's version — absent
+    otherwise, so no record changes shape until a curation needs it. It is
+    inside `sealed`, so the data commitment covers it.
+  - Readers open and verify at it, and MUST refuse a `sealed.version`
+    greater than the record's own (a body cannot be sealed for a version the
+    room had not reached). SealedRecordBody's rule (3) now checks the body
+    against the location it was sealed at.
+  - A record curated by a host predating the member opens at neither version.
+    A reader MAY try earlier versions, newest first, never above the record's
+    own: the AEAD makes a wrong guess fail rather than mislead, and the
+    author's signed location makes the one that opens the one the author
+    wrote, so recovery does not trust the host for the answer.
+  - rooms/records/curate/0.1 states the rule from its side: a curation MUST
+    NOT alter a kept record's sealed content.
+
+  Edited in place, as #807 added `roomProfile` to SealedRecordBody: the rooms
+  family and its shared component are `draft`, and the addition is optional.
+  Libraries regenerated (Rust, TS, Go, Dart); one negative example added
+  (sealed.version 0).
+
+## 0.26.17 — 2026-10-18
+
+
+### Added
+
+- **vtc/rooms/memberships**: List — every surface shows a member the same rooms, and finishes an acceptance any other began (#813)
+
+A member reaches their community from several surfaces (member portal via
+  the wallet, a terminal client, a phone). Each could see only the offers
+  open now or accepted within the repeat window, so a room taken up in one
+  was missing from the others after it; and an acceptance one surface began
+  could be finished by no other, because every other minted a different
+  KeyPackage and was answered alreadyAccepted.
+
+  - vtc/rooms/memberships/list 0.1 (new): the community's own record of the
+    caller's admissions to rooms it owns — offered, admitted or removed — for
+    as long as it keeps the record, with no credentials. repeatAcceptUntil
+    says while the Welcome is kept. Defines how a surface combines it with
+    rooms/keys/list (custody) so every surface derives the same state, and
+    forbids a surface keeping its own record of acceptance.
+  - rooms/keys/key-package 0.2: returns the outstanding KeyPackage for the
+    same room, member and invitation (alreadyMinted: true, original
+    expiresAt) instead of minting another; invitation and expiresAt
+    required. Mint, accept and Welcome now each answer a repeat with their
+    first answer.
+  - rooms/keys/act 0.5: adds vtc/rooms/memberships/list/0.1 to the table
+    beside the offer types (act 0.4, #810), on their terms, as "the
+    community types"; widens the type pattern to vtc/rooms/memberships/;
+    KeyPackages from key-package 0.1 or 0.2. A new version, not an edit to
+    0.4: the closed table admits a type 0.4 refuses.
+  - vtc/_shared/0.1/community-room: RoomMembership.
+  - vtc/rooms/offers/list 0.2, offers/accept 0.1: informative cross-links.
+
+  Bindings regenerated (Rust, TS, Go, Dart); additive modules only.
+
+## 0.26.16 — 2026-10-17
+
+
+### Added
+
+- **vtc/community/theme**: Show and update — a community's own stylesheet for its console and member portal (#811)
+
+* feat(vtc/community/theme): show and update — a community's own stylesheet for its console and member portal
+
+  A community could set an accent colour and a logo (vtc/community/branding),
+  and nothing else about how its pages look. Administrators want to restyle
+  their console and member portal at run time, without the operator-only
+  admin_ui directory mode.
+
+  vtc/community/theme/update/0.1 (new, draft):
+  - An administrator replaces one stylesheet; the empty string removes it.
+    Proof and issuedAt REQUIRED; audited by digest, never by text.
+  - `dryRun: true` checks and answers with what would be stored, storing
+    nothing, so a client can preview a theme exactly as stored.
+  - The theme profile (P1-P8): design tokens on :root (light/dark), plus a
+    small set of cosmetic properties on ordinary elements — colours,
+    gradients, bounded borders/radius, font family/weight. No url()/@import/
+    @font-face (a theme loads nothing), no !important, no escapes or `<`, and
+    nothing that can move, size, hide, overlay or add content.
+    `outsideProfile` names the line, column and profile item broken.
+  - maxDocumentBytes 48 KiB both ways, for a 32 KiB stylesheet.
+
+  vtc/community/theme/show/0.1 (new, draft):
+  - Proof OPTIONAL and answerable to an unidentified caller: sign-in pages
+    draw the theme before the visitor holds any identity.
+  - Client requirements: re-check the profile before applying; render every
+    surface where a person decides, approves, consents, signs or is warned
+    in structural isolation from the theme; mark that a custom theme is on.
+
+  Why no second-administrator consent: the profile and the isolation
+  together mean a theme cannot change what another administrator is asked
+  to approve, so it stays an ordinary configuration write.
+
+  Bindings regenerated (Rust, TS, Go, Dart).
+
+
+
+### Specifications
+
+- **rooms/keys**: Act 0.4 — a member lists their offers at vtc/rooms/offers/list 0.2, and sees what each room is for (#810)
+
+rooms/keys/act/0.3's closed table admits vtc/rooms/offers/list/0.1 but not
+  vtc/rooms/offers/list/0.2 (#805), which shows each offered room's current
+  label and description (never its tags). A key holder conforming to act 0.3
+  refuses a 0.2 listing with typeNotActable, so a surface that reads offers
+  through act — pnm, the browser wallet — cannot use 0.2, and a member never
+  sees a room's description before accepting.
+
+  act 0.4:
+  - The table's offers/list row lists vtc/rooms/offers/list/0.1 and
+    vtc/rooms/offers/list/0.2 on the same terms: no presentation inserted,
+    issuer REQUIRED and the DID the offer is addressed to (Producer item 2),
+    resolved without a room credential (Recipient item 2b, which now names
+    list/0.2 too).
+  - New "What changed from 0.3" note; a request example completing a
+    list/0.2 as the member.
+  - Schemas otherwise identical to 0.3 (the type pattern already admits
+    vtc/rooms/offers/); no error code added. vtc/rooms/offers/accept has only
+    0.1, so nothing changes for it.
+
+  vtc/rooms/offers/list/0.2, in place: its "Signing as the member" paragraph
+  pointed at act "0.3 or later", which does not list it; it now points at
+  act 0.4. Prose only; its wire is unchanged (SPEC §5.2 editorial, as #797).
+
+## 0.26.15 — 2026-10-17
+
+
+### Added
+
+- **rooms/keys/profile**: A room's own profile — name and description sealed inside the room, readable only by its members (#807)
+
+A member holding keys to many rooms saw a DID per room: nothing a member
+  could read said what a room was, and the community's label for a room it
+  owns reached only administrators and members it was offered to.
+
+  - rooms/_shared/0.1: RoomProfile (name required ≤128, description ≤1000,
+    tags ≤8, one emoji, ext) and RoomProfileStatement — the profile as a
+    SealedRecordBody's new `roomProfile` member, signed by its author, with
+    the author's authority chain and issuedAt. One record per epoch at
+    profile_key(E) = HKDF(storage_key(E), "openvtc/room/profile/v1" ||
+    roomId || u64be(E)) — 22 chars, indistinguishable from a random key, so
+    the host cannot tell which record names the room; fixed key
+    `room-profile` on open rooms. Readers accept only a chain conferring
+    curate or admin, valid at issuedAt, issuedAt within the host's
+    updatedAt window, not revoked at or before issuedAt; newest accepted
+    epoch wins; a retraction (curate-gated at the host) clears it.
+    Revocation is not retroactive.
+  - rooms/keys/profile/read 0.1 (new): the member's key holder derives the
+    location, walks epochs down, fetches as the member, verifies, and
+    answers found/absent/cleared with stale, searched and rejected.
+  - rooms/keys/profile/write 0.1 (new): the key holder signs as the member,
+    embeds the chain, pads, seals under the current epoch and puts; clear
+    retracts. Carries the rule that a key holder advancing an epoch
+    re-writes the profile under the new one (fromJoin members can read it).
+  - vtc/rooms/community/create 0.3, update 0.2: the community's VTA writes
+    label/description (never tags) as the room's profile; the community's
+    own authority confers admin, write and curate; response `roomProfile`.
+  - Editorial pointers in rooms/owner/group/{add 0.2, remove 0.2, renew
+    0.1}; vtc/_shared RoomLabel/RoomDescription say where they now go.
+  - Rust, TypeScript, Go and Dart bindings regenerated.
+
+- **rooms/keys/label**: A member's own private name, description, notes and tags for a room they hold (#806)
+
+A member holding several rooms could tell them apart only by names other
+  parties gave them — the room's own profile, a community's offer label — or
+  by their DIDs. Nothing let a member keep their own name for a room, and a
+  person holding one room as two personas could not even tell the two
+  rooms/keys/list entries apart (implementations carried the member in ext).
+
+  - rooms/keys/label 0.1 (new): set, change or remove the member's personal
+    label for one room — label (one line, 128), description (1000), notes
+    (4000), tags (1–16 × 32) — kept by their key holder, keyed by room AND
+    member, never sent to the room, its host, its owner or a community, never
+    logged. Patch semantics (each detail given replaces, absent unchanged,
+    removeX removes one), idempotent (changed: false on a repeat), no
+    precondition. notHeld answers both "no group state" and "not a member you
+    act as". Delegates refused. Kept and backed up with the group state for
+    that room and member, discarded with it, and not on removal from the room.
+  - rooms/keys/list 0.2: each entry names its `member` (one entry per room
+    and member, for the members the caller may act as); `includePersonal`
+    (off by default) returns each entry's `personal` label. A consumer sends
+    a label nowhere but to the member; a wallet does not hand one to a
+    website unless the member chose to.
+  - rooms/_shared/0.1/personal-label (new): PersonalLabel and its details.
+
+  Informative display precedence: personal label, then the room's own
+  profile name, then the community's offer label, then the DID.
+
+- **vtc/rooms/community**: Update — administrators name, describe and tag the rooms the community owns (#805)
+
+A community could name a room it owns only once, at create, with no
+  description, and nothing could change it afterwards — so neither its
+  administrators nor the members it offers a room to could tell what each
+  room was for.
+
+  - vtc/rooms/community/update 0.1 (new): change a community-owned room's
+    label, description (or removeDescription) and tags. vtc.rooms.manage;
+    proof and issuedAt REQUIRED; reason audited with each changed detail's
+    previous and new value; same values answer changed: false and write
+    nothing; notFound for a room the community only hosts. Designed for
+    no operation-bound step-up: it reaches no key holder and confers
+    nothing.
+  - vtc/rooms/community/create 0.2: optional description and tags.
+  - vtc/rooms/community/get 0.2, list 0.2: CommunityRoomV2 — description,
+    tags, detailsUpdatedAt/detailsUpdatedBy; list filters by tag.
+  - vtc/rooms/offers/list 0.2: OfferV2 carries the room's current
+    description (never its tags).
+  - vtc/_shared/0.1/community-room: additive $defs RoomDescription,
+    RoomTag, RoomTags, CommunityRoomV2, OfferV2 (the RecordMetadataV2
+    pattern), so every 0.1 task keeps its published shape.
+
+  Details stay the community's owner-side record: never in the host
+  record, the room, or anything sent on its host path.
+
+- **rooms**: Revocation — a removal takes effect at the host at once (#804)
+
+A room can now withdraw credentials it issued before they expire, and a
+  host refuses them from the moment it accepts the withdrawal.
+
+  - rooms/_shared/0.1: RevocationList (room-signed, cumulative, sequenced,
+    append-only), RevocationEntry (credential | subject | room, keyed on
+    validFrom vs revokedAt so a party can be re-admitted), RevocationHead.
+    AuthorityPresentation states that every credential's proof must be made
+    by a key of its own issuer, and that a host holding a list refuses any
+    chain containing a revoked link, under every task and version.
+  - rooms/revocations/put 0.1 (new): an admin delivers the list; the host
+    enforces it immediately on every path.
+  - rooms/revocations/get 0.1 (new): an admin reads the held list, to
+    confirm enforcement or recover a lost list.
+  - rooms/owner/revoke 0.1 (new): the owner's key holder signs the next
+    list as the room and pushes it to every host — outbound only.
+  - rooms/owner/group/remove 0.2: withdraws the member first, then
+    advances the group; refuses a private room.
+  - vtc/rooms/community/members/remove 0.2: open and attributed rooms
+    withdraw the member's credentials (and an open offer's) at the host.
+  - Editorial pointers in group/remove 0.1, owner/claim 0.1 and
+    vtc/rooms/community/members/remove 0.1.
+
+## 0.26.14 — 2026-10-16
+
+
+### Specifications
+
+- **vtc/registry/sync-jobs/retry**: 0.2 — bring a job waiting on its backoff forward (#802)
+
+0.1 requeues only failed jobs, so an operator who fixes what the registry
+  was refusing, or configures a registry for a community that ran without one,
+  has no way to stop members waiting out a backoff that can reach an hour.
+
+  0.2 accepts a pending job by jobId and adds allWaiting (exactly one of
+  jobId, allFailed, allWaiting). A held job, one deliberately delayed such as
+  a batched removal, is never brought forward and is skipped as held.
+  notFailed is replaced by inFlight and held; requeued[].from says whether
+  each job was failed or pending. 0.1 is unchanged.
+
+## 0.26.13 — 2026-10-16
+
+
+### Added
+
+- **vta/witness**: List — read back stored witness credentials with their outcome evidence (#800)
+
+vta/witness/accept stores a VWC with its outcome evidence (the
+  witness/session document and the witness's submit #response), and its
+  answer was the client's only copy of that evidence: vault/credentials/query
+  returns body-free descriptors and vault/credentials/get the credential alone.
+  A client that stopped between accept returning and recording the result, or
+  another device of the same principal, could see the VWC and not present it,
+  since a VWC without its evidence counts for nothing at a verifier.
+
+  vta/witness/list/0.1 returns every stored VWC the caller may read, each as
+  accept answered it (credentialId, witness, relationshipDid,
+  vwcDigestMultibase) plus acceptedAt and the evidence byte for byte, the VWC
+  travelling once inside evidence.outcome. Filters relationshipDid and witness
+  (AND-combined); pageSize (<= 100) / cursor / truncated as vta/credentials/list.
+  Only VWCs in contexts the caller may act in (witnessRequest, never sign alone),
+  active vault entries only; an unreachable or unknown DID matches nothing,
+  never an error. Lists VWCs accepted under 0.1 and 0.2 alike. A read:
+  sideEffects none, discloses secret, so request and response proofs and
+  issuedAt are REQUIRED; retention transient.
+
+  accept/0.2's "Reading the evidence back later" and the 0.6 conventions now
+  point at it. Bindings regenerated (Rust, TS, Go, Dart).
+
+## 0.26.12 — 2026-10-16
+
+
+### Added
+
+- **vtc/members**: Registry-consent — a member grants or withdraws their own trust-registry consent (#798)
+
+
+### Documentation
+
+- **keys**: Sign-jws and sign-csr name their known implementation (#792)
+
+keys/sign-jws/0.1 and keys/sign-csr/0.1 declared no knownImplementations,
+  so the registry showed "Not declared" for both, although a runtime
+  implementation exists: OpenVTC/verifiable-trust-infrastructure#2057 (VTA
+  custodian; merged 2026-10-13 at dda501d) serves both tasks. Its test
+  suite reproduces the sign-jws example's signing input and SHA-256 digest,
+  and checks that a sign-csr request's signature verifies.
+
+  Front matter only; no wire or binding change.
+
+
+
+### Specifications
+
+- **witness**: Add 0.2 — a member presentation on submit, and outcome evidence on personhood/assert, replace the ext stop-gaps (#799)
+
+Two members implementations carried in a vendor extension,
+  ext["org.openvtc.witness"], become specified members, so any witness and
+  any community reads them.
+
+  - witness/session/submit/0.2: optional memberPresentation — a VP by the
+    member DID, for authentication, bound to the session's challenge and
+    domain, carrying the eligibility credentials (a membership credential
+    naming the member DID). Neither party nor the witness; a failure where
+    relied on is presentationInvalid; a witness not using it MUST NOT treat it
+    as satisfying anything. The member DID never appears in the VWC, and the
+    witness keeps neither it nor the presentation. Privacy: links the pairwise
+    relationship DID to the member DID at the witness; proves co-possession in
+    one session, not one person; the alternatives are recorded.
+  - witness/session/0.2: same payload; its outcomeEvidence names
+    submit/0.2#response. The declaration belongs to the initiating document's
+    specification (SPEC §7.3 item 20, §4.9.4 check 3), so a 0.1 session cannot
+    close with a 0.2 submit. Versions pair one to one.
+  - vtc/members/personhood/assert/0.2: optional outcomeEvidence (1–16
+    entries, each {session, outcome} carried byte for byte). A VWC counts only
+    from a trusted witness, paired by §4.9.4's four checks and the witnessing
+    checks; unpaired entries are ignored. A member presents only the VWCs it
+    selects.
+  - witness/_shared/0.1/outcome-evidence: OutcomeEvidence, shared by
+    personhood/assert/0.2 and vta/witness/accept/0.2.
+  - vta/witness/{open,present,accept}/0.2 + vta/_shared/0.6 conventions:
+    conduct 0.2 sessions; present puts the member presentation in
+    memberPresentation; open drops memberLinkUnsupported; a 0.2 session is
+    continued only by 0.2 tasks. The 0.1 tasks are unchanged.
+
+  Bindings regenerated (Rust, TS, Go, Dart).
+
+- **rooms/keys**: Act 0.3 — a member takes up a community's offer of a room as themself, with only a KeyPackage their key holder minted (#797)
+
+`vtc/rooms/offers/list/0.1` and `vtc/rooms/offers/accept/0.1` must be signed
+  as the DID the community addressed its offer to. That DID is the member as
+  the community knows them — typically a persona their key holder holds — so
+  no surface the member acts from can sign either, and `rooms/keys/act/0.2`
+  could not complete them: its `type` pattern admits only `rooms/`, and its
+  closed table lists neither. A member could be offered a room and never
+  reach it.
+
+  act 0.3:
+  - The table gains `vtc/rooms/offers/list/0.1` and
+    `vtc/rooms/offers/accept/0.1`, with no presentation inserted: the member
+    holds no room authority yet, and the community checks the offer against
+    the document's proof. The `type` pattern admits `vtc/rooms/offers/` beside
+    `rooms/` and nothing else of the vtc family (new invalid example: an
+    administrator's `vtc/rooms/community/members/add` is refused by schema).
+  - Producer item 2: `issuer` REQUIRED for the offer types (the DID the offer
+    is addressed to); `recipient` is the community.
+  - Recipient item 2b (new): for the offer types, act as `issuer` iff the
+    recipient holds a key `issuer`'s DID document lists for `authentication`
+    and the caller may act as it; `issuerNotPrincipal` otherwise,
+    `principalAmbiguous` when absent; never pick for the caller. No room
+    credential is required.
+  - Recipient item 10 / Producer item 5 (new): an acceptance's `keyPackage`
+    is completed only when the recipient minted it with rooms/keys/key-package
+    for that room and that member and still holds its private half (unused,
+    unexpired), compared by KeyPackageRef, never by its leaf credential;
+    otherwise the new code `keyPackageNotHeld`.
+  - Security & Privacy: why item 10 is required — a KeyPackage the key holder
+    did not mint becomes the member's leaf with keys someone else holds (the
+    client), opening every later record and signing group messages as the
+    member outside the key holder and beyond any withdrawal of the client's
+    standing; the leaf credential is signed by the leaf key, not the member's
+    DID, so the community cannot tell, and only the minting key holder can.
+    And why the offer types belong in act rather than a task of their own:
+    same entitlement, same delegate refusal (item 3), same closed table — one
+    signing-as-the-member surface to audit, not two — and a key holder that
+    accepted itself would call the community and route the answer, which item
+    7 rules out.
+  - Examples: an acceptance completed as the member; a `keyPackageNotHeld`
+    refusal.
+
+  vtc/rooms/offers/{list,accept}/0.1, in place: one paragraph each under
+  Authorization pointing a surface without the member's keys at act 0.3.
+  Prose only; their wire is unchanged (SPEC §5.2 editorial, as #783).
+
+- **vtc/rooms/community/members/remove**: The answer says what removal did in its structured members, not in a notice — clarified in place (#796)
+
+Item 4 required the community to "say in its record and its answer that
+  removal does not recall what was read", but the response schema has no
+  member to say it in (`additionalProperties: false`). An implementation
+  could comply only through `ext`, which a caller cannot depend on — so the
+  requirement promised callers something the wire never guaranteed.
+
+  Two ways out: add an optional `notice` member, or drop "and its answer".
+  This drops it, and puts the obligation where it does its work:
+
+  - Community item 4: MUST NOT represent a removal, in its record or answer,
+    as recalling what was read, re-sealing what was written, or revoking the
+    authority credential. The answer's structured members are what it says:
+    `member.state` `removed`, `member.validUntil` (when a host stops honouring
+    the authority credential), and `epoch` (sealed tier, admitted member: the
+    first epoch sealed without them; absent means nothing was withdrawn
+    cryptographically — an open room, or a withdrawn offer).
+  - Producer (new): the administrator's surface SHOULD show what removal does
+    and does not do on the room's tier, and the member's `validUntil`, before
+    the request is signed and before any step-up gesture bound to it; SHOULD
+    report the answer from `validUntil`/`epoch`; MUST NOT report any removal
+    as ending access to what was already read.
+  - New subsection *Why the answer carries no notice*.
+
+  Why not a field: the statement is identical for every removal on a tier, so
+  it carries nothing the caller cannot render from the specification, the
+  tier, `validUntil` and `epoch`; as a field it would be server-chosen,
+  unlocalised prose shown to an administrator as guidance; and it would
+  arrive after the decision. The moment it matters is before the requester
+  commits, when a bound step-up ties them to this one document — which is a
+  producer obligation, not a response member. An implementation MAY still
+  carry a statement under `ext`; a caller MUST NOT depend on one.
+
+- **rooms/owner/group**: Add 0.2 — a repeated admission is answered with its Welcome, not alreadyMember (#795)
+
+`rooms/owner/group/add/0.1` item 6 settles a pending admission at the next
+  request, which keeps the room and the owner's group in step across a lost
+  host reply. But the next request is, in the case that matters, the same
+  request again: the caller lost the answer and retries. 0.1 settled the
+  pending admission, found `member` already in the group, and refused the
+  retry `alreadyMember`. The Welcome — the only way the newcomer can join —
+  was returned to nobody. The same happens when the recipient applied the
+  admission and its own reply to its caller was lost. `vtc/rooms/offers/accept`
+  already promises its callers that retrying is safe; under 0.1 it was not.
+
+  add 0.2:
+  - Item 8 (new): the recipient keeps, with the group state, the last
+    admission it applied for the room — `member`, the KeyPackage's
+    `KeyPackageRef` (RFC 9420 §5.2), epoch, Welcome and ratchet tree — until
+    its next advance of the room or 24 hours, whichever comes first. A request
+    naming the same room, the same `member` (string-equal) and a KeyPackage of
+    the same `KeyPackageRef` is answered, once item 1 and the authorization
+    checks pass, with that admission's epoch, Welcome and tree; the recipient
+    does not advance the room, contact the host, change its group or build a
+    fresh Welcome. Anything else for a member with a leaf is `alreadyMember`.
+  - Item 6 hands over to item 8 when the pending admission it applies is the
+    one the request repeats.
+  - New section *Repeating an admission*: why re-serving is safe (the Welcome
+    is HPKE-sealed to the KeyPackage's init key and addressed by its
+    KeyPackageRef, RFC 9420 §12.4.3.1; the joiner discards the private half on
+    use or expiry, so a late copy opens nothing), why the match is exact (equal
+    KeyPackageRefs mean byte-identical KeyPackages, hence the same init key; a
+    different KeyPackage for the same member would be a second leaf), and why
+    retention is short.
+  - `alreadyMember` and `hostUnreachable` meanings updated; retention and
+    exposure rationales say what is kept. No code added; payload and response
+    schemas unchanged.
+
+  vtc/rooms/offers/accept/0.1, in place: "Repeating an accept" now points at
+  group/add 0.2 items 6 and 8, says the community repeats its own request to
+  its VTA unchanged, and that the community's VTA serves group/add at 0.2 or
+  later. Prose only; its wire is unchanged, and it now describes what its own
+  existing retry promise requires (SPEC §5.2 editorial, as #783).
+
+- **vtc/vetting/vetters/pcs-root**: A member may recover a lost enrolment answer within the same label (#791)
+
+pcs-root/0.1 refused every second enrolment under a label as
+  alreadyEnrolled. That is right for counting, but it made a lost answer
+  unrecoverable for the rest of the label: if the community issued and the
+  answer never reached the vetter in a form it could open (late arrival, a
+  client restart losing the blinding state, a transport drop), the vetter
+  held no credential and was locked out of hidden vetting until the next
+  vetter/<YYYY-MM> label. This happened in a live run.
+
+  vtc/vetting/vetters/pcs-root/0.1 (draft, in place per SPEC §5.2), new
+  "Recovering a lost answer" section under Authorization:
+  - A community MAY answer a second request under a label the member is
+    enrolled in with a fresh issuance over the new blinded request, when its
+    `id` is the one recorded for the member. Every first-enrolment check still
+    applies (live grant, proof, issuedAt, wrongLabel, badRequest).
+  - It MUST NOT re-issue unless its suite binds the blinded request to the
+    secret `id` is derived from, so every credential under one `id` yields
+    the same tags. That binding is what stops a re-issue counting as a second
+    vetter; without it the community refuses with alreadyEnrolled.
+  - A different `id` is still identifierRebound. No second enrolment is
+    recorded. Re-issues SHOULD be bounded per member per label, refused beyond
+    the bound with alreadyEnrolled, and audited.
+  - What this gives up is "exactly one credential object per member per
+    label", not "each member counted once". Distinctness is by tag.
+  - Client note: re-run vta/pcs/root-request for the label (it replaces the
+    blinding state and keeps the key, so the `id`), send, and pass the answer
+    to vta/pcs/root-accept. alreadyEnrolled now means the community does not
+    re-issue, or no longer will for this label.
+
+  The alreadyEnrolled meaning, the proof rationale and the "record only after
+  signing" note say the same. hidden/publish/0.1's pointer to pcs-root no
+  longer says a second enrolment is impossible. Bindings regenerated.
+
+  The issue's alternative, an administrator task to clear an enrolment, is
+  not taken: re-issuance under the same `id` recovers without an operator
+  and without a record of the member's enrolment being erased.
+
+- **vtc/join-requests**: Submit and supplement say why a hidden-vetting challenge was refused (#790)
+
+A hidden-vetting proof is bound to a single-use challenge issued over
+  vtc/vetting/pcs-challenge, and the community spends that challenge when it
+  counts the proof. Neither vtc/join-requests/submit nor
+  vtc/join-requests/supplement declared a code for a refused challenge, so
+  implementations fell back to malformedRequest. An applicant could not tell
+  an expired challenge from a spent one, or either from a client bug.
+
+  submit/0.2, submit/0.3 and supplement/0.1 (draft, in place per SPEC §5.2)
+  each declare four codes under the task's own name, none retryable:
+  - challengeNotIssued: no challenge held for the applicant's DID;
+  - challengeAlreadyUsed: spent by an earlier submission or supplement;
+  - challengeExpired: past expiresAt, details MAY carry expiredAt (the
+    details schema does not close the object, so an implementation's own
+    markers still validate);
+  - challengeMismatch: bound to a value other than the open challenge,
+    which this attempt spends.
+
+  A new "Hidden-vetting challenge" section in each says where the proof
+  travels (extensions.hiddenVetting), that counting it spends the open
+  challenge whether or not the applicant is then admitted, that the message
+  never echoes the challenge value, that the value is discarded on use, and
+  that a value-free spent marker MAY be kept until expiry so a repeat attempt
+  is told challengeAlreadyUsed rather than challengeNotIssued. Recovery is a
+  new challenge and a new proof. submit/0.3 adds that a producer SHOULD name
+  its criterion on a hidden-vetting submission. supplement/0.1's
+  `extensions` is no longer described as wholly uninterpreted, and
+  pcs-challenge/0.1's Retention permits the spent marker and points at the
+  codes.
+
+  The issue's note about several hidden-vetting criteria spending one
+  challenge is moot: vtc/vetting/hidden/publish refuses a second criterion
+  (otherCriterion, #734). Bindings regenerated (Rust ERROR_CODES).
+
+- **vtc/members/update**: PublishConsent may be withdrawn by an administrator, never granted — consentGrantForbidden (#789)
+
+A member's consent to trust-registry publication is the member's own
+  privacy decision, given with `registryConsent` on vtc/join-requests/submit.
+  update/0.1 listed `publishConsent` among the fields an administrator may
+  change with no direction, so an administrator could raise it and publish
+  someone who said no.
+
+  vtc/members/update/0.1 (draft, in place per SPEC §5.2):
+  - `publishConsent` MAY lower consent (true -> false, e.g. a takedown) and
+    MAY restate the current value. It MUST NOT raise it: consent becomes true
+    only through the member's own registryConsent on a join submit, including
+    a rejoin, which writes a fresh member record.
+  - New error vtc/members/update:consentGrantForbidden (not retryable),
+    checked after notFound and adminRoleForbidden. A refused raise rejects the
+    whole update; no other field in the request is applied.
+  - A withdrawal: the community SHOULD remove the member's published registry
+    record at its next sync, and MUST NOT publish the member again until the
+    member consents anew.
+  - Security & Privacy says why consent runs one way. Bindings regenerated.
+
+## 0.26.11 — 2026-10-16
+
+
+### Specifications
+
+- **rooms/keys**: Act 0.2 — the member is the subject, and a document that names no room names its member (#787)
+
+`rooms/keys/act/0.1` declared `subjectPath: /document/payload/roomId` and
+  resolved the member to act as "among the members of the document's room".
+  Three types in its own table carry no `roomId` — `rooms/blobs/chunk/0.1`
+  (`downloadId`, `index`) and `rooms/blobs/upload/{commit,abort}/0.2`
+  (`uploadId`) — and for them 0.1 defined neither the subject nor how the
+  recipient finds the document's room, while a producer MAY omit `issuer`.
+  A conforming request could leave the recipient nothing to resolve the
+  member from.
+
+  act 0.2:
+  - The table: these types carry no `roomId`; the member is the document's
+    `issuer`, which the producer MUST set to the member whose request
+    opened the transfer.
+  - Producer item 2: `issuer` MUST be set for a type that names no room
+    (MAY → MUST for those types; unchanged otherwise).
+  - Recipient item 2a: for a type that names no room, act as `issuer` if it
+    is a member the recipient holds keys for and the caller may act as;
+    otherwise `issuerNotPrincipal`; `issuer` absent is `principalAmbiguous`.
+    The recipient MUST NOT pick a member for the caller (not its only one,
+    not one inferred from the transfer identifier).
+  - `subjectPath` moves to `/document/issuer`. The subject is the party
+    whose authority the task exercises (`actsAsSubject: true`) — the
+    member, whose key signs — which is the question a delegated-execution
+    policy point asks of `subjectPath` ("does the executing agent speak
+    for this subject?") and exactly what Recipient item 2 decides. The room
+    is the resource the completed document addresses, not a party the caller
+    speaks for, and three of the table's types do not name one. Where
+    `issuer` is absent (a room-naming type, one candidate member) the
+    subject is the member item 2 resolves, and a recipient evaluating
+    policy or audit against the subject MUST use it and MUST NOT treat the
+    unresolved pointer as "no subject".
+  - `principalAmbiguous` / `issuerNotPrincipal` meanings cover the
+    room-less case. No code added; payload and response schemas unchanged
+    except the `issuer` description.
+  - Examples: a direct upload's commit completed as the member; a chunk
+    refused `principalAmbiguous`. Invalid example: a non-DID `issuer`.
+
+- **rooms/keys**: File-key and open 0.2 — unknownEpoch says `removed` when catching up cannot help (#786)
+
+`rooms/keys/file-key/0.1` gave `unknownEpoch` two reasons in a closed
+  details schema — `notDelivered` and `beyondChain` — and defined
+  `notDelivered` as "E is later than any epoch it holds". A removal leaves
+  the oracle's group where it was, so a file sealed after the oracle's
+  principal was removed matches that definition too. The oracle could only
+  say `notDelivered`, telling the caller to catch up with the room's
+  commits, and no commit will ever make that epoch derivable for a removed
+  member: a caller following the reason retried forever.
+  `rooms/keys/open/0.1` declared `unknownEpoch` with no details schema at
+  all, so a caller could not tell the two cases apart there either, and an
+  implementation already sends an undeclared `reason: removed`.
+
+  file-key 0.2:
+  - `unknownEpoch.details.reason` gains `removed`, and `details` gains
+    `removedAtEpoch` (integer, minimum 1).
+  - Oracle item 4: `removed`, with `removedAtEpoch`, when a commit the
+    oracle processed removed its principal from the room's group at
+    `removedAtEpoch` and E is at or after it — no later commit will make E
+    derivable, so the caller MUST NOT be told to catch up. It takes
+    precedence: an oracle that knows of such a removal MUST NOT answer
+    `notDelivered` for an E at or after it.
+  - Caller: acts on `details.reason`, never on the message; after `removed`
+    it MUST NOT retry after catching up.
+  - A `removed` refusal example, a Security & Privacy sentence, and a
+    "What changed from 0.1" section.
+
+  open 0.2 declares the same three reasons and the same details schema for
+  `rooms/keys/open:unknownEpoch`, with the same conformance text
+  (`beyondChain` for an epoch earlier than the oracle's current one that its
+  retained chain does not reach).
+
+## 0.26.10 — 2026-10-16
+
+
+### Added
+
+- **vtc/members**: Admit and make-membership — direct admission by an administrator, decided by the community's admission policy (#784)
+
+Two new draft tasks for admitting a member without a join request, as one
+  governed ceremony:
+
+  - vtc/members/admit/0.1 ("Add a member"): a DID with no access-control
+    entry (or only an `application` entry) is admitted at a community role the
+    administrator names. The community writes the entry, the member record and
+    a revocation slot and issues the VMC and role VAC, as a completed join
+    would. A former member (removed record, no entry) is re-admitted and
+    reported `returning`.
+  - vtc/members/make-membership/0.1 ("Make this a membership"): an existing
+    live entry with no member record (typically the bootstrap administrator)
+    gets the member record and credentials at the role it already holds; the
+    entry itself is not changed.
+
+  The rules no policy can change:
+  - the requester holds `vtc.members.manage` (permissionDenied);
+  - a role other than `member` takes `vtc.roles.assign`, and the entry it
+    seats is bounded by the requester's own;
+  - `admin`, `application` and any role conferring authority-conferring
+    capabilities are never seated (`roleNotPermitted`);
+  - make-membership refuses an `application` entry, an expired or suspended
+    entry, a live membership and a removed record.
+
+  The community's admission policy then admits, refers (parked in the action
+  list, answered with trust-task-next-step, approved only by another holder of
+  `vtc.members.manage` who is neither requester nor subject, every check
+  re-run at execution, exactly once) or refuses (`deniedByPolicy`). Step-up
+  and consent are described as the model the tasks are designed for, not
+  required (SPEC §7.3 item 13).
+
+  Both answer with the same AdmittedMembership (subject, role, label?,
+  status, returning, approval policyAllowed|approved|waived,
+  statusListIndex, vmc, roleVac), shared in vtc/_shared/0.1/admission.
+
+  The wire shape and codes are those of the Verifiable Trust Infrastructure
+  implementation (vtc-service), which bound the tasks ahead of this
+  specification with local types; generated types replace them.
+
+  Bindings regenerated (Rust, TS, Go, Dart).
+
+
+
+### Specifications
+
+- **external**: Credentials/issue 0.3 — details.maxOperations is a guaranteed-to-fit count, clarified in place (#783)
+
+0.3 said `details.maxOperations` on `responseTooLarge` was "how many of the
+  batch's operations, taken in order, would fit", which left open whether a
+  consumer may rely on it or must treat it as a hint.
+
+  It is a guarantee, and now says so:
+
+  - Producer (Conformance item 7): a custodian that gives `maxOperations`
+    MUST give a count k such that the same request, with `presign.requests`
+    cut to its first k operations (and `uploadId` left out if none of them
+    needs one, as item 4 requires), is answered within the bound on
+    `sealedCredential`, the account and binding as they were at the refusal.
+    It MAY be conservative — a sealed bundle's length varies with its
+    ciphertext's randomness, so a count computed from an upper bound on the
+    sealed length is sometimes lower than the most that would fit. It MUST
+    NOT give a count it has not established fits; it omits the member when it
+    cannot compute one or when not even one operation fits. The count speaks
+    for those operations in that order only.
+  - Consumer (item 5): SHOULD split by it (else in half); the first part fits,
+    the rest carries no promise, and the consumer MUST handle another
+    `responseTooLarge` on any part or any other batch by splitting again. It
+    MUST NOT treat the count as a size that fits other operations. A single
+    operation refused this way cannot be split and SHOULD NOT be retried.
+  - The `responseTooLarge` meaning, the "What changed from 0.2" list and the
+    refusal example say the same.
+
+## 0.26.9 — 2026-10-15
+
+
+### Specifications
+
+- **external**: Credentials/issue 0.3 — at most 64 presigned requests per batch, responseTooLarge when the sealed answer would exceed its bound (#781)
+
+0.2 let a presign batch hold 128 operations and bounded the response's
+  sealedCredential at 262144 characters, on the estimate that 128 presigned
+  requests are about 128 KiB of cleartext and a third more once armored.
+  That estimate does not hold: a sealed-transfer bundle's overhead depends
+  on how its cleartext is encoded inside the seal and can be several times
+  the cleartext, and objectKey and uploadId may each be 1024 characters, so
+  a long key or upload id lengthens every URL in the set. A batch of 128
+  could produce an answer the schema forbids, and 0.2 said nothing about
+  what a custodian does then.
+
+  external/credentials/issue 0.3 (draft; a narrowed constraint, so a new
+  MINOR per SPEC §5.2):
+  - PresignBatch.requests maxItems 128 -> 64; every prose 128 for this task
+    updated (summary, Direct uploads, Definitions, examples, Security).
+  - New error external/credentials/issue:responseTooLarge: a custodian whose
+    sealed answer to a valid batch would exceed the sealedCredential bound
+    refuses it — never truncates the set, never answers over the bound —
+    with optional details.maxOperations; the caller SHOULD split and ask
+    again. It is a new conformance item 7, after the batch, ceiling and TTL
+    checks and before the rate check; a refused batch does not count
+    against the binding's rate. The custodian learns the size by presigning
+    and sealing (no provider contact), so noKeyAgreement precedes it, and a
+    set built and refused is discarded unreturned and unlogged.
+  - The maxDocumentBytes rationale is corrected; sealedCredential stays at
+    262144 and maxDocumentBytes at 65536 / 294912, which still hold a bundle
+    at its bound plus the echoed batch, envelope and proof.
+
+  Why cap rather than raise the bound: presigned requests are bearer
+  authority until they expire (five minutes at most for direct-upload
+  targets), so presigning more than can be used before expiry only widens
+  exposure; 64 parts of S3's 5 MiB minimum is 320 MiB per batch, and larger
+  uploads use larger parts or ask again; a larger answer must cross
+  mediators, DIDComm envelopes whose nesting multiplies base64 expansion,
+  and memory-constrained custodians and hosts.
+
+  Invalid examples: a 65-operation batch (request) and a response echoing
+  65 operations. external/_shared/0.1 already names PresignedRequestSet for
+  "0.2 and later" and keeps its own 128 bound for 0.2, so it is unchanged.
+  rooms/blobs/upload/begin/0.2's 128 part targets per answer stays true: a
+  host fills such an answer with two issuances. Bindings regenerated.
+
+## 0.26.8 — 2026-10-15
+
+
+### Added
+
+- **vta/witness**: The client carries the witness messages — vta/witness/{open,present,accept} replace vta/witness/request (#779)
+
+vta/witness/request/0.1 (#777) had the VTA make both round trips to the
+  witness itself, as the principal's relationship DID. It cannot: a witness
+  checks that the transport-proven sender of each document is its issuer and
+  replies to that sender, and the relationship DID's one mediator connection
+  belongs to whoever holds the relationship, normally the client. So the
+  client carries the messages and the VTA builds, signs and verifies, in
+  three steps:
+
+  - vta/witness/open/0.1: checks key custody, the credentials and the member
+    link up front, opens a session record, and returns the witness/session
+    document signed as relationshipDid for the client to send.
+  - vta/witness/present/0.1: takes the witness's session #response verbatim,
+    checks it is the witness's for this session, builds the relationship
+    presentation (and the member presentation) bound to its challenge and
+    domain, and returns the signed witness/session/submit document.
+  - vta/witness/accept/0.1: takes the submit #response verbatim, verifies the
+    VWC as #777 did, stores it with its evidence, and answers as #777 did.
+
+  The record is keyed by the session id within the caller's contexts,
+  expires, holds no presentation or challenge, and moves opened -> presented
+  -> accepted. Every handed-back document is checked against it (type,
+  issuer = the witness, recipient = relationshipDid, threadId, the witness's
+  proof) before it is read, so nothing from another session can be spliced
+  in. Each step is safe to repeat: open's duplicate is inert, present's
+  duplicates are spent by the witness's single-use challenge, and accept
+  answers the same outcome again without storing twice.
+
+  Shared rules are in vta/_shared/0.5/CONVENTIONS.md and the shared shapes
+  (SessionId, CarriedDocument) in witness-party.schema.json. The
+  witnessRequest capability now covers the three tasks.
+
+  vta/witness/request/0.1 is published (release #778), so it is not edited:
+  it is retired in place, supersededBy vta/witness/open/0.1, with a status
+  note naming its successors, why it cannot be implemented, and that no
+  implementation shipped it.
+
+## 0.26.7 — 2026-10-15
+
+
+### Added
+
+- **vta/witness**: Vta/witness/request — the VTA runs a witnessed session for its principal's relationship (#777)
+
+A Verifiable Witness Credential is issued to the participating party of a
+  witness/session, who presents its relationship credential bound to the
+  session's challenge. A principal whose keys and credentials live in a VTA
+  cannot do that from a client that holds neither. This adds
+  vta/witness/request/0.1: the client names a witness, the relationship
+  (relationshipDid, counterpartyDid, the enclosing thread) and credentials by
+  vault handle; the VTA opens the session as the relationship DID, builds and
+  signs the presentation itself, submits, verifies the VWC as a verifier of
+  the evidence would (issuer = session recipient = response signer,
+  taskContext/taskDigest over the session document as sent, subject and
+  object digest, vwcDigestMultibase), and stores it in the credential vault
+  with its evidence — the session document as sent and the submit #response
+  as received. It answers with the vault handle, the digest and the two
+  evidence documents (which carry the VWC); never a key, a presentation or
+  the challenge.
+
+  Membership evidence is optional. A VMC naming the relationship DID rides
+  in the relationship presentation; one naming a member DID needs an
+  explicit memberDid, and the VTA builds a second presentation by that DID
+  bound to the same session. witness/session/submit/0.1 has no member for
+  it, so its carriage is the witness's own (SPEC 4.5.1 leaves an ext
+  namespace's semantics to its controller); the OpenVTC carriage is cited
+  non-normatively.
+
+  Authorization is standing over every context the task touches, expressed
+  as the new witnessRequest capability (witness-request in device/_shared
+  0.1), which is not sign and is not satisfied by sign. Errors: notFound,
+  credentialMismatch, noMatchingProtocol, witnessUnreachable (retryable),
+  witnessRefused, challengeMismatch, presentationInvalid (the witness's own
+  code and message in details), vwcInvalid.
+
+## 0.26.6 — 2026-10-15
+
+
+### Specifications
+
+- **external**: Credentials/issue 0.2 — batched presigned requests with signed length and checksum, multipart and head, for direct uploads (#775)
+
+rooms/blobs/upload/begin/0.2 lets a host answer with direct-to-storage
+  targets whose PUT binds each part's exact length and SHA-256 (item 17),
+  and commit/0.2 has the host verify the object at storage and complete a
+  multipart upload before recording (item 3). A host that holds no storage
+  credential asks its custodian for each request through
+  external/credentials/issue on an s3-static-presign account, and 0.1 can
+  express none of it: one GET/PUT/DELETE per issuance, no signed headers,
+  no multipart operations, no HEAD.
+
+  external/credentials/issue 0.2:
+  - the payload takes either `scope` (session and token models, as 0.1)
+    or `presign` (s3-static-presign only): one object, at most one
+    multipart upload of it, up to 128 operations — put, get, head, delete,
+    create-multipart, upload-part, list-parts, complete-multipart,
+    abort-multipart;
+  - the custodian signs Content-Length and x-amz-checksum-sha256 into put
+    and upload-part, uploadId/partNumber into the query,
+    x-amz-checksum-algorithm into create-multipart, x-amz-mp-object-size
+    into complete-multipart, x-amz-checksum-mode into head, so storage is
+    the enforcer;
+  - every operation is presigned, none performed: issuance keeps needing
+    no egress, and verifying the object stays the host's duty;
+  - the binding ceiling is unchanged: each operation is authorized by
+    put / get / delete (multipart writes by put, head by get, abort by
+    delete), so no account record or other task changes shape;
+  - a batch counts once against the binding's rate;
+  - new errors requestShapeMismatch and invalidBatch; the sealed cleartext
+    for presign is a PresignedRequestSet; the response's bundle is bounded
+    at 256 KiB, maxDocumentBytes declared.
+
+  external/_shared/0.1 gains PresignOperation and PresignedRequestSet
+  (additive); CONVENTIONS §6 names the new cleartext. Bindings regenerated.
+  rooms/blobs/upload/{begin,commit}/0.2 do not name
+  external/credentials/issue, so they are unchanged.
+
+## 0.26.5 — 2026-10-15
+
+
+### Added
+
+- **rooms**: Rooms/owner/group/renew renews a sealed room; rooms/keys/act refuses a sealed room's mint (#773)
+
+A sealed room (`attributed` / `private`) had no correct way to renew, and
+  one way to brick itself that looked like a renewal.
+
+  - rooms/epoch/mint advances a host without a commit (a host MUST), and on a
+    sealed room the room epoch is the MLS group epoch + 1. rooms/keys/act/0.1
+    completes a mint for a member's client, which holds no group key and so
+    sends no commit: the host moves to N+1, every member's key holder stays at
+    N, every write is refused as sealed under a superseded epoch, and the
+    owner's next rooms/owner/group/{add,remove} fails epochConflict.
+  - Only membership changes advanced a sealed room's epoch, so a room whose
+    membership was stable lapsed after its epoch lifetime with no remedy.
+
+  rooms/owner/group/renew/0.1 (new, Owner -> KeyHolder): the sibling of
+  group/{create,add,remove}. The key holder advances the group with a commit
+  that changes no membership (self-update or empty commit), builds the epoch
+  link, retains the pending advance durably before sending (at most one per
+  room, shared with add/remove), mints at the host with the commit, the link
+  and the owner's admin presentation, applies only on acceptance, discards on
+  refusal, keeps on an unknown outcome and settles via rooms/info. Errors:
+  noGroup, noAuthority, epochConflict (details.hostEpoch), hostUnreachable,
+  hostRefused.
+
+  rooms/keys/act/0.1 (draft, edited in place): recipient item 9 refuses a
+  rooms/epoch/mint for a room it holds group state for, for any member it
+  serves, with the new rooms/keys/act:sealedRoomMint naming
+  rooms/owner/group/renew; producer item 4 says not to ask. Open rooms keep
+  renewing through act. The wire shape is unchanged; a draft MAY change
+  without a version bump (SPEC §5.2/§5.3), and a 0.2 would leave 0.1
+  permitting the defect it exists to close.
+
+## 0.26.4 — 2026-10-15
+
+
+### Added
+
+- **rooms**: Act as the member's persona — rooms/keys/act, seal 0.2, direct-to-storage blob transfer (#771)
+
+A member of a data room is the DID the room admitted — usually a persona
+  their key holder (VTA) holds for them — but the member's own client (CLI,
+  extension, phone) holds none of that DID's keys. Until now it could reach a
+  host only through rooms/keys/present, which grants the leaf to the caller,
+  and then signed with its own key: the host recorded the client's did:key as
+  the actor and, on an attributed room, as the author of every record.
+
+  - rooms/keys/act/0.1 (new): the client builds a host-bound room request
+    without presentation or proof; the key holder completes it as the member
+    (the member's own authority narrowed to the one action a closed table
+    fixes per type, granted to the member; issuer = member; the member's
+    authentication proof) and returns it for the client to send. Refused to
+    delegates, which keep using rooms/keys/present.
+  - rooms/keys/seal/0.2: optional signAsPrincipal — the key holder signs the
+    SealedRecordBody as its author (a member the caller acts as) before
+    sealing, so the record is attributed to the member.
+  - rooms/blobs/upload/{begin,chunk,commit,abort}/0.2 and rooms/blobs/get/0.2:
+    two transfer modes. Direct: the host authorizes and reserves as before,
+    then issues per-part presigned PUTs (one object, one method, exact length
+    and SHA-256 as signed headers, <= 5 min), verifies the object at storage
+    before commit records it, and serves reads with a presigned GET. Proxied:
+    bytes through the host as chunk documents signed by a single-use upload
+    key the begin names, so file bytes never pass through the key holder.
+    A host SHOULD NOT offer direct transfer on a private room unless its
+    policy allows; the response always names the mode.
+  - In place (drafts, wire unchanged): rooms/keys/{read,browse,backfill}
+    present as the principal and never let the key holder's own identifier
+    reach the host; rooms/keys/welcome and rooms/keys/open keep one group
+    state per member per room.
+  - rooms/_shared/0.1/blobs: TransferMode, PartPlan, TransferTarget (additive).
+
 ## 0.26.3 — 2026-10-14
 
 

@@ -107,13 +107,24 @@ returning success would tell a member their record was restored when it was not 
 
 Permanent removal of a tombstone is **out of scope for this task**, and deliberately so:
 removing it breaks convergence for every caller that has not synchronised past it. It
-belongs to a host's retention lifecycle, not to a member's curation verb.
+belongs to a host's retention lifecycle, not to a member's curation verb. That act is
+[`rooms/records/prune`](../../prune/0.1/spec.md): a holder of `admin`, applying the room's
+stated record retention, which leaves a mark (`lastPrune`) from which an incremental reader
+learns to rebuild instead.
 
 ### Curation assigns a new version
 
 A curated record **MUST** receive a new version from the room's counter. A demotion other
 members are expected to converge on is a change like any other, and a status change that
 left the version alone would be invisible to every `sinceVersion` watermark in the room.
+
+A curation **MUST NOT** alter a kept record's sealed content. On the `attributed` and
+`private` tiers the body is bound — by the AEAD and by its author's signature — to the
+version it was sealed at, so moving the record to a new version while keeping its body
+would leave it opening for nobody. The host therefore keeps the version the body was sealed
+at and serves it as `sealed.version` whenever it differs from the record's own
+([`SealedRecord`](../../../_shared/0.1/room.schema.json)), and readers open the body there. A
+retraction drops the body, so it has nothing to keep.
 
 ### Pinning is orthogonal to status
 

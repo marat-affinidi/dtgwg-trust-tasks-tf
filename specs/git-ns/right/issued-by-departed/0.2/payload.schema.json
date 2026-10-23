@@ -32,13 +32,13 @@
       ],
       "properties": {
         "granter": {
-          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
           "description": "The member who granted these rights and has since left the community."
         },
         "rights": {
           "type": "array",
           "items": {
-            "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/AdminRightRow"
+            "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/AdminRightRow"
           },
           "description": "The rights `granter` issued, still live or awaiting a break-glass ratification. Every row's `origin` is `recorded` and `granterDeparted` is `true` — a role-derived grant has no granter and never appears here."
         }
@@ -67,8 +67,8 @@
           "description": "Departed granters with at least one surviving right they issued, ordered by `granter`."
         },
         "nextCursor": {
-          "type": ["string", "null"],
-          "description": "Continuation token for the next page of granters, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page of granters; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "ext": {
           "$ref": "../../../../_framework/0.2/framework.schema.json#/$defs/Ext"

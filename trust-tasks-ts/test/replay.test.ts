@@ -24,7 +24,9 @@ import {
   PROOF_INVALID_WIRE_MESSAGE,
   sha256Hex,
   STALE_WIRE_MESSAGE,
+  recordExpiry,
   StaticTransport,
+  validateBasic,
   validateFreshness,
   type ConsumeOutcome,
   type ReplayGuard,
@@ -115,6 +117,33 @@ describe("SPEC §7.2 item 11 — duplicate execution", () => {
 
     // …and again, arbitrarily often.
     assert.equal((await run(doc())).kind, "duplicate");
+    assert.equal(state.executions, 1);
+  });
+
+  it("releases the claim when the handler throws, so a resend executes", async () => {
+    const guard = new InMemoryReplayGuard(64);
+    await assert.rejects(
+      consumeInbound<Payload, Response>({
+        transport: new StaticTransport({ issuer: PEER, recipient: ME }),
+        spec: SPEC,
+        proofPolicy: { kind: "acceptUnverified" },
+        payloadPolicy: { kind: "acceptUnvalidated" },
+        checks: consequentialChecks(guard),
+        doc: doc(),
+        myVid: ME,
+        now: NOW,
+        newErrorId: () => "err-1",
+        handler: () => {
+          throw new Error("database connection reset");
+        },
+      }),
+      /database connection reset/,
+    );
+
+    // The handler never finished, so a resend is a fresh attempt, not an
+    // in-flight duplicate held until the record expires.
+    const { run, state } = runner(guard);
+    assert.equal((await run(doc())).kind, "handled");
     assert.equal(state.executions, 1);
   });
 
@@ -220,6 +249,21 @@ describe("SPEC §7.2 item 11 — duplicate execution", () => {
       "store detail reached the wire",
     );
     assert.equal(state.executions, 0, "executed without a usable record");
+  });
+
+  it("fails closed on a verdict it does not know", async () => {
+    // A guard written in plain JS, or against a newer verdict set, can answer
+    // with a kind the switch has no case for.
+    const unknown: ReplayGuard = {
+      claim: () => ({ kind: "Fresh" }) as unknown as ReturnType<ReplayGuard["claim"]>,
+    };
+    const { run, state } = runner(unknown);
+
+    const outcome = await run(doc());
+    assert.equal(outcome.kind, "rejected");
+    if (outcome.kind !== "rejected") return;
+    assert.equal(outcome.error.payload.code, "unavailable");
+    assert.equal(state.executions, 0, "executed without the guard saying fresh");
   });
 
   it("keeps no record when the caller declares the task not consequential", async () => {
@@ -336,6 +380,26 @@ describe("SPEC §4.2 / §7.2 — freshness bounds", () => {
     assert.equal(bad?.message, FUTURE_ISSUED_AT);
   });
 
+  it("refuses a timestamp with no zone designator, as Rust and Go do", () => {
+    // Date.parse reads "12:00:00" with no zone as local time, so the instant
+    // would depend on where the consumer runs.
+    for (const zoneless of ["2026-08-26T12:00:00", "2026-08-26", "Aug 26 2026 12:00:00"]) {
+      assert.equal(
+        validateFreshness(doc({ issuedAt: zoneless }), NOW, skew)?.code,
+        "malformedRequest",
+        `issuedAt ${zoneless}`,
+      );
+      assert.equal(
+        validateBasic(doc({ expiresAt: zoneless }), NOW, ME)?.code,
+        "malformedRequest",
+        `expiresAt ${zoneless}`,
+      );
+    }
+    for (const zoned of ["2026-08-26T12:00:00Z", "2026-08-26t12:00:00.250z", "2026-08-26T13:00:00+01:00"]) {
+      assert.equal(validateFreshness(doc({ issuedAt: zoned }), NOW, skew), null, zoned);
+    }
+  });
+
   it("does not name the consumer's clock in the future-dated message", () => {
     // Echoing the delta would be a remote `ntpdate` for an unauthenticated
     // sender (SPEC §12.4).
@@ -375,6 +439,17 @@ describe("SPEC §4.2 / §7.2 — freshness bounds", () => {
     // …unless the producer supplied an `expiresAt`, which is a window of its own.
     const bounded = doc({ issuedAt: undefined, expiresAt: "2026-08-26T12:30:00Z" });
     assert.equal(validateFreshness(bounded, NOW, windowed), null);
+  });
+
+  it("keeps the replay record for as long as the skew lets the document be accepted", () => {
+    // 5m30s old: past maxAgeMs, inside maxAgeMs + skewMs, so still accepted.
+    // A record dropped at issuedAt + maxAgeMs would let this replay run twice.
+    const policy = { skewMs: 60_000, maxAgeMs: 5 * 60_000 };
+    const late = doc({ issuedAt: "2026-08-26T11:54:30Z" });
+    assert.equal(validateFreshness(late, NOW, policy), null);
+    const retainUntil = recordExpiry(late, policy, NOW);
+    assert.ok(retainUntil !== undefined && retainUntil > NOW);
+    assert.equal(retainUntil, Date.parse("2026-08-26T12:00:30Z"));
   });
 });
 

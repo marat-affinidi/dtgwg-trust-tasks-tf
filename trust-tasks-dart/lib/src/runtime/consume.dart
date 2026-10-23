@@ -282,8 +282,9 @@ const String replayRecordUnavailable = 'temporarily unavailable';
 ///
 /// Return a success response, or null for a specification that defines no
 /// success response (§4.4.1) — which yields [Accepted]. Throw a [Refusal] to
-/// refuse with a built error response; any other exception propagates to the
-/// caller of [consumeInbound].
+/// refuse with a built error response; any other exception releases the
+/// item-11 claim, so the document can be resent, and propagates to the caller
+/// of [consumeInbound].
 typedef Handler<P, R> = Future<TrustTaskDocument<R>?> Function(
   TrustTaskDocument<P> doc,
   ResolvedParties parties,
@@ -319,6 +320,14 @@ Refusal refuse<P>(
 
 /// Run SPEC §7.2 items 4–8 against [doc], then either call [handler] or build
 /// the routed error response per §8.1.
+///
+/// Pass [responseToJson] whenever [checks] uses a [ReplayGuard] that persists
+/// what it records. With it, a success response reaches
+/// [ReplayGuard.recordResponse] as the same JSON map a refusal does, and a
+/// later [DuplicateOutcome.priorResponse] is that map. Without it, the guard
+/// receives the [TrustTaskDocument] object itself, which an in-memory guard can
+/// hold but a persistent one cannot serialise. Such a guard would then cache no
+/// success response, and a resend would be absorbed with nothing to return.
 Future<ConsumeOutcome<R>> consumeInbound<P, R>({
   required TransportHandler transport,
   required SpecPolicy spec,
@@ -332,6 +341,7 @@ Future<ConsumeOutcome<R>> consumeInbound<P, R>({
   required Object? Function(P payload) payloadToJson,
   required Handler<P, R> handler,
   Clock? clock,
+  Object? Function(R response)? responseToJson,
 }) async {
   ConsumeOutcome<R> route(RejectReason reason) {
     final error = reject(transport, doc, newErrorId(), reason, clock: clock);
@@ -527,6 +537,19 @@ Future<ConsumeOutcome<R>> consumeInbound<P, R>({
       await settle(refusal.response.toJson((p) => p.toJson()));
     }
     return Rejected<R>(refusal.response);
+  } on Object {
+    // The handler did not finish, so nothing says the effect happened. Holding
+    // the claim would answer every resend with an in-flight duplicate until the
+    // record expired: the document could not be retried, and the producer would
+    // never learn why.
+    if (claimedGuard != null) {
+      try {
+        await claimedGuard.release(doc.id, claimedDigest!);
+      } on Object {
+        /* best-effort */
+      }
+    }
+    rethrow;
   }
 
   if (response == null) {
@@ -536,7 +559,9 @@ Future<ConsumeOutcome<R>> consumeInbound<P, R>({
     return Accepted<R>();
   }
 
-  await settle(response);
+  await settle(
+    responseToJson == null ? response : response.toJson(responseToJson),
+  );
   return Handled<R>(response);
 }
 

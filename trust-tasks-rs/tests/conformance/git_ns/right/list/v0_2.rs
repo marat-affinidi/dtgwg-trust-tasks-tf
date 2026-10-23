@@ -15,6 +15,15 @@ fn request_example_1() {
     let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
     assert_eq!(rendered, expected, "request example failed round-trip");
 }
+#[test]
+fn response_example_1() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6b02\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/right/list/0.2#response\",\n  \"threadId\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6b01\",\n  \"issuer\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"recipient\": \"did:webvh:QmDanaScid8:acme-vtc.example:dana\",\n  \"issuedAt\": \"2026-09-26T09:10:01Z\",\n  \"payload\": {\n    \"rights\": [\n      {\n        \"subject\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol\",\n        \"right\": \"git.repo.own\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"origin\": \"recorded\",\n        \"grantedBy\": \"did:webvh:QmBobScid2:acme-vtc.example:bob\",\n        \"grantedAt\": \"2026-09-23T09:50:00Z\",\n        \"reason\": \"Founding maintainer of the repository.\",\n        \"subjectMember\": true,\n        \"granterDeparted\": false\n      },\n      {\n        \"subject\": \"did:webvh:QmEveScid11:acme-vtc.example:eve\",\n        \"right\": \"git.repo.maintain\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"origin\": \"recorded\",\n        \"grantedBy\": \"did:webvh:QmEveScid11:acme-vtc.example:eve\",\n        \"grantedAt\": \"2026-09-25T14:00:00Z\",\n        \"reason\": \"On-call incident response; no maintainer was reachable.\",\n        \"subjectMember\": true,\n        \"granterDeparted\": false,\n        \"breakGlass\": {\n          \"by\": \"did:webvh:QmEveScid11:acme-vtc.example:eve\",\n          \"at\": \"2026-09-25T14:00:00Z\",\n          \"justification\": \"Production outage; every maintainer was unreachable and the fix could not wait for reseating.\"\n        }\n      },\n      {\n        \"subject\": \"did:webvh:QmFrankScid12:acme-vtc.example:frank\",\n        \"right\": \"git.commit.sign\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"origin\": \"roleDerived\",\n        \"subjectMember\": true,\n        \"granterDeparted\": false\n      }\n    ]\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Response> =
+        serde_json::from_str(JSON).expect("deserialize response example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "response example failed round-trip");
+}
 /// Each fixture in `payload.invalid-examples.json` MUST be
 /// rejected by at least one of: serde deserialization, or
 /// JSON-Schema validation under the `validate` feature. The
@@ -76,7 +85,11 @@ fn rejects_invalid_response_examples() {
         ),
         (
             "Response variant: missing required `rights` member.",
-            "{\n  \"nextCursor\": null\n}",
+            "{\n  \"nextCursor\": \"c2VxPTEwMA\"\n}",
+        ),
+        (
+            "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+            "{\n  \"nextCursor\": null,\n  \"rights\": []\n}",
         ),
     ];
     for (i, (note, raw)) in fixtures.iter().enumerate() {

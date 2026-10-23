@@ -25,5 +25,10 @@
         { "granter": "did:webvh:QmGraceScid13:acme-vtc.example:grace" }
       ]
     }
+  },
+  {
+    "note": "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+    "variant": "response",
+    "payload": { "cascadeOnDeparture": false, "granters": [], "nextCursor": null }
   }
 ]

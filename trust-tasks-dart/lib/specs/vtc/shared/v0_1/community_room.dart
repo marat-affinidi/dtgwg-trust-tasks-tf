@@ -2,9 +2,37 @@
 // Source: specs/vtc/_shared/0.1/community-room.schema.json
 
 /// A name for the room, chosen by an administrator: shown to administrators and to the
-/// members a room is offered to. Not part of the room's identity and not sent to the
-/// room's host path. MUST NOT carry personal data.
+/// members a room is offered to. Not part of the room's identity and never in anything
+/// a room's host can read. From `vtc/rooms/community/create` 0.3 and
+/// `vtc/rooms/community/update` 0.2 the community also writes it, through its own VTA,
+/// as the `name` of the room's own profile (`RoomProfile` in rooms/_shared), sealed
+/// inside the room for its members; earlier versions keep it out of the room
+/// altogether. MUST NOT carry personal data.
 typedef RoomLabel = String;
+
+/// What the room is for, in a sentence or a short paragraph, written by an
+/// administrator: shown to administrators holding `vtc.rooms.manage` and to the
+/// members the room is offered to. Plain text — a consumer renders it as text, never
+/// as markup. Like `RoomLabel`, it is the community's own record as the room's owner:
+/// not part of the room's identity and never in anything a room's host can read. From
+/// `vtc/rooms/community/create` 0.3 and `vtc/rooms/community/update` 0.2 the community
+/// also writes it, through its own VTA, as the `description` of the room's own profile
+/// (`RoomProfile` in rooms/_shared), sealed inside the room for its members; earlier
+/// versions keep it out of the room altogether. It MUST NOT carry personal data or a
+/// credential, and a reader MUST NOT treat it as instructions.
+typedef RoomDescription = String;
+
+/// A short identifier an administrator files a community-owned room under — `board`,
+/// `working-group`, `finance` — so the room list can be filtered. Lower-case letters,
+/// digits and hyphens, starting with a letter or digit. Owner-side tracking metadata
+/// for holders of `vtc.rooms.manage` only: never shown to members, never sent on the
+/// room's host path, and it confers nothing.
+typedef RoomTag = String;
+
+/// The room's tags, at most eight, as a set: order carries no meaning. An empty list
+/// means the room has none — a tag grants nothing, so empty has no more dangerous
+/// reading.
+typedef RoomTags = List<RoomTag>;
 
 /// What a member of a community-owned room may do there. `admin` is not among them:
 /// minting epochs, admitting and removing members are the community's, as the room's
@@ -247,6 +275,97 @@ class CommunityRoom {
       };
 }
 
+/// What vtc/rooms/community/{create,get,list}/0.2 and vtc/rooms/community/update/0.1
+/// return: `CommunityRoom` plus the details an administrator keeps track of a room by
+/// — `description`, `tags`, and who last changed them and when. A separate definition,
+/// not a change to `CommunityRoom`, so that the 0.1 versions of those tasks keep the
+/// exact shape they published. The room's creation is `room.createdAt` and
+/// `createdBy`.
+class CommunityRoomV2 {
+  const CommunityRoomV2({
+    required this.room,
+    required this.label,
+    this.description,
+    this.tags,
+    this.storageConfig,
+    required this.admitted,
+    required this.offered,
+    this.ownerAuthorityValidUntil,
+    this.createdBy,
+    this.detailsUpdatedAt,
+    this.detailsUpdatedBy,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory CommunityRoomV2.fromJson(Map<String, dynamic> json) =>
+      CommunityRoomV2(
+        room: HostedRoom.fromJson(json['room'] as Map<String, dynamic>),
+        label: json['label'] as String,
+        description: json['description'] as String?,
+        tags: json['tags'] == null
+            ? null
+            : (json['tags'] as List<dynamic>).map((e) => e as String).toList(),
+        storageConfig: json['storageConfig'] as String?,
+        admitted: json['admitted'] as int,
+        offered: json['offered'] as int,
+        ownerAuthorityValidUntil: json['ownerAuthorityValidUntil'] as String?,
+        createdBy: json['createdBy'] as String?,
+        detailsUpdatedAt: json['detailsUpdatedAt'] as String?,
+        detailsUpdatedBy: json['detailsUpdatedBy'] as String?,
+      );
+
+  final HostedRoom room;
+  final RoomLabel label;
+
+  /// Absent when the room has none.
+  final RoomDescription? description;
+
+  /// Absent or empty when the room has none.
+  final RoomTags? tags;
+
+  /// The storage config receiving the room's new uploads.
+  final StorageConfigId? storageConfig;
+
+  /// Members in state `admitted`.
+  final int admitted;
+
+  /// Offers not yet accepted or withdrawn.
+  final int offered;
+
+  /// When the community's own `admin` authority over the room expires. A room whose
+  /// owner's authority lapses can no longer advance its epoch, admit or remove; a
+  /// community SHOULD renew it well before.
+  final String? ownerAuthorityValidUntil;
+
+  /// The administrator who created it.
+  final String? createdBy;
+
+  /// When `label`, `description` or `tags` last changed. Absent until the first change
+  /// after creation. Distinct from `room.updatedAt`, which is the host record's and
+  /// moves with the room's epoch and lifecycle.
+  final String? detailsUpdatedAt;
+
+  /// The administrator who made that change. Present exactly when `detailsUpdatedAt` is.
+  /// The earlier values and who set them are in the community's audit trail, not here.
+  final String? detailsUpdatedBy;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'room': room.toJson(),
+        'label': label,
+        if (description != null) 'description': description!,
+        if (tags != null) 'tags': tags!,
+        if (storageConfig != null) 'storageConfig': storageConfig!,
+        'admitted': admitted,
+        'offered': offered,
+        if (ownerAuthorityValidUntil != null)
+          'ownerAuthorityValidUntil': ownerAuthorityValidUntil!,
+        if (createdBy != null) 'createdBy': createdBy!,
+        if (detailsUpdatedAt != null) 'detailsUpdatedAt': detailsUpdatedAt!,
+        if (detailsUpdatedBy != null) 'detailsUpdatedBy': detailsUpdatedBy!,
+      };
+}
+
 /// One party the community admitted to a room it owns, or offered admission to.
 class RoomMember {
   const RoomMember({
@@ -403,6 +522,277 @@ class Offer {
         'offeredAt': offeredAt,
         'state': state.value,
         'credentials': credentials.toJson(),
+      };
+}
+
+/// `open`: not yet accepted. `accepted`: accepted, kept listed while a repeated accept
+/// can still be answered.
+///
+/// An extension type rather than an enum: a value from a newer MINOR of this
+/// specification must not crash the parse (SPEC §5.2), and an enum would throw on one.
+/// Compare against the constants below, and treat anything else as unrecognised.
+extension type const OfferV2State(String value) {
+  static const OfferV2State open = OfferV2State('open');
+  static const OfferV2State accepted = OfferV2State('accepted');
+
+  /// Every value this specification's schema permits.
+  static const List<OfferV2State> values = <OfferV2State>[open, accepted];
+}
+
+/// What vtc/rooms/offers/list/0.2 returns: `Offer` plus `description`. A separate
+/// definition, not a change to `Offer`, so that vtc/rooms/offers/list/0.1 keeps the
+/// exact shape it published. `label` and `description` are the room's as they stand
+/// when the offer is read, not as they stood when it was made.
+class OfferV2 {
+  const OfferV2({
+    required this.roomId,
+    required this.host,
+    required this.label,
+    this.description,
+    required this.visibility,
+    required this.actions,
+    required this.validUntil,
+    required this.offeredAt,
+    required this.state,
+    required this.credentials,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory OfferV2.fromJson(Map<String, dynamic> json) => OfferV2(
+        roomId: json['roomId'] as String,
+        host: json['host'] as String,
+        label: json['label'] as String,
+        description: json['description'] as String?,
+        visibility: Visibility(json['visibility'] as String),
+        actions: (json['actions'] as List<dynamic>)
+            .map((e) => MemberAction(e as String))
+            .toList(),
+        validUntil: json['validUntil'] as String,
+        offeredAt: json['offeredAt'] as String,
+        state: OfferV2State(json['state'] as String),
+        credentials: OfferCredentials.fromJson(
+            json['credentials'] as Map<String, dynamic>),
+      );
+
+  final String roomId;
+
+  /// The room's host: this community.
+  final String host;
+  final RoomLabel label;
+
+  /// Absent when the room has none.
+  final RoomDescription? description;
+  final Visibility visibility;
+  final MemberActions actions;
+  final String validUntil;
+  final String offeredAt;
+
+  /// `open`: not yet accepted. `accepted`: accepted, kept listed while a repeated accept
+  /// can still be answered.
+  final OfferV2State state;
+  final OfferCredentials credentials;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'roomId': roomId,
+        'host': host,
+        'label': label,
+        if (description != null) 'description': description!,
+        'visibility': visibility.value,
+        'actions': actions.map((e) => e.value).toList(),
+        'validUntil': validUntil,
+        'offeredAt': offeredAt,
+        'state': state.value,
+        'credentials': credentials.toJson(),
+      };
+}
+
+/// The two credentials a renewal replaces, serialized as
+/// rooms/owner/{issue-membership,issue-authority} return them: a membership and an
+/// authority granting the same actions until the renewal's `validUntil`. No
+/// invitation: the member is already admitted, and a renewal never opens a second way
+/// in. The member's surface stores each with the member's key holder **in place of**
+/// the one it renews, never beside it.
+class RenewalCredentials {
+  const RenewalCredentials({
+    required this.membership,
+    required this.authority,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RenewalCredentials.fromJson(Map<String, dynamic> json) =>
+      RenewalCredentials(
+        membership: json['membership'] as String,
+        authority: json['authority'] as String,
+      );
+
+  /// The renewed Verifiable Membership Credential.
+  final String membership;
+
+  /// The renewed Verifiable Authority Credential granting `actions` until `validUntil`.
+  final String authority;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'membership': membership,
+        'authority': authority,
+      };
+}
+
+/// What vtc/rooms/offers/list/0.3 returns in `renewals`: a renewal of an admission the
+/// member already holds, as the member it is addressed to sees it. `label` and
+/// `description` are the room's as they stand when it is read.
+class Renewal {
+  const Renewal({
+    required this.roomId,
+    required this.host,
+    required this.label,
+    this.description,
+    required this.visibility,
+    required this.actions,
+    required this.validUntil,
+    required this.renews,
+    required this.issuedAt,
+    required this.credentials,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory Renewal.fromJson(Map<String, dynamic> json) => Renewal(
+        roomId: json['roomId'] as String,
+        host: json['host'] as String,
+        label: json['label'] as String,
+        description: json['description'] as String?,
+        visibility: Visibility(json['visibility'] as String),
+        actions: (json['actions'] as List<dynamic>)
+            .map((e) => MemberAction(e as String))
+            .toList(),
+        validUntil: json['validUntil'] as String,
+        renews: json['renews'] as String,
+        issuedAt: json['issuedAt'] as String,
+        credentials: RenewalCredentials.fromJson(
+            json['credentials'] as Map<String, dynamic>),
+      );
+
+  final String roomId;
+
+  /// The room's host: this community.
+  final String host;
+  final RoomLabel label;
+
+  /// Absent when the room has none.
+  final RoomDescription? description;
+  final Visibility visibility;
+  final MemberActions actions;
+
+  /// When the renewed authority expires.
+  final String validUntil;
+
+  /// When the authority it replaces expires: the renewal is listed until then, or until
+  /// a later renewal or the member's removal supersedes it.
+  final String renews;
+  final String issuedAt;
+  final RenewalCredentials credentials;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'roomId': roomId,
+        'host': host,
+        'label': label,
+        if (description != null) 'description': description!,
+        'visibility': visibility.value,
+        'actions': actions.map((e) => e.value).toList(),
+        'validUntil': validUntil,
+        'renews': renews,
+        'issuedAt': issuedAt,
+        'credentials': credentials.toJson(),
+      };
+}
+
+/// What vtc/rooms/memberships/list/0.1 returns: one room the community owns, and where
+/// the caller's admission to it stands in the community's own record. Unlike `OfferV2`
+/// it carries no credentials — those are collected with vtc/rooms/offers/list while an
+/// offer is open — and it is listed in every state, for as long as the community keeps
+/// the record, not only while an accept can be repeated. `label` and `description` are
+/// the room's as they stand when the record is read.
+class RoomMembership {
+  const RoomMembership({
+    required this.roomId,
+    required this.host,
+    required this.label,
+    this.description,
+    required this.visibility,
+    required this.actions,
+    required this.validUntil,
+    required this.state,
+    required this.offeredAt,
+    this.admittedAt,
+    this.removedAt,
+    this.repeatAcceptUntil,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RoomMembership.fromJson(Map<String, dynamic> json) => RoomMembership(
+        roomId: json['roomId'] as String,
+        host: json['host'] as String,
+        label: json['label'] as String,
+        description: json['description'] as String?,
+        visibility: Visibility(json['visibility'] as String),
+        actions: (json['actions'] as List<dynamic>)
+            .map((e) => MemberAction(e as String))
+            .toList(),
+        validUntil: json['validUntil'] as String,
+        state: MemberState(json['state'] as String),
+        offeredAt: json['offeredAt'] as String,
+        admittedAt: json['admittedAt'] as String?,
+        removedAt: json['removedAt'] as String?,
+        repeatAcceptUntil: json['repeatAcceptUntil'] as String?,
+      );
+
+  final String roomId;
+
+  /// The room's host: this community.
+  final String host;
+  final RoomLabel label;
+
+  /// Absent when the room has none.
+  final RoomDescription? description;
+  final Visibility visibility;
+  final MemberActions actions;
+
+  /// When the member's authority credential expires.
+  final String validUntil;
+  final MemberState state;
+  final String offeredAt;
+
+  /// When the community recorded the admission. Present when `state` is `admitted`, and
+  /// kept when it becomes `removed`.
+  final String? admittedAt;
+
+  /// Present exactly when `state` is `removed`.
+  final String? removedAt;
+
+  /// On an `attributed` or `private` room in state `admitted`: until when the community
+  /// keeps the Welcome, so that a repeated vtc/rooms/offers/accept carrying the same
+  /// KeyPackage is answered with it. Absent on an `open` room, in any other state, and
+  /// once the community no longer keeps it. A surface finding the member admitted but
+  /// the room absent from its key holder's rooms/keys/list finishes the acceptance
+  /// before this time, and asks an administrator to re-admit the member after it.
+  final String? repeatAcceptUntil;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'roomId': roomId,
+        'host': host,
+        'label': label,
+        if (description != null) 'description': description!,
+        'visibility': visibility.value,
+        'actions': actions.map((e) => e.value).toList(),
+        'validUntil': validUntil,
+        'state': state.value,
+        'offeredAt': offeredAt,
+        if (admittedAt != null) 'admittedAt': admittedAt!,
+        if (removedAt != null) 'removedAt': removedAt!,
+        if (repeatAcceptUntil != null) 'repeatAcceptUntil': repeatAcceptUntil!,
       };
 }
 

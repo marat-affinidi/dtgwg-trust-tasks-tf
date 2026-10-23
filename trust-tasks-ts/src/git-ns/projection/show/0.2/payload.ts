@@ -3,7 +3,7 @@
  * Source: specs/git-ns/projection/show/0.2/payload.schema.json
  */
 
-import type { Did_GitNsV0_3 as Did, Ext, Resource_GitNsV0_6 as Resource, Right } from "../../../../_shared/components.js";
+import type { Did_GitNsV0_3 as Did, Ext, Resource_GitNsV0_1 as Resource, Right } from "../../../../_shared/components.js";
 
 
 /**
@@ -37,9 +37,9 @@ export interface GitNamespacesShowTrustRegistryProjectionResponsePayload {
    */
   published: PublishedRow[];
   /**
-   * Continuation token for the next page of `published`, or `null` when this is the last.
+   * Continuation token for the next page of `published`; pass it back as the request's `cursor`. Absent on the last page — never `null`.
    */
-  nextCursor?: string | null;
+  nextCursor?: string;
   /**
    * How many records the next reconciliation pass will add, remove or replace to bring the registry into line with the VTC's current rights — across the whole VTC, regardless of `resource` or paging. Zero means the registry already matches.
    */
@@ -238,11 +238,8 @@ export const PAYLOAD_SCHEMA = {
           "description": "Records matching `resource`, as the VTC's own mirror of what it last published, ordered by `resource` then `action` then `entity`."
         },
         "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Continuation token for the next page of `published`, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page of `published`; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "pendingChanges": {
           "type": "integer",
@@ -266,10 +263,10 @@ export const PAYLOAD_SCHEMA = {
     },
     "Resource": {
       "title": "Resource",
-      "description": "A forge-qualified resource, all lowercase: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`, and a subgroup such as `gitlab.com/acme/platform` is not a resource. A repository path has 1 to 21 segments (GitLab: 20 levels of subgroup and the project); GitHub and Forgejo repository paths are always one. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
+      "description": "A forge-qualified resource: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo>` for one repository, all lowercase — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
       "type": "string",
-      "maxLength": 5885,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){0,21}$"
+      "maxLength": 455,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+(?:/[a-z0-9_-][a-z0-9._-]{0,99}){1,2}$"
     },
     "Right": {
       "title": "Right",
@@ -394,11 +391,8 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
           "description": "Records matching `resource`, as the VTC's own mirror of what it last published, ordered by `resource` then `action` then `entity`."
         },
         "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Continuation token for the next page of `published`, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page of `published`; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "pendingChanges": {
           "type": "integer",
@@ -422,10 +416,10 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
     },
     "Resource": {
       "title": "Resource",
-      "description": "A forge-qualified resource, all lowercase: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`, and a subgroup such as `gitlab.com/acme/platform` is not a resource. A repository path has 1 to 21 segments (GitLab: 20 levels of subgroup and the project); GitHub and Forgejo repository paths are always one. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
+      "description": "A forge-qualified resource: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo>` for one repository, all lowercase — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
       "type": "string",
-      "maxLength": 5885,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){0,21}$"
+      "maxLength": 455,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+(?:/[a-z0-9_-][a-z0-9._-]{0,99}){1,2}$"
     },
     "Right": {
       "title": "Right",

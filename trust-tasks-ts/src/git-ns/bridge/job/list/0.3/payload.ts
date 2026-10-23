@@ -3,7 +3,7 @@
  * Source: specs/git-ns/bridge/job/list/0.3/payload.schema.json
  */
 
-import type { Did_GitNsV0_3 as Did, Ext, NamespaceId, RepoResource_GitNsV0_6 as RepoResource } from "../../../../../_shared/components.js";
+import type { Did_GitNsV0_3 as Did, Ext, NamespaceId, RepoResource_GitNsV0_1 as RepoResource } from "../../../../../_shared/components.js";
 
 
 /**
@@ -55,9 +55,9 @@ export interface GitNamespacesListBridgeJobsResponsePayload {
    */
   jobs: JobRow[];
   /**
-   * Continuation token for the next page, or `null` when this is the last.
+   * Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`.
    */
-  nextCursor?: string | null;
+  nextCursor?: string;
   ext?: Ext;
 }
 /**
@@ -272,11 +272,8 @@ export const PAYLOAD_SCHEMA = {
           "description": "Jobs matching `namespace` and `state`, newest (`createdAt`) first."
         },
         "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Continuation token for the next page, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "ext": {
           "$ref": "#/$defs/Ext"
@@ -295,10 +292,10 @@ export const PAYLOAD_SCHEMA = {
     },
     "RepoResource": {
       "title": "RepoResource",
-      "description": "A forge-qualified resource naming exactly one repository: `<forge-host>/<owner>/<repo-path>`, lowercase, where the repository path has 1 to 21 segments (see `Resource`).",
+      "description": "A forge-qualified resource naming exactly one repository: `<forge-host>/<owner>/<repo>`, lowercase.",
       "type": "string",
-      "maxLength": 5885,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){1,21}$"
+      "maxLength": 455,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,99}/[a-z0-9_-][a-z0-9._-]{0,99}$"
     },
     "Did": {
       "title": "Did",
@@ -442,11 +439,8 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
           "description": "Jobs matching `namespace` and `state`, newest (`createdAt`) first."
         },
         "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Continuation token for the next page, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "ext": {
           "$ref": "#/$defs/Ext"
@@ -465,10 +459,10 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
     },
     "RepoResource": {
       "title": "RepoResource",
-      "description": "A forge-qualified resource naming exactly one repository: `<forge-host>/<owner>/<repo-path>`, lowercase, where the repository path has 1 to 21 segments (see `Resource`).",
+      "description": "A forge-qualified resource naming exactly one repository: `<forge-host>/<owner>/<repo>`, lowercase.",
       "type": "string",
-      "maxLength": 5885,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){1,21}$"
+      "maxLength": 455,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,99}/[a-z0-9_-][a-z0-9._-]{0,99}$"
     },
     "Did": {
       "title": "Did",

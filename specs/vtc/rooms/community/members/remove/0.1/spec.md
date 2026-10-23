@@ -72,7 +72,7 @@ related:
 
 **VTC Rooms — Community — Members — Remove** ends a member's access to a room the community owns.
 
-**What removal means, and does not.** On an `attributed` or `private` room, the community's VTA removes the member from the room's group ([`rooms/owner/group/remove`](../../../../../../rooms/owner/group/remove/0.1/spec.md), the counterpart of [`rooms/owner/group/add`](../../../../../../rooms/owner/group/add/0.1/spec.md)), which advances the room to a new epoch sealed to everyone else: the removed member cannot open anything written from then on. Nothing they already read can be recalled, and nothing written before is re-sealed. Their authority credential is not revoked — nothing in this family is — so a host still honours it until its `validUntil`; what it admits them to is ciphertext they cannot open. On an `open` room, which has no group, removal withdraws nothing cryptographically: the member's authority lasts until it expires. A community that wants removal on an open room to bite SHOULD admit members with short expiries and renew them.
+**What removal means, and does not.** On an `attributed` or `private` room, the community's VTA removes the member from the room's group ([`rooms/owner/group/remove`](../../../../../../rooms/owner/group/remove/0.1/spec.md), the counterpart of [`rooms/owner/group/add`](../../../../../../rooms/owner/group/add/0.1/spec.md)), which advances the room to a new epoch sealed to everyone else: the removed member cannot open anything written from then on. Nothing they already read can be recalled, and nothing written before is re-sealed. This version does not revoke their authority credential — [`0.2`](../../remove/0.2/spec.md) does, on `open` and `attributed` rooms — so a host still honours it until its `validUntil`; what it admits them to is ciphertext they cannot open. On an `open` room, which has no group, removal withdraws nothing cryptographically: the member's authority lasts until it expires. A community that wants removal on an open room to bite SHOULD admit members with short expiries and renew them.
 
 An open offer is simply withdrawn; nothing was issued to the room's group.
 
@@ -91,7 +91,16 @@ A conforming **community** (`recipient`):
 1. **MUST** refuse a caller without `vtc.rooms.manage` with `permissionDenied`, and **MUST** answer `notFound` for a room it does not own and `notInRoom` for a member holding neither an admission nor an open offer.
 2. On a sealed tier, for an admitted member, **MUST** have its VTA remove them and advance the room before recording the removal, and **MUST** record it only once the VTA has answered that it did.
 3. **MUST** withdraw an open offer, so it is never listed or accepted again.
-4. **MUST** say in its record and its answer that removal does not recall what was read.
+4. **MUST NOT** represent a removal, in its record of it or in its answer, as recalling what the member already read, re-sealing what was written before it, or revoking the member's authority credential. The answer says what the removal did in its structured members, and nothing more is required of it: `member.state` is `removed`; `member.validUntil` is when a host stops honouring the member's authority credential; and `epoch`, present only on a sealed tier for an admitted member, is the first epoch sealed without them. Where `epoch` is absent nothing was withdrawn cryptographically — an `open` room, or an offer withdrawn.
+
+A conforming **producer** (the administrator's surface):
+
+1. **SHOULD** show the requester, before the request is signed — and before any step-up gesture bound to it — what removal does and does not do on the room's tier (*What removal means, and does not*, above), and **SHOULD** show `validUntil` from the member's record.
+2. **SHOULD** report the answer from its structured members — `validUntil`, and `epoch` where present — and **MUST NOT** report an `open` room's removal, or any removal, as ending access to what the member already read.
+
+### Why the answer carries no notice
+
+What a removal does not do is the same for every removal on a tier, so a sentence saying it in every answer carries nothing the caller cannot render from this specification, from the tier, and from `validUntil` and `epoch` — and it would be server-chosen prose shown to an administrator as guidance, in one language, after the decision was made. The moment it matters is **before** the requester commits, when a step-up gesture binds them to this one document, which is why the producer requirements put it there. An implementation **MAY** still carry such a statement under `ext`; a caller **MUST NOT** depend on one.
 
 ## Authorization
 

@@ -38,6 +38,11 @@
   {
     "note": "Response variant: missing required `rights` member.",
     "variant": "response",
-    "payload": { "nextCursor": null }
+    "payload": { "nextCursor": "c2VxPTEwMA" }
+  },
+  {
+    "note": "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+    "variant": "response",
+    "payload": { "rights": [], "nextCursor": null }
   }
 ]

@@ -473,8 +473,8 @@ func TestRecordExpiryPrefersExpiresAtThenIssuedAtPlusWindow(t *testing.T) {
 
 	aged := freshnessDoc(ptr("2026-01-01T00:00:00Z"), nil)
 	got, bounded = tt.RecordExpiry(aged, policy, testNow)
-	if !bounded || !got.Equal(testNow.Add(tt.DefaultMaxAge)) {
-		t.Errorf("expected issuedAt + MaxAge, got %v (%v)", got, bounded)
+	if !bounded || !got.Equal(testNow.Add(tt.DefaultMaxAge+tt.DefaultSkew)) {
+		t.Errorf("expected issuedAt + MaxAge + Skew, got %v (%v)", got, bounded)
 	}
 
 	// No window at all: the caller must not execute a consequential task.
@@ -572,5 +572,70 @@ func TestDocumentDigestIsStableAcrossMemberOrder(t *testing.T) {
 	}
 	if changed == first {
 		t.Error("a different payload produced the same digest")
+	}
+}
+
+func TestItem11ReleasesTheClaimWhenTheHandlerFailsWithoutARefusal(t *testing.T) {
+	guard := tt.NewInMemoryReplayGuard(0)
+	opts := func(fail bool, executions *int) tt.ConsumeOptions[payload, response] {
+		return tt.ConsumeOptions[payload, response]{
+			Transport:     tt.UnauthenticatedTransport{},
+			Spec:          relaxedSpec,
+			ProofPolicy:   tt.ProofPolicy{Kind: tt.ProofAcceptUnverified},
+			PayloadPolicy: tt.PayloadPolicy{Kind: tt.PayloadAcceptUnvalidated},
+			Checks:        tt.ConsequentialChecks(guard),
+			Doc:           consequentialDoc(nil),
+			MyVID:         me,
+			Now:           testNow,
+			NewErrorID:    func() string { return "err-1" },
+			Clock:         fixedClock,
+			Handler: func(_ context.Context, accepted *tt.Document[payload], _ tt.ResolvedParties) (*tt.Document[response], error) {
+				*executions++
+				if fail {
+					return nil, errors.New("database connection reset")
+				}
+				return tt.RespondWith[payload, response](accepted, "resp-1", response{OK: true}, fixedClock), nil
+			},
+		}
+	}
+
+	executions := 0
+	if _, err := tt.ConsumeInbound(context.Background(), opts(true, &executions)); err == nil {
+		t.Fatal("expected the handler's error to propagate")
+	}
+	// The handler never finished, so a resend is a fresh attempt, not an
+	// in-flight duplicate held until the record expires.
+	outcome, err := tt.ConsumeInbound(context.Background(), opts(false, &executions))
+	if err != nil {
+		t.Fatalf("ConsumeInbound: %v", err)
+	}
+	if outcome.Kind != tt.OutcomeHandled {
+		t.Fatalf("expected the resend to be handled, got %q (inFlight=%v)", outcome.Kind, outcome.InFlight)
+	}
+	if executions != 2 {
+		t.Errorf("expected two executions, got %d", executions)
+	}
+}
+
+// zeroVerdictGuard answers every claim with the zero ReplayVerdict and no error:
+// a guard written against a newer verdict set, or simply a buggy one.
+type zeroVerdictGuard struct{ failingGuard }
+
+func (zeroVerdictGuard) Claim(context.Context, string, string, time.Time, time.Time) (tt.ReplayVerdict, error) {
+	return tt.ReplayVerdict{}, nil
+}
+
+func TestItem11FailsClosedOnAVerdictItDoesNotKnow(t *testing.T) {
+	executions := 0
+	outcome := consequential(t, zeroVerdictGuard{}, consequentialDoc(nil), &executions, testNow)
+
+	if outcome.Kind != tt.OutcomeRejected {
+		t.Fatalf("expected rejected, got %q", outcome.Kind)
+	}
+	if outcome.Error.Payload.Code != string(tt.CodeUnavailable) {
+		t.Errorf("expected unavailable, got %q", outcome.Error.Payload.Code)
+	}
+	if executions != 0 {
+		t.Error("executed without the guard saying the document was fresh")
 	}
 }

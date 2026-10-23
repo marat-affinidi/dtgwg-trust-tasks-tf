@@ -95,11 +95,16 @@ extension type const Capability(String value) {
   static const Capability signSshsig = Capability('signSshsig');
   static const Capability signJws = Capability('signJws');
   static const Capability signCsr = Capability('signCsr');
+  static const Capability signDocument = Capability('signDocument');
   static const Capability externalAccountsManage =
       Capability('externalAccountsManage');
   static const Capability externalAuthUse = Capability('externalAuthUse');
   static const Capability pcsVetter = Capability('pcsVetter');
   static const Capability pcsApplicant = Capability('pcsApplicant');
+  static const Capability witnessRequest = Capability('witnessRequest');
+  static const Capability pcsVoter = Capability('pcsVoter');
+  static const Capability pcsTrustee = Capability('pcsTrustee');
+  static const Capability credentialPresent = Capability('credentialPresent');
 
   /// Every value this specification's schema permits.
   static const List<Capability> values = <Capability>[
@@ -121,10 +126,15 @@ extension type const Capability(String value) {
     signSshsig,
     signJws,
     signCsr,
+    signDocument,
     externalAccountsManage,
     externalAuthUse,
     pcsVetter,
-    pcsApplicant
+    pcsApplicant,
+    witnessRequest,
+    pcsVoter,
+    pcsTrustee,
+    credentialPresent
   ];
 }
 

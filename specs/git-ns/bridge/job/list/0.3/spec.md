@@ -56,16 +56,17 @@ related:
 
 It is a read. It changes nothing, retries nothing and cancels nothing.
 
-## Changes from 0.2
-
-- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
-- The schema pins [`git-ns/_shared/0.6`](../../../../_shared/0.6/git-ns.schema.json) (was `0.5`).
-
-Accepting what `0.2` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.2` document is a valid `0.3` document. A producer that also serves `0.2` **MUST NOT** put a resource `0.2` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.2` document: a `0.2` consumer validates against the `0.2` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.2` answer instead. Everything else is unchanged from `0.2` and restated below, so that this version stands on its own.
-
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
+
+## Changes from 0.2
+
+- Response **`nextCursor`** narrows from `string | null` to **`string`**. On the last page the VTC omits it; it is never `null`.
+
+This applies the registry-wide pagination convention, under which the absence of `nextCursor` is the one way to say "last page". A VTC that sent `"nextCursor": null` under `0.2` omits the member instead. The request is unchanged, and nothing else in the payload moves.
+
+Breaking on the wire, released as a `MINOR` increment under [§5.2](/SPEC.md#52-compatibility-rules)'s `draft` allowance. `0.2` remains published.
 
 ## Conformance
 
@@ -96,7 +97,7 @@ The administrator sends the request to the VTC. See the top-level schema in [`pa
 1. Identifies the caller from the verified `proof` ([Authorization](#authorization)), refusing an unsigned document with `proofRequired`.
 2. Determines the caller's administered namespaces from its own records. Refuses with `git-ns/bridge/job/list:notAdministrator` a caller who has none and does not hold the community-administrator capability, and a caller whose `namespace` is not one of them.
 3. Returns `jobs`: every job dispatched or queued in an administered namespace — or in `namespace` only, when given — narrowed to `state` where given, newest (`createdAt`) first.
-4. Returns at most `limit` jobs (clamped to 1..=500, default 100) and, when more match, a `nextCursor` to continue.
+4. Returns at most `limit` jobs (clamped to 1..=500, default 100) and, when more match, a `nextCursor` to continue; on the last page `nextCursor` is absent, never `null`.
 
 A VTC **MUST NOT** return a job outside the caller's administered namespaces, and **MUST NOT** change anything on this task.
 
@@ -126,7 +127,7 @@ The VTC answers with the matching jobs, per the sub-schema reachable via `$ancho
 ```json
 {
   "id": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6d02",
-  "type": "https://trusttasks.org/spec/git-ns/bridge/job/list/0.2#response",
+  "type": "https://trusttasks.org/spec/git-ns/bridge/job/list/0.3#response",
   "threadId": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6d01",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
@@ -162,6 +163,17 @@ The VTC answers with the matching jobs, per the sub-schema reachable via `$ancho
   }
 }
 ```
+
+## Changes from 0.1
+
+One job kind is listed, and nothing else in the task changes.
+
+1. **`kind` gains `closePullRequest`.** [`git-ns/bridge/job`](../../0.5/spec.md) `0.5` added the kind — the bridge comments on a pull request and closes it, when the VTC's pull-request policy does not allow its author. `0.1`'s `JobKind` is a closed enum of the seven `0.4` kinds, so a `0.1` response cannot carry such a job: a VTC that queues `closePullRequest` jobs had either to omit them from the list or send a row its strict consumers reject.
+2. **A row carries `number`.** The pull request a `closePullRequest` job closes, so an administrator can tell which one a failed job left open. It is present for a `closePullRequest` job only, and requires `repo` (`dependentRequired`). The job's `message` is not echoed: the queue view shows what was acted on, not the community's rendered text.
+
+The request is unchanged. Adding a value to a **response** enum is not a compatible change for a consumer that rejects a value it does not know — the generated bindings do — so this is a new version rather than an edit in place of the `draft` `0.1`, released as a `MINOR` increment under the `draft` allowance of [SPEC §5.2](/SPEC.md#52-compatibility-rules). A `0.1` response is a valid `0.2` response with the same meaning.
+
+**Which version a VTC answers.** A VTC that queues `closePullRequest` jobs **SHOULD** support `0.2` and list its *Type URI* in answer to [`trust-task-discovery`](/SPEC.md#10-discovery-and-capability-negotiation). A VTC that also answers `0.1` requests **MUST NOT** put a `closePullRequest` job in a `0.1` response, which cannot carry it, and **MUST** still apply the request's `limit` and `nextCursor` to the jobs it does return; such a list is incomplete, and a console that needs every job uses `0.2`.
 
 ## Security & Privacy
 

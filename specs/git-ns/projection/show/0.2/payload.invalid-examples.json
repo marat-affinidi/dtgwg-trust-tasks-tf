@@ -36,5 +36,10 @@
     "note": "Response variant: missing required `pendingChanges`.",
     "variant": "response",
     "payload": { "registryConfigured": true, "published": [] }
+  },
+  {
+    "note": "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+    "variant": "response",
+    "payload": { "registryConfigured": true, "published": [], "pendingChanges": [], "nextCursor": null }
   }
 ]

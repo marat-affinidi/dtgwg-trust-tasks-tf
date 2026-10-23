@@ -755,6 +755,34 @@ async fn https_enforces_recipient_required_with_no_in_band_recipient() {
     assert_eq!(code, serde_json::json!("malformedRequest"));
 }
 
+/// The server runs the §7.2 checks in `consume_inbound`'s order: a document
+/// addressed elsewhere is `wrongRecipient` even when its in-band issuer also
+/// contradicts the bearer token, rather than `identityMismatch`.
+#[tokio::test]
+async fn a_misaddressed_document_is_wrong_recipient_before_identity_mismatch() {
+    let addr = spawn_server().await;
+    let resp = reqwest::Client::new()
+        .post(format!("http://{addr}/trust-tasks"))
+        .header("authorization", "Bearer alice")
+        .header("content-type", "application/json")
+        .body(
+            serde_json::json!({
+                "id": "urn:uuid:misaddressed",
+                "type": "https://trusttasks.org/spec/acl/grant/0.1",
+                "issuer": "did:web:carol.example",
+                "recipient": "did:web:elsewhere.example",
+                "issuedAt": chrono::Utc::now().to_rfc3339(),
+                "payload": { "entry": { "subject": "did:web:carol.example", "role": "admin" } }
+            })
+            .to_string(),
+        )
+        .send()
+        .await
+        .unwrap();
+    let code = resp.json::<serde_json::Value>().await.unwrap()["payload"]["code"].clone();
+    assert_eq!(code, serde_json::json!("wrongRecipient"));
+}
+
 /// The client must never hang on an unresponsive peer: its `reqwest::Client`
 /// carries finite timeouts by default, so a server that accepts the
 /// connection and then goes silent surfaces as an error.
@@ -1957,5 +1985,68 @@ async fn a_fire_and_forget_spec_is_registerable_and_answers_204() {
     assert!(
         resp.bytes().await.unwrap().is_empty(),
         "204 carries no body"
+    );
+}
+
+// ─── Proofs are verified over the document as received ────────────────────
+
+/// REGRESSION. The server verified a proof over `TrustTask<Value>`
+/// re-serialised, which re-renders the framework timestamps: a genuine proof
+/// over a document whose producer wrote `issuedAt` with `+00:00` (or a
+/// non-zero-padded fraction) was refused `proofInvalid`. The proof is now
+/// checked over the request body as received.
+#[tokio::test]
+async fn a_proof_is_verified_over_the_body_as_received() {
+    use affinidi_secrets_resolver::secrets::Secret;
+    use trust_tasks_proof::affinidi::{sign_trust_task, SignOptions, Verifier};
+
+    const SEED: [u8; 32] = [7u8; 32];
+    let pk_mb = Secret::generate_ed25519(None, Some(&SEED))
+        .get_public_keymultibase()
+        .expect("ed25519 public multikey");
+    let vm = format!("did:key:{pk_mb}#{pk_mb}");
+    let mut secret = Secret::generate_ed25519(Some(&vm), Some(&SEED));
+    secret.id = vm.clone();
+    let did = vm.split('#').next().unwrap().to_string();
+
+    let server = HttpsServer::builder()
+        .local_vid(SERVER_VID)
+        .with_verifier(Verifier::for_did_key())
+        .on::<list::v0_1::Payload, _>(|_req, _ctx| Ok(list_response()))
+        .build();
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let app = server.into_router();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    // `+00:00` is valid RFC 3339 and re-serialises as `Z`.
+    let issued_at = Utc::now().format("%Y-%m-%dT%H:%M:%S+00:00").to_string();
+    let doc = serde_json::json!({
+        "id": "urn:uuid:test-as-received",
+        "type": list::v0_1::Payload::TYPE_URI,
+        "issuer": did,
+        "recipient": SERVER_VID,
+        "issuedAt": issued_at,
+        "payload": {},
+    });
+    let signed = sign_trust_task(&doc, &secret, SignOptions::new())
+        .await
+        .expect("sign");
+
+    let resp = reqwest::Client::new()
+        .post(format!("http://{addr}/trust-tasks"))
+        .header("content-type", "application/json")
+        .body(serde_json::to_vec(&signed).unwrap())
+        .send()
+        .await
+        .unwrap();
+    let status = resp.status();
+    let body: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(status, reqwest::StatusCode::OK, "{body}");
+    assert_eq!(
+        body["type"],
+        format!("{}#response", list::v0_1::Payload::TYPE_URI)
     );
 }

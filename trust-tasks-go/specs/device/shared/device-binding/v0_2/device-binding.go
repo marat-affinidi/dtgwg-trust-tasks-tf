@@ -119,10 +119,15 @@ const (
 	CapabilitySignSshsig             Capability = "signSshsig"
 	CapabilitySignJWS                Capability = "signJws"
 	CapabilitySignCsr                Capability = "signCsr"
+	CapabilitySignDocument           Capability = "signDocument"
 	CapabilityExternalAccountsManage Capability = "externalAccountsManage"
 	CapabilityExternalAuthUse        Capability = "externalAuthUse"
 	CapabilityPcsVetter              Capability = "pcsVetter"
 	CapabilityPcsApplicant           Capability = "pcsApplicant"
+	CapabilityWitnessRequest         Capability = "witnessRequest"
+	CapabilityPcsVoter               Capability = "pcsVoter"
+	CapabilityPcsTrustee             Capability = "pcsTrustee"
+	CapabilityCredentialPresent      Capability = "credentialPresent"
 )
 
 // DeviceAttestation Producer-supplied attestation at registration time, verifiable by the

@@ -3,9 +3,11 @@
 This repo holds the Trust Tasks framework spec, the per-task spec/schema registry
 (`specs/<slug>/<version>/`), the transport bindings (`bindings/`), the registry
 website (`website/`), and the generated client libraries (`trust-tasks-rs`,
-`trust-tasks-ts`). `npm run build` (`scripts/build-registry.mjs`) regenerates the
-website registry; `cargo run -p trust-tasks-codegen` and `npm run build-ts-bindings`
-regenerate the libraries.
+`trust-tasks-ts`, `trust-tasks-go`, `trust-tasks-dart`) with their hand-written
+binding and proof packages. `npm run build` (`scripts/build-registry.mjs`)
+regenerates the website registry; `cargo run -p trust-tasks-codegen`,
+`npm run build-ts-bindings`, `npm run build-go-bindings` and
+`npm run build-dart-bindings` regenerate the libraries.
 
 ## ⚠️ `SPEC.md` is generated — never edit it here
 
@@ -122,6 +124,8 @@ defects three times.
 | `checkCategoryTaxonomy`, `checkBindingRegistry` | hand-maintained lists match the tree | other hand-maintained lists nobody has guarded yet |
 | `npm run check-dart-packages` | the five files naming the Dart packages (`publish.yml`'s `tag-dart` matrix, `release-pr.sh`'s `DART_PACKAGES`, `publish-dart.yml`, `release-bump-dart.sh`, `dart.yml`) name the same packages with the same dirs and tag prefixes | whether a package's first manual publish and trusted-publishing setup happened |
 | `checkBindingFrameworkTarget`, `checkBindingErrorSpecPin` | a binding's prose agrees with its own front matter, and pins no `trust-task-error` version | prose that is stale in a way no other file contradicts |
+| the member/value casing lint (`scripts/lib/member-casing.mjs`) | every schema's member names and enumerated values are lowerCamelCase (SPEC §4.10), or named in `member-casing-allowlist.json` — `external` with the vocabulary that owns it, or `frozen` for its own family's pre-lint deviations | whether an `external` entry's attribution is true |
+| the wire-conventions lint (`scripts/lib/wire-conventions.mjs`) | the latest version of every non-retired spec — and every shared definition it `$ref`s — spells instants as RFC 3339, pages with `cursor` + `limit` → `nextCursor` (never `null`, no `truncated`/`pageSize`/`offset`), uses `since` only as a time filter and never a boolean `created`; deliberate look-alikes are in `wire-conventions-allowlist.json` with a reason | a convention the lint has no rule for, or an instant whose name and description give no hint it is one |
 | the error-URI check in `check-bindings-conformance.mjs` | `trust_task_error_type_uri()`, `TRUST_TASK_ERROR_TYPE_URI`, `TrustTaskErrorTypeURI` and `trustTaskErrorTypeUri` all name the same version | whether that version is the right one to have adopted |
 
 The fourth instance of the hand-maintained-list failure mode was binding *prose*:
@@ -295,7 +299,7 @@ construction path). The consequence worth knowing:
 ### ⚠️ `trust-tasks-rs` unit tests see only the `acl` family
 
 `cargo test` compiles a library twice — as the library, and again with
-`cfg(test)` as its unit-test harness — and the generated tree is ~46 MB of the
+`cfg(test)` as its unit-test harness — and the generated tree is ~66 MB of the
 crate. So the generator keeps that second build small:
 
 - **Every gated family except those in `UNIT_TEST_FAMILIES`** (in
@@ -310,6 +314,15 @@ crate. So the generator keeps that second build small:
   it by hand.
 
 Measured on the `validate` build: 63s → 23s, peak memory 9.0 GB → 4.3 GB.
+
+**A single family builds and tests on its own** —
+`cargo test -p trust-tasks-rs --no-default-features --features vault` is about
+13 s and 1 GB cold, against minutes and ~6 GB for the whole workspace — and the
+`test-single-family` job in `rust.yml` keeps it that way for `acl`, `vault` and
+`keys`. So a test naming a family must sit behind that family's feature: the
+`acl`-specimen unit-test modules are `#[cfg(all(test, feature = "acl"))]`, and an
+integration test file that uses a family opens with `#![cfg(feature = "…")]`
+for each one it names.
 
 ## Declared error codes are generated — Rust only, so far
 
@@ -501,9 +514,11 @@ classification. No third-party dependency (only the core, for `Document` and
   attempt, distinct from a bit-for-bit retry the consumer's item-11 record
   absorbs. Sign built documents with `trust-tasks-go/proof`.
 - **Core CI does not reach it**; a `capabilityclient` job in `go.yml` builds/vets/
-  tests it on the `go 1.22` floor. Keep the files gofmt-clean. `go get` works via
-  the proxy, so the website matrix lists the Go `capability-client` cell as
-  shipped.
+  tests it on the `go 1.22` floor. Keep the files gofmt-clean. **Released on
+  its own `trust-tasks-go/capabilityclient/vX.Y.Z` tag** the same way `proof`
+  is — a `version.go`, a `publish-go` matrix leg, a `GO_MODULES` entry in
+  `release-pr.sh` and a `release-bump-go.sh` case — and the core's release
+  watch excludes it, so a change here releases this module, not the core.
 
 ## ⚠️ The hand-written TypeScript packages
 
@@ -588,6 +603,12 @@ are not obvious:
   `../trust-tasks-dart`, the Dart form of a Rust `path =` dependency. pub never
   publishes it. `tag-dart` deletes it before verifying a release, so the release
   is checked against the *published* core.
+- **A sibling's `trust_tasks` constraint must admit the current core.** pub
+  reads `^0.1.0` as `<0.2.0`, so until #895 every sibling declared a range that
+  excluded the core it was developed against: consumers got core 0.1.19, and an
+  app on core 0.9 could not add a sibling at all. `tag-dart` cannot see this —
+  it verifies against the newest core the constraint admits — so when the core
+  crosses a `0.x` minor, raise the siblings' floor in the same release cycle.
 - **`ssi: ">=3.9.6 <5.0.0"` spans two majors on purpose.** `package:didcomm`
   pins ssi 3, so requiring ssi 4 would make this package impossible to use
   beside a DIDComm transport. The `packages` job in `dart.yml` tests with ssi
@@ -616,10 +637,13 @@ are not obvious:
   importing `dart:io` from the main library would take the web away from the
   client, which is the half a Flutter web app wants.
 - **Its request pipeline mirrors `trust-tasks-https/src/server.rs` step for
-  step**, including running identity, expiry and freshness *before* the
-  attribution gate — `consumeInbound` repeats them afterwards, harmlessly. A
-  reorder changes which code a document that fails two checks is refused with,
-  and the two servers would then disagree.
+  step**, including running expiry, freshness and identity (in §7.2 order, as
+  `consumeInbound` does — except that with no authenticated sender identity
+  runs first, so a misaddressed document stays suppressed per §8.1) *before*
+  the attribution gate — `consumeInbound`
+  repeats them afterwards, harmlessly. A reorder in one server changes which
+  code a document that fails two checks is refused with, and the servers would
+  then disagree with each other and with `consumeInbound`.
 - **Proofs are verified over the JSON as received**, not the typed re-encoding
   `consumeInbound` would hand the verifier, which drops payload members the
   generated type does not model and so breaks valid signatures.
@@ -674,12 +698,10 @@ logic, no crypto** — document builders for the `governance/capability/*` and
 - **It reuses the core's `slugFromTypeUri`** (which throws on a non-Trust-Task
   URI, so `slugOf` wraps it and returns `null`); the response-variant check is a
   `#response` suffix test. Sign built documents with `package:trust_tasks_proof`.
-- **Like `trust_tasks_tsp` it is tested but not released yet** — it is in the
-  `dart.yml` `packages` job but deliberately absent from the release matrices
-  (`tag-dart`, `DART_PACKAGES`), `publish-dart.yml` and `release-bump-dart.sh`,
-  which `check-dart-packages` permits. Unlike `tsp`, nothing blocks it (it has no
-  unpublished dependency): the first pub.dev publish is manual, and adding the
-  five release entries + flipping the website matrix cell is a clean follow-up.
+- **Released like the other siblings** — a `tag-dart` matrix leg, a
+  `DART_PACKAGES` entry, a `publish-dart.yml` tag pattern and a
+  `release-bump-dart.sh` case, which `check-dart-packages` holds in agreement.
+  Its first pub.dev publish (`0.1.0`) was the manual one.
 
 ## Build / validate / publish
 

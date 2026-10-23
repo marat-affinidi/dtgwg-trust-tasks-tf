@@ -6,6 +6,142 @@ this crate versions independently of `trust-tasks-rs` — it takes its own
 leading bump when a `trust-tasks-rs` break reaches it, rather than aligning
 to that crate's number (see the `0.6.5` → `0.7.0` release for the shape).
 
+## [0.34.0](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.33.2...trust-tasks-didcomm-v0.34.0) — 2026-10-23
+
+
+### Fixed
+
+- Binding rejection reasons carry a category, not the error's text ([#877](https://github.com/trustoverip/dtgwg-trust-tasks-tf/pull/877))
+
+The DIDComm v2.1, DIDComm v1 and TSP bindings built the malformedRequest
+  reason in `into_reject_reason` from the error's `Display`. That text holds the
+  deserializer's member names and line/column offsets, sender DIDs and VIDs,
+  verkeys, and upstream envelope and resolver failures. A caller that answered
+  with the reason put all of it on the wire, which SPEC §10.4 forbids. The HTTPS
+  binding already avoided this.
+
+  - A body that does not deserialise now maps through
+    `RejectReason::malformed_from_serde`, as the HTTPS binding's does.
+  - A thread disagreement names the header and member, not their values.
+  - Every other malformedRequest carries one constant reason per binding.
+
+  The error's `Display` is unchanged, so logs keep the detail. The codes are
+  unchanged; only the reason text differs.
+
+- Proofs are verified over the document as received, so a genuine proof survives a typed re-encoding ([#875](https://github.com/trustoverip/dtgwg-trust-tasks-tf/pull/875))
+
+Every Rust consumer verified a proof over its parsed TrustTask re-serialised:
+  consume_inbound through ProofVerifier::verify, the HTTPS server through
+  DynProofVerifier::verify_json on a TrustTask<Value>. Re-serialisation
+  reproduces the signed bytes only when every member round-trips, and several
+  do not — a generated `#[serde(default)]` member the producer omitted comes
+  back as `false`, a member the payload type does not model is dropped, and a
+  framework timestamp written `+00:00` is re-rendered as `Z`. A genuine proof
+  over any such document was refused proofInvalid.
+
+  - ProofVerifier and DynProofVerifier gain a provided `verify_received(&Value)`;
+    the affinidi Verifier overrides it with its exact `verify_raw`, and
+    ErasedVerifier forwards it. Existing implementations keep the old,
+    re-serialising behaviour by default.
+  - ProofPolicy gains `VerifyReceived(&V, &Value)` and `with_received`, which
+    turns a caller's `Verify` into it. consume_inbound re-parses the received
+    value and refuses proofInvalid when it is not the document being consumed,
+    since a proof over one document vouches for nothing about another.
+  - The TSP, DIDComm v2 and DIDComm v1 `receive` paths keep the document as
+    received and apply `with_received`, so their callers change nothing.
+  - The HTTPS server verifies over the request body parsed as a Value, keeping
+    the typed parse that refuses a duplicated top-level member.
+  - DynProofVerifier's doc no longer claims the erasure is lossless.
+
+  All additive: cargo semver-checks reports no update required for
+  trust-tasks-rs, trust-tasks-proof or trust-tasks-https.
+
+
+
+## [0.33.2](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.33.1...trust-tasks-didcomm-v0.33.2) — 2026-10-22
+
+
+## [0.33.1](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.33.0...trust-tasks-didcomm-v0.33.1) — 2026-10-21
+
+
+## [0.33.0](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.10...trust-tasks-didcomm-v0.33.0) — 2026-10-21
+
+
+## [0.32.10](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.9...trust-tasks-didcomm-v0.32.10) — 2026-10-21
+
+
+## [0.32.9](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.8...trust-tasks-didcomm-v0.32.9) — 2026-10-21
+
+
+## [0.32.8](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.7...trust-tasks-didcomm-v0.32.8) — 2026-10-21
+
+
+## [0.32.7](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.6...trust-tasks-didcomm-v0.32.7) — 2026-10-20
+
+
+## [0.32.6](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.5...trust-tasks-didcomm-v0.32.6) — 2026-10-20
+
+
+## [0.32.5](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.4...trust-tasks-didcomm-v0.32.5) — 2026-10-20
+
+
+## [0.32.4](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.3...trust-tasks-didcomm-v0.32.4) — 2026-10-19
+
+
+## [0.32.3](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.2...trust-tasks-didcomm-v0.32.3) — 2026-10-19
+
+
+## [0.32.2](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.1...trust-tasks-didcomm-v0.32.2) — 2026-10-19
+
+
+## [0.32.1](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.32.0...trust-tasks-didcomm-v0.32.1) — 2026-10-19
+
+
+## [0.32.0](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.16...trust-tasks-didcomm-v0.32.0) — 2026-10-18
+
+
+## [0.31.16](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.15...trust-tasks-didcomm-v0.31.16) — 2026-10-18
+
+
+## [0.31.15](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.14...trust-tasks-didcomm-v0.31.15) — 2026-10-17
+
+
+## [0.31.14](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.13...trust-tasks-didcomm-v0.31.14) — 2026-10-17
+
+
+## [0.31.13](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.12...trust-tasks-didcomm-v0.31.13) — 2026-10-16
+
+
+## [0.31.12](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.11...trust-tasks-didcomm-v0.31.12) — 2026-10-16
+
+
+## [0.31.11](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.10...trust-tasks-didcomm-v0.31.11) — 2026-10-16
+
+
+## [0.31.10](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.9...trust-tasks-didcomm-v0.31.10) — 2026-10-16
+
+
+## [0.31.9](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.8...trust-tasks-didcomm-v0.31.9) — 2026-10-16
+
+
+## [0.31.8](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.7...trust-tasks-didcomm-v0.31.8) — 2026-10-15
+
+
+## [0.31.7](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.6...trust-tasks-didcomm-v0.31.7) — 2026-10-15
+
+
+## [0.31.6](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.5...trust-tasks-didcomm-v0.31.6) — 2026-10-15
+
+
+## [0.31.5](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.4...trust-tasks-didcomm-v0.31.5) — 2026-10-15
+
+
+## [0.31.4](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.3...trust-tasks-didcomm-v0.31.4) — 2026-10-15
+
+
+## [0.31.3](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.2...trust-tasks-didcomm-v0.31.3) — 2026-10-15
+
+
 ## [0.31.2](https://github.com/trustoverip/dtgwg-trust-tasks-tf/compare/trust-tasks-didcomm-v0.31.1...trust-tasks-didcomm-v0.31.2) — 2026-10-14
 
 

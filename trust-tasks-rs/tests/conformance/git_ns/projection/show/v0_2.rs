@@ -15,6 +15,15 @@ fn request_example_1() {
     let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
     assert_eq!(rendered, expected, "request example failed round-trip");
 }
+#[test]
+fn response_example_1() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6e02\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/projection/show/0.2#response\",\n  \"threadId\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6e01\",\n  \"issuer\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"recipient\": \"did:webvh:QmDanaScid8:acme-vtc.example:dana\",\n  \"issuedAt\": \"2026-09-26T09:25:01Z\",\n  \"payload\": {\n    \"registryConfigured\": true,\n    \"published\": [\n      {\n        \"entity\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol\",\n        \"action\": \"git.repo.own\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"context\": {\n          \"framework\": \"https://trusttasks.org/spec/git-ns/right/grant/0.3\",\n          \"activeFrom\": \"2026-09-23T09:50:00Z\"\n        },\n        \"publishedAt\": \"2026-09-23T09:50:05Z\"\n      },\n      {\n        \"entity\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol\",\n        \"action\": \"git.commit.sign\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"context\": {\n          \"framework\": \"https://trusttasks.org/spec/git-ns/right/grant/0.3\",\n          \"activeFrom\": \"2026-09-23T09:50:00Z\",\n          \"impliedBy\": \"git.repo.own\"\n        },\n        \"publishedAt\": \"2026-09-23T09:50:05Z\"\n      },\n      {\n        \"entity\": \"did:webvh:QmFrankScid12:acme-vtc.example:frank\",\n        \"action\": \"git.commit.sign\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"context\": {\n          \"framework\": \"https://trusttasks.org/spec/git-trust/grant/0.1\",\n          \"origin\": \"roleDerived\"\n        },\n        \"publishedAt\": \"2026-09-25T14:05:00Z\"\n      }\n    ],\n    \"pendingChanges\": 2\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Response> =
+        serde_json::from_str(JSON).expect("deserialize response example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "response example failed round-trip");
+}
 /// Each fixture in `payload.invalid-examples.json` MUST be
 /// rejected by at least one of: serde deserialization, or
 /// JSON-Schema validation under the `validate` feature. The
@@ -73,6 +82,10 @@ fn rejects_invalid_response_examples() {
         (
             "Response variant: missing required `pendingChanges`.",
             "{\n  \"published\": [],\n  \"registryConfigured\": true\n}",
+        ),
+        (
+            "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+            "{\n  \"nextCursor\": null,\n  \"pendingChanges\": [],\n  \"published\": [],\n  \"registryConfigured\": true\n}",
         ),
     ];
     for (i, (note, raw)) in fixtures.iter().enumerate() {

@@ -84,6 +84,14 @@ class _FailingGuard implements ReplayGuard {
   Future<void> release(String id, String digest) async {}
 }
 
+/// An [InMemoryReplayGuard] that, like a store, keeps only what encodes as
+/// JSON, and keeps it as the decoded JSON.
+class _SerialisingGuard extends InMemoryReplayGuard {
+  @override
+  Future<void> recordResponse(String id, Object? response) =>
+      super.recordResponse(id, jsonDecode(jsonEncode(response)));
+}
+
 void main() {
   group('SPEC §7.2 item 11 — duplicate execution', () {
     test('absorbs a bit-for-bit resend and never executes twice (§8.4)',
@@ -103,6 +111,73 @@ void main() {
       final prior = (second as DuplicateOutcome<Response>).priorResponse;
       expect(prior, isA<TrustTaskDocument<Response>>());
       expect((prior! as TrustTaskDocument<Response>).id, 'resp-1');
+    });
+
+    test('releases the claim when the handler throws, so a resend executes',
+        () async {
+      final guard = InMemoryReplayGuard();
+      await expectLater(
+        consumeInbound<Payload, Response>(
+          transport: const UnauthenticatedTransport(),
+          spec: consequentialSpec,
+          proofPolicy: const ProofPolicy.acceptUnverified(),
+          payloadPolicy: const PayloadPolicy.acceptUnvalidated(),
+          checks: consequentialChecks(guard),
+          doc: consequentialDoc(),
+          myVid: me,
+          now: testNow,
+          newErrorId: () => 'err-1',
+          payloadToJson: payloadToJson,
+          handler: (accepted, parties) async =>
+              throw StateError('database connection reset'),
+        ),
+        throwsStateError,
+      );
+
+      // The handler never finished, so a resend is a fresh attempt, not an
+      // in-flight duplicate held until the record expires.
+      final executions = Executions();
+      final outcome =
+          await consequential(guard, consequentialDoc(), executions);
+      expect(outcome, isA<Handled<Response>>());
+      expect(executions.count, 1);
+    });
+
+    test('caches a success response as JSON a persistent guard can store',
+        () async {
+      // Stands in for a guard backed by a store: it keeps only what
+      // jsonEncode can write, as Redis or a database would.
+      final guard = _SerialisingGuard();
+      Future<ConsumeOutcome<Response>> run() =>
+          consumeInbound<Payload, Response>(
+            transport: const UnauthenticatedTransport(),
+            spec: consequentialSpec,
+            proofPolicy: const ProofPolicy.acceptUnverified(),
+            payloadPolicy: const PayloadPolicy.acceptUnvalidated(),
+            checks: consequentialChecks(guard),
+            doc: consequentialDoc(),
+            myVid: me,
+            now: testNow,
+            newErrorId: () => 'err-1',
+            payloadToJson: payloadToJson,
+            clock: fixedClock,
+            responseToJson: (r) => r.toJson(),
+            handler: (accepted, parties) async =>
+                respondWith<Payload, Response>(
+              accepted,
+              'resp-1',
+              const Response(true),
+              clock: fixedClock,
+            ),
+          );
+
+      expect(await run(), isA<Handled<Response>>());
+      final second = await run();
+      expect(second, isA<DuplicateOutcome<Response>>());
+      final prior = (second as DuplicateOutcome<Response>).priorResponse;
+      expect(prior, isA<Map<String, dynamic>>());
+      expect((prior! as Map<String, dynamic>)['id'], 'resp-1');
+      expect((prior as Map<String, dynamic>)['payload'], {'ok': true});
     });
 
     test('rejects differing content under a reused id with idConflict',
@@ -310,6 +385,37 @@ void main() {
           payload: const Payload('admin'),
         );
 
+    test('refuses a timestamp with no zone designator, as Rust and Go do', () {
+      // DateTime.tryParse reads "00:00:00" with no zone as local time, so the
+      // instant would depend on where the consumer runs.
+      const policy = FreshnessPolicy.defaults;
+      for (final zoneless in [
+        '2026-01-01T00:00:00',
+        '2026-01-01',
+        '2026-01-01 00:00:00Z',
+        '20260101T000000Z',
+      ]) {
+        expect(
+          validateFreshness(at(issuedAt: zoneless), testNow, policy)?.code,
+          StandardCode.malformedRequest,
+          reason: 'issuedAt $zoneless',
+        );
+        expect(
+          validateBasic(at(expiresAt: zoneless), testNow, me)?.code,
+          StandardCode.malformedRequest,
+          reason: 'expiresAt $zoneless',
+        );
+      }
+      for (final zoned in [
+        '2026-01-01T00:00:00Z',
+        '2026-01-01t00:00:00.250z',
+        '2026-01-01T01:00:00+01:00',
+      ]) {
+        expect(validateFreshness(at(issuedAt: zoned), testNow, policy), isNull,
+            reason: zoned);
+      }
+    });
+
     test('rejects an issuedAt beyond the skew tolerance', () {
       const policy = FreshnessPolicy.defaults;
       expect(
@@ -387,7 +493,7 @@ void main() {
       );
       expect(
         recordExpiry(at(issuedAt: '2026-01-01T00:00:00Z'), policy, testNow),
-        testNow.add(defaultMaxAge),
+        testNow.add(defaultMaxAge + defaultSkew),
       );
       // No window at all: the caller must not execute a consequential task.
       expect(recordExpiry(at(), FreshnessPolicy.defaults, testNow), isNull);

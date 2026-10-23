@@ -36,6 +36,11 @@
   {
     "note": "Response variant: missing required `items` member.",
     "variant": "response",
-    "payload": { "nextCursor": null }
+    "payload": { "nextCursor": "c2VxPTEwMA" }
+  },
+  {
+    "note": "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+    "variant": "response",
+    "payload": { "items": [], "nextCursor": null }
   }
 ]

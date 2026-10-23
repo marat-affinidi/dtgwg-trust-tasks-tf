@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "properties": {
     "namespace": {
-      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
+      "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/NamespaceId",
       "description": "Only activity in this namespace. Absent: every administered namespace."
     },
     "cursor": {
@@ -62,23 +62,23 @@
           "description": "Where the item came from: an audit row or a bridge job."
         },
         "namespace": {
-          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/NamespaceId",
+          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/NamespaceId",
           "description": "The namespace the item belongs to. Absent only for a community-wide audit row from before any namespace was unbound (visible to a community administrator with no `namespace` filter only)."
         },
         "resource": {
-          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
+          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Resource",
           "description": "The resource the item concerns, where it names one."
         },
         "right": {
-          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Right",
+          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Right",
           "description": "The right a rights-change item concerns. Absent for a drift report or a job item."
         },
         "actor": {
-          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
           "description": "Who acted, for an audit item. Absent when a right-to-be-forgotten erasure has removed it from the audit row, and always absent for a job item, which has no actor of its own."
         },
         "subject": {
-          "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
+          "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
           "description": "Whose right it was, for a rights-change audit item. Absent likewise on erasure, and always absent for a job item."
         },
         "detail": {
@@ -106,8 +106,8 @@
           "description": "Items in administered namespaces, newest (`at`) first."
         },
         "nextCursor": {
-          "type": ["string", "null"],
-          "description": "Continuation token for the next page, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "ext": {
           "$ref": "../../../../_framework/0.2/framework.schema.json#/$defs/Ext"

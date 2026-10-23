@@ -58,16 +58,17 @@ related:
 
 It is a read. It changes nothing, grants nothing and publishes nothing.
 
-## Changes from 0.1
-
-- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
-- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.5`).
-
-Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
-
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
+
+## Changes from 0.1
+
+- Response **`nextCursor`** narrows from `string | null` to **`string`**. On the last page the VTC omits it; it is never `null`.
+
+This applies the registry-wide pagination convention, under which the absence of `nextCursor` is the one way to say "last page". A VTC that sent `"nextCursor": null` under `0.1` omits the member instead. The request is unchanged, and nothing else in the payload moves.
+
+Breaking on the wire, released as a `MINOR` increment under [§5.2](/SPEC.md#52-compatibility-rules)'s `draft` allowance. `0.1` remains published.
 
 ## Conformance
 
@@ -91,7 +92,7 @@ The capability is read from the VTC's own records at execution time; the `proof`
 
 **Role-derived grant** — a v0.1 `[hooks.git-trust] grant_on_role` entry: the hook relay grants `git.commit.sign` on a configured resource to every member holding a configured VTC access-control role. It is published from configuration, not recorded through any `git-ns/*` task, has no granter, grant time or expiry, and is withdrawn only by editing the configuration — never by [`git-ns/right/revoke`](../../revoke/0.3/spec.md).
 
-**Row** — one [`AdminRightRow`](../../../_shared/0.6/git-ns.schema.json#/$defs/AdminRightRow): a recorded right restated with `subjectMember` and `granterDeparted`, or a role-derived grant with `subjectMember` and `granterDeparted: false`.
+**Row** — one [`AdminRightRow`](../../../_shared/0.5/git-ns.schema.json#/$defs/AdminRightRow): a recorded right restated with `subjectMember` and `granterDeparted`, or a role-derived grant with `subjectMember` and `granterDeparted: false`.
 
 ## Request
 
@@ -100,7 +101,7 @@ The community administrator sends the request to the VTC. See the top-level sche
 1. Identifies the caller from the verified `proof` ([Authorization](#authorization)), refusing an unsigned document with `proofRequired`.
 2. Confirms the caller holds the community-administrator capability, refusing with `git-ns/right/list:notCommunityAdministrator` otherwise.
 3. Enumerates every live recorded right (a break-glass record awaiting its delay included) and every role-derived grant, narrowed to `resource` and `subject` where given, and returns them as `rights`, ordered by `resource` then `subject`.
-4. Returns at most `limit` rows (clamped to 1..=500, default 100) and, when more match, a `nextCursor` to continue.
+4. Returns at most `limit` rows (clamped to 1..=500, default 100) and, when more match, a `nextCursor` to continue; on the last page `nextCursor` is absent, never `null`.
 
 A VTC **MUST NOT** change anything on this task. A `cursor` carries the filters it was minted under; a VTC **MUST** reject a request that supplies a `cursor` together with a different `resource` or `subject` with `malformedRequest`, and a consumer **MUST NOT** send one.
 
@@ -131,7 +132,7 @@ One recorded right, one break-glass record awaiting ratification, and one role-d
 ```json
 {
   "id": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6b02",
-  "type": "https://trusttasks.org/spec/git-ns/right/list/0.1#response",
+  "type": "https://trusttasks.org/spec/git-ns/right/list/0.2#response",
   "threadId": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6b01",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmDanaScid8:acme-vtc.example:dana",

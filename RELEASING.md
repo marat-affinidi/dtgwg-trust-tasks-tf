@@ -35,6 +35,19 @@ Types: `feat` `fix` `docs` `test` `ci` `build` `perf` `refactor` `chore`
 `security` `spec` `site` `revert`. (`site` is a change to the registry website
 under `website/`; it reaches no published package.)
 
+**`!` is for a package's API, not for wire behaviour.** All eight core crates
+release as one group, so one `!` makes every one of them a breaking release.
+Write it only when a library's public API breaks — a removed or renamed type,
+member or function, a changed signature. A change to what a task means on the
+wire (a new refusal, a tightened rule) that leaves the generated types as they
+were is versioned by the specification — a new task version where consumers
+must tell the two apart — and its title carries no `!`.
+
+**Enum values are append-only.** A generated Rust enum has implicit
+discriminants, so a value inserted mid-list renumbers every value after it — a
+breaking change to the crates even though the wire only grew. Add a value at
+the end. CI checks this (`npm run check-enum-append-only`).
+
 **`spec` is ours, not the standard's**, and release-plz does not know it — an
 unrecognised type is scored as a **patch**. That is right for an in-place schema
 edit and wrong for a **new spec family**, which is additive API surface in both
@@ -96,6 +109,7 @@ no hand-written entries.
 | `trust-tasks-go` | none — a Go module is published by pushing a `trust-tasks-go/vX.Y.Z` tag, after which `proxy.golang.org` serves it |
 | `trust-tasks-go/proof` | none — a **separate** nested Go module (Data Integrity proofs), released on its own `trust-tasks-go/proof/vX.Y.Z` tag, independently of the core. It has a `version.go`, a `publish-go` matrix leg and a `GO_MODULES` entry in `scripts/release-pr.sh` like the core. No manual first publish — a Go tag is self-bootstrapping. |
 | `trust-tasks-go/didcomm` | none — a **separate** nested Go module (DIDComm v2 binding), released on its own `trust-tasks-go/didcomm/vX.Y.Z` tag, the same way as `proof`. |
+| `trust-tasks-go/capabilityclient` | none — a **separate** nested Go module (capability wire client), released on its own `trust-tasks-go/capabilityclient/vX.Y.Z` tag, the same way as `proof`. |
 | `trust-tasks-go/tsp` | none — a **separate** nested Go module for the TSP binding, published by pushing a `trust-tasks-go/tsp/vX.Y.Z` tag. **Not released yet**: its dependency `affinidi-tsp-go` has no tag, so it is required at a pseudo-version and a release waits until that is tagged. `go get` of the module already resolves the pseudo-version from the public repo. It is a separate module so the core stays dependency-free. |
 | `trust_tasks` | pub.dev — the Dart bindings, published by pushing a `trust-tasks-dart-vX.Y.Z` tag, which triggers the publishing workflow |
 | `trust_tasks_proof` | pub.dev — Data Integrity proof verification for `trust_tasks`, published the same way from a `trust-tasks-dart-proof-vX.Y.Z` tag |
@@ -146,7 +160,8 @@ the `trust-tasks-go/v*` tag (watching `specs/`, `trust-tasks-go/` and
 `scripts/build-go-bindings.mjs`). Go has no manifest to bump, so it moves
 `const Version` in `trust-tasks-go/trusttasks/version.go`, which stands in for
 one; the tag is what actually publishes. The nested modules
-(`trust-tasks-go/proof`, `trust-tasks-go/didcomm`) version on their own
+(`trust-tasks-go/proof`, `trust-tasks-go/didcomm`,
+`trust-tasks-go/capabilityclient`) version on their own
 `trust-tasks-go/<name>/vX.Y.Z` tags, and the **core's** watch set excludes them,
 so a change under a nested module releases that module, not the core. `tsp` is
 the exception — still unreleased, see the table above.
@@ -157,6 +172,13 @@ the exception — still unreleased, see the table above.
 declarations that must stay equal: `version:` in `pubspec.yaml` and
 `packageVersion` in `lib/src/runtime/version.dart`. The others watch only their
 own directory and move `version:` alone.
+
+`release-plz` runs one `cargo-semver-checks` per changed crate, in parallel, and
+each builds rustdoc for its crate and every dependency. With `trust-tasks-rs`
+alone peaking near 13 GB, four at once exhausted the 16 GB runner and the
+kernel killed the job (exit 143, with no error in the log). `publish.yml`
+therefore wraps the binary in `flock` so they run one at a time; the Release PR
+job takes about 40 minutes as a result, and its timeout is 90.
 
 > ⚠️ **Only the crates have a `cargo-semver-checks` equivalent.** The npm, Go and
 > Dart bumps are only as accurate as the commit subjects: if a change breaks one

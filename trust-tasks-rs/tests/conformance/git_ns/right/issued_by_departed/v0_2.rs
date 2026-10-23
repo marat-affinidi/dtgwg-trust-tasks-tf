@@ -15,6 +15,15 @@ fn request_example_1() {
     let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
     assert_eq!(rendered, expected, "request example failed round-trip");
 }
+#[test]
+fn response_example_1() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6c02\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/right/issued-by-departed/0.2#response\",\n  \"threadId\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6c01\",\n  \"issuer\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"recipient\": \"did:webvh:QmDanaScid8:acme-vtc.example:dana\",\n  \"issuedAt\": \"2026-09-26T09:15:01Z\",\n  \"payload\": {\n    \"cascadeOnDeparture\": false,\n    \"granters\": [\n      {\n        \"granter\": \"did:webvh:QmGraceScid13:acme-vtc.example:grace\",\n        \"rights\": [\n          {\n            \"subject\": \"did:webvh:QmHenryScid14:acme-vtc.example:henry\",\n            \"right\": \"git.repo.maintain\",\n            \"resource\": \"github.com/acme/widgets\",\n            \"origin\": \"recorded\",\n            \"grantedBy\": \"did:webvh:QmGraceScid13:acme-vtc.example:grace\",\n            \"grantedAt\": \"2026-08-01T10:00:00Z\",\n            \"reason\": \"Covering releases while Grace was on leave.\",\n            \"subjectMember\": true,\n            \"granterDeparted\": true\n          }\n        ]\n      }\n    ]\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Response> =
+        serde_json::from_str(JSON).expect("deserialize response example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "response example failed round-trip");
+}
 /// Each fixture in `payload.invalid-examples.json` MUST be
 /// rejected by at least one of: serde deserialization, or
 /// JSON-Schema validation under the `validate` feature. The
@@ -69,6 +78,10 @@ fn rejects_invalid_response_examples() {
         (
             "Response variant: a DepartedGranter entry with no `rights` array.",
             "{\n  \"cascadeOnDeparture\": false,\n  \"granters\": [\n    {\n      \"granter\": \"did:webvh:QmGraceScid13:acme-vtc.example:grace\"\n    }\n  ]\n}",
+        ),
+        (
+            "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+            "{\n  \"cascadeOnDeparture\": false,\n  \"granters\": [],\n  \"nextCursor\": null\n}",
         ),
     ];
     for (i, (note, raw)) in fixtures.iter().enumerate() {

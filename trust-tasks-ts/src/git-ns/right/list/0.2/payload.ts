@@ -3,7 +3,7 @@
  * Source: specs/git-ns/right/list/0.2/payload.schema.json
  */
 
-import type { AdminRightRow_GitNsV0_6 as AdminRightRow, BreakGlass, Did_GitNsV0_3 as Did, Ext, Resource_GitNsV0_6 as Resource, Right, RightOrigin } from "../../../../_shared/components.js";
+import type { AdminRightRow_GitNsV0_5 as AdminRightRow, BreakGlass, Did_GitNsV0_3 as Did, Ext, Resource_GitNsV0_1 as Resource, Right, RightOrigin } from "../../../../_shared/components.js";
 
 
 /**
@@ -37,9 +37,9 @@ export interface GitNamespacesListRightsResponsePayload {
    */
   rights: AdminRightRow[];
   /**
-   * Continuation token for the next page, or `null` when this is the last.
+   * Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`.
    */
-  nextCursor?: string | null;
+  nextCursor?: string;
   ext?: Ext;
 }
 
@@ -116,11 +116,8 @@ export const PAYLOAD_SCHEMA = {
           "description": "Rows matching `resource` and `subject`, ordered by `resource` then `subject`. A break-glass record waiting out a policy delay is included — it is exactly the one other administrators have a window to revoke."
         },
         "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Continuation token for the next page, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "ext": {
           "$ref": "#/$defs/Ext"
@@ -258,10 +255,10 @@ export const PAYLOAD_SCHEMA = {
     },
     "Resource": {
       "title": "Resource",
-      "description": "A forge-qualified resource, all lowercase: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`, and a subgroup such as `gitlab.com/acme/platform` is not a resource. A repository path has 1 to 21 segments (GitLab: 20 levels of subgroup and the project); GitHub and Forgejo repository paths are always one. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
+      "description": "A forge-qualified resource: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo>` for one repository, all lowercase — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
       "type": "string",
-      "maxLength": 5885,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){0,21}$"
+      "maxLength": 455,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+(?:/[a-z0-9_-][a-z0-9._-]{0,99}){1,2}$"
     },
     "Right": {
       "title": "Right",
@@ -301,11 +298,8 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
           "description": "Rows matching `resource` and `subject`, ordered by `resource` then `subject`. A break-glass record waiting out a policy delay is included — it is exactly the one other administrators have a window to revoke."
         },
         "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Continuation token for the next page, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "ext": {
           "$ref": "#/$defs/Ext"
@@ -443,10 +437,10 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
     },
     "Resource": {
       "title": "Resource",
-      "description": "A forge-qualified resource, all lowercase: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`, and a subgroup such as `gitlab.com/acme/platform` is not a resource. A repository path has 1 to 21 segments (GitLab: 20 levels of subgroup and the project); GitHub and Forgejo repository paths are always one. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
+      "description": "A forge-qualified resource: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo>` for one repository, all lowercase — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.",
       "type": "string",
-      "maxLength": 5885,
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){0,21}$"
+      "maxLength": 455,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+(?:/[a-z0-9_-][a-z0-9._-]{0,99}){1,2}$"
     },
     "Right": {
       "title": "Right",

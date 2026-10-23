@@ -105,7 +105,12 @@
     "note": "Response variant: missing required `jobs` member.",
     "variant": "response",
     "payload": {
-      "nextCursor": null
+      "nextCursor": "c2VxPTEwMA"
     }
+  },
+  {
+    "note": "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+    "variant": "response",
+    "payload": { "jobs": [], "nextCursor": null }
   }
 ]

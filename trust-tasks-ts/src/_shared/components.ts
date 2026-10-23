@@ -355,6 +355,10 @@ export type Admission = "automatic" | "review";
  */
 export type AnchorCadence = "never" | "renewal" | "manual";
 /**
+ * How the admission came to execute. `policyAllowed`: the community's policy admitted it at once. `approved`: the policy referred it, the community parked it, and another administrator approved it. `waived`: the policy referred it, and the community's single-administrator mode waived the approval on the requester's own re-authentication bound to the operation.
+ */
+export type Approval = "policyAllowed" | "approved" | "waived";
+/**
  * An explicit statement of the capabilities a subject may approve. Exactly one of `ceiling` (the role's full approve ceiling), `none`, or `listed` with a NON-EMPTY list of CapabilityRef.
  */
 export type ApproveCapabilityScope = CapabilityScopeCeiling | CapabilityScopeNone | ApproveCapabilityScopeListed;
@@ -370,6 +374,12 @@ export type ApproverLabel = string;
  * The metadata of one attestation: what a Vetting Statement would have said, minus its issuer, as vetting/attestation/0.1 defines it.
  */
 export type AttestationMeta = StatementMeta;
+/**
+ * Who may see a directory field, ordered from narrowest to widest. `admins`: holders of `vtc.directory.admin` (and, for derived fields, `vtc.members.manage`). `groups`: members who share at least one community group with the subject (narrowed to the groups the subject names in `groupAudience`, where it names any). `connections`: members holding an attributed, in-force verified relationship with the subject at the community. `members`: every active member. `public`: anyone, and what the member's signed public card carries outside the community.
+ *
+ * `groups` and `connections` are not a chain: a viewer sees a field when they satisfy the audience the subject chose for it or any wider audience. Every audience includes the administrators, and the subject always sees their own whole card. There is no `onlyMe`: a value nobody else should see is not directory data.
+ */
+export type Audience = "admins" | "groups" | "connections" | "members" | "public";
 /**
  * The kind of privileged change recorded in the audit log.
  */
@@ -404,9 +414,38 @@ export type AuthorityScope = AuthorityScopeAll | AuthorityScopeNone | AuthorityS
 export type AwsArn = string;
 export type AwsRegion = string;
 /**
+ * The ARN of an AWS IAM role, in any AWS partition (`arn:aws:`, `arn:aws-cn:`, `arn:aws-us-gov:`). Validated here because the community passes it to STS AssumeRole and derives the partition of the session policy's resources from it; it must never carry anything but a role ARN.
+ */
+export type AwsRoleArn = string;
+export type BindingId = string;
+export type BindingSpec = RoomBindingSpec | GrantsBindingSpec | RoleBindingSpec;
+/**
  * The name of one blob: the digest of its BlobManifest, taken over the manifest's RFC 8785 (JCS) canonicalization. sha2-256 is RECOMMENDED and MUST be implemented. Content addressing over ciphertext, never plaintext, so a BlobRef says nothing about what the file contains, and two uploads of one file have different BlobRefs (a fresh `fileId` gives a different key, and so different ciphertext). Rooms cannot be correlated by the files they share. Compared as decoded multihash bytes, never as encoded strings. A BlobRef is defined over the manifest's JSON, as this schema states it and RFC 8785 canonicalizes it, never over any binding's generated type: two bindings that model the manifest as distinct types still compute the same BlobRef from the same JSON.
  */
 export type BlobRef = DigestMultibase;
+/**
+ * One leaf of a board. A leaf's hash is the RFC 9162 leaf hash of the JCS canonicalization of this object. Entries carry no time of arrival: the order is the board's, and a timestamp would hand anyone who reads the board the timing the registrar's log would need to pair a ticket with its cast.
+ */
+export type BoardEntry =
+  | CastEntry
+  | ReplacementEntry
+  | LifecycleEntry
+  | ResultEntry
+  | EncryptedCastEntry
+  | TransportKeyEntry
+  | DealingEntry
+  | ConfirmationEntry
+  | JustificationEntry
+  | ElectionKeyEntry
+  | PartialDecryptionsEntry
+  | UnsealedEntry
+  | SpoiledEntry
+  | TrusteeStepEntry
+  | DecryptionAuthorizedEntry;
+/**
+ * `public`: anyone reads the board. `private`: the community, the auditors the manifest names and, for one cast's inclusion, the holder of its receipt (VTI-VOT-052).
+ */
+export type BoardVisibility = "public" | "private";
 /**
  * The control-plane account of a bundle transfer: which algorithm, on what terms, until when. Exactly one of the two shapes — they are mutually exclusive, since StreamDescriptor requires `transportUrl` and `transportToken` and forbids `chunks`, and ChunkedDescriptor requires `chunks` and forbids both.
  */
@@ -449,10 +488,15 @@ export type Capability_DeviceV0_1 =
   | "sign-sshsig"
   | "sign-jws"
   | "sign-csr"
+  | "sign-document"
   | "external-accounts-manage"
   | "external-auth-use"
   | "pcs-vetter"
-  | "pcs-applicant";
+  | "pcs-applicant"
+  | "witness-request"
+  | "pcs-voter"
+  | "pcs-trustee"
+  | "credential-present";
 /**
  * Fine-grained capability flag scoped to the device's allowed contexts. See SPEC.md for the full semantics of each. Capability values are additive: a consumer MUST ignore a value it does not recognise rather than reject the binding, and MUST NOT treat an unrecognised value as conferring anything.
  */
@@ -475,10 +519,15 @@ export type Capability_DeviceV0_2 =
   | "signSshsig"
   | "signJws"
   | "signCsr"
+  | "signDocument"
   | "externalAccountsManage"
   | "externalAuthUse"
   | "pcsVetter"
-  | "pcsApplicant";
+  | "pcsApplicant"
+  | "witnessRequest"
+  | "pcsVoter"
+  | "pcsTrustee"
+  | "credentialPresent";
 /**
  * Number of chunks in the bundle, equal to ceil(expectedSizeBytes / chunkSize). Bounded at 4096 so that the manifest itself — one digest per chunk — fits in the single document that carries it under the same message-size reasoning as a chunk.
  */
@@ -573,6 +622,12 @@ export type DataCommitment = DigestMultibase;
  */
 export type Decision = "approve" | "deny";
 /**
+ * What a partial decryption decrypts: the sealed cast at a board leaf, or the total of one option of one question.
+ */
+export type DecryptionTarget = {
+  [k: string]: unknown | undefined;
+};
+/**
  * `queued`: stored and not yet handed to the recipient. `delivered`: handed to the recipient (pickup or live stream) but not yet deleted by it — the recipient has not acknowledged it.
  */
 export type DeliveryState = "queued" | "delivered";
@@ -628,6 +683,17 @@ export type Did_GitNsV0_3 = string;
  */
 export type DigestMultibase = string;
 /**
+ * A community directory entry's identifier, exactly as that community's directory returned it. Opaque and community-scoped: the agent stores and compares it as a string, never parses it, and never treats the same value under two communities as the same entry.
+ */
+export type DirectoryEntryId = string;
+/**
+ * A disjunctive proof that a ciphertext encrypts one value of a public list: one `(c, z)` per value, in the list's order (CONVENTIONS §9.3).
+ *
+ * @minItems 1
+ * @maxItems 65
+ */
+export type DisjunctiveProof = [SigmaProof, ...SigmaProof[]];
+/**
  * The kinds of drift, named so that a task can select a drift item by kind. The same values, with the same meanings, as `DriftItem`'s `type`, which keeps its own inline list so that `DriftItem` stays textually identical to 0.1; the two lists change together. `roleAdded` — someone holds a forge role the projection does not give them. `roleRemoved` — a projected role is missing. `roleChanged` — a projected role is present at another level. `requiredCheckMissing` — the verify-trust check is no longer required. `protectionWeakened` — branch protection or a ruleset is weaker than the projection in another way (force-push allowed, bypass actors added). `bootstrapMissing` — a bootstrap file or variable is gone.
  */
 export type DriftType =
@@ -650,13 +716,48 @@ export type Duration = string;
  */
 export type Effect_ConsentV0_1 = "allow" | "deny";
 /**
+ * An election's identifier, unique within its community. A closed alphabet: it appears in the ticket class label `voter/<electionId>` and is framed into every hash a cast is bound to.
+ */
+export type ElectionId = string;
+export type ElectionState = "registered" | "registration" | "voting" | "closed" | "tallied" | "cancelled";
+/**
  * The three rights that carry authority over other people's rights: `git.ns.admin`, `git.repo.create` (which makes its holder the owner of every repository they create) and `git.repo.own`. Separation of duties applies to these: nobody grants one to themselves through git-ns/right/grant, or records one for themselves through any other task that grants on the actor's own authority. The explicit self-grant is git-ns/right/break-glass. `git.repo.maintain` and `git.commit.sign` are not elevated.
  */
 export type ElevatedRight = "git.ns.admin" | "git.repo.create" | "git.repo.own";
 /**
+ * A cast of a sealed or tallied-encrypted election: exactly one of `sealed` (the Ballot's JCS bytes sealed to the election key) or `encrypted`, with the tag and the attestation over the JCS bytes of whichever is present (CONVENTIONS §3.6, §9.5).
+ */
+export type EncryptedCast = {
+  [k: string]: unknown | undefined;
+};
+/**
  * The anchor the binding rested on, recorded so an incident review can see how each factor came to exist. `install`: claimed with the community's install token (vtc/install/claim/finish/0.3). `invite`: redeemed from an administrator's invite (auth/step-up/approver/redeem/finish/0.1). `selfService`: added by the subject behind a factor they already held (auth/step-up/approver/enroll/0.1). `offline`: redeemed from an invite minted by the operator with host access while the service was stopped — an `invite`-shaped redemption whose issuer was the host rather than an administrator.
  */
 export type EnrolledVia = "install" | "invite" | "selfService" | "offline";
+/**
+ * Opaque identifier of one directory entry: `dir_` followed by 16 to 64 base64url characters. Random, scoped to one community, and stable for the life of the membership — it survives a rotation of the member's DID, which is why groups, notes and cards are keyed by it. It MUST NOT be derived from, and MUST NOT reveal, any DID of the member, and the same person's entries in two communities MUST NOT share one. Compared by exact string equality.
+ */
+export type EntryId = string;
+/**
+ * The earliest epoch whose storage key a room still lets anybody derive: its chain was pruned below it (`rooms/epoch/prune`), and every epoch under it is meant to be unreadable — at the host, and, as far as each of them conforms, at every member's key holder. Absent means the room's chain has never been pruned.
+ *
+ * **The off-by-one, stated once.** A rung (`EpochLink`) numbered `e` opens with epoch `e`'s key and yields epoch `e − 1`'s. A prune with `beforeEpoch: N` drops the rungs numbered below `N`, so rung `N` survives and still yields epoch `N − 1`'s key; the floor after it is therefore `N − 1`, never `N`. A party applying a floor `F` discards the rungs numbered `F` and below — rung `F` would yield `F − 1` — and every key for an epoch below `F`.
+ *
+ * **Monotonic.** A floor only rises. A host raises the room's to the higher of the floor it held and `beforeEpoch − 1` at each prune it performs, and never lowers it; every other party keeps the highest it has learnt for the room, from any source, and never lowers it either. A lower floor learnt later — from a stale response, or a host that has not been pruned — changes nothing.
+ *
+ * **A host** that holds a floor for a room MUST NOT store, accept or serve a rung numbered at or below it, and MUST serve the floor wherever a response can carry it (`rooms/epoch/chain` 0.2, `rooms/epoch/prune` 0.2).
+ *
+ * **A member's key holder** — and any client of the member that keeps the room's rungs or keys itself — on learning a floor `F` above the one it held, by any means (`rooms/epoch/chain` 0.2 in its own reads, `rooms/keys/backfill` 0.2, `rooms/keys/chain` 0.2 from its principal):
+ *   1. MUST discard every rung it holds for the room numbered `F` or below, and every storage key, file key or other key material it holds or has cached for an epoch below `F` — including one it derived in passing while applying commits through those epochs (`rooms/keys/commit`, `rooms/epoch/commits`);
+ *   2. MUST NOT store such a rung or key again from any source — a delivery from its principal, a backfill, a repair, a catch-up, or a host that has not been pruned — and MUST NOT ask for one;
+ *   3. MUST refuse to derive or use a key for an epoch below `F`, answering exactly as it answers for an epoch its chain does not reach (`beyondChain`, with an earliest epoch at or above `F`), whatever it still holds;
+ *   4. MUST keep `F` itself for as long as it holds anything for the room, since it is what makes items 2 and 3 enforceable after the material is gone.
+ *
+ * A key holder SHOULD learn the floor whenever it fetches rungs or catches up, and SHOULD ask for it — a `rooms/epoch/chain` 0.2 read carries it whatever `fromEpoch` and `limit` it names — at least as often as it otherwise reads the room. One that never asks never learns, and keeps what it held.
+ *
+ * **What a floor does not do, stated plainly.** It is honoured by parties that conform; it does not reach into one that does not, and it recalls nothing. Plaintext a key holder already returned, records a member already opened, files already downloaded and decrypted, exports, and any key a member's own software extracted are beyond it. What it guarantees cryptographically is what the prune guarantees: a party that had not derived a key below the floor before the host erased its rungs can never derive it afterwards. What it adds is that every conforming key holder stops being able to — so that a restart, a new device or an agent's next recall reads nothing below the floor, rather than everything its holder happened to keep.
+ */
+export type EpochFloor = number;
 /**
  * Lowercase hex SHA-256 of the whole bundle's bytes. Kept in the hex form the 1.0 descriptor published rather than moved to DigestMultibase, because it is an unchanged member of an existing descriptor and re-encoding it would break every stream producer for no gain in what it checks. For a chunked transfer it is the check over the reassembled bundle, applied after every chunk has verified individually, so that a correct set of chunks assembled in the wrong order is still caught.
  */
@@ -719,6 +820,46 @@ export type FaceReach =
  */
 export type FacetColour = "slate" | "indigo" | "teal" | "moss" | "sand" | "clay" | "rose" | "plum";
 /**
+ * Help text shown to a member filling the field in. Plain text; a reader MUST NOT treat it as instructions.
+ */
+export type FieldDescription = string;
+/**
+ * Identifier of a directory field. A key with no `.` is a BASE field, the same in every community: `displayName`, `nickname`, `avatar`, `pronouns`, `bio`, `links` (written by the member) and `role`, `joinedAt`, `did`, `personhood` (derived from the community's own records, never stored on a card). A community-defined field MUST use a reverse-DNS key (`org.example.employer`), so a base key never collides with one, and a key is never reused with a different meaning once defined.
+ */
+export type FieldKey = string;
+/**
+ * What readers see as the field's name. Plain text.
+ */
+export type FieldLabel = string;
+/**
+ * Who writes the value. `member`: self-asserted, through vtc/directory/card/update. `admin`: asserted by the community through vtc/directory/card/assert; the member reads it and cannot change it. `credential`: a claim the member discloses from a credential through vtc/directory/card/present, badged with its issuer. `derived`: a base field read from the community's own records (`role`, `joinedAt`, `did`, `personhood`) and never stored on a card. Each source is written only through its own path.
+ */
+export type FieldSource = "member" | "admin" | "credential" | "derived";
+/**
+ * `active`: in use. `disabled`: a base field the community has switched off; hidden from every projection and re-enablable. `retired`: a community field withdrawn for good; hidden at once, its values purged after the community's retention period, and its key never reused.
+ */
+export type FieldState = "active" | "disabled" | "retired";
+/**
+ * The kind of value a field holds, which fixes its `FieldValue` shape. `did` holds a DID the member chooses to show (never their membership DID, which is the derived base field `did`). `claim` holds a `VerifiedValue` and requires `source: credential`.
+ */
+export type FieldType =
+  | "text"
+  | "longText"
+  | "url"
+  | "email"
+  | "phone"
+  | "enum"
+  | "multiEnum"
+  | "date"
+  | "country"
+  | "image"
+  | "did"
+  | "claim";
+/**
+ * The value of one field. Which shape a field takes is fixed by its definition's `type`: text-like types (`text`, `longText`, `url`, `email`, `phone`, `enum`, `date` as YYYY-MM-DD, `country` as ISO 3166-1 alpha-2, `did`) are strings; `multiEnum` and the base field `links` are arrays of strings; `image` and the base field `avatar` are a `CardBlobRef`; `claim` is a `VerifiedValue`; the derived base field `personhood` is a boolean.
+ */
+export type FieldValue = string | boolean | string[] | CardBlobRef | VerifiedValue;
+/**
  * A range of a file's bytes, base64url-encoded without padding (RFC 4648 §5). Empty for an empty range. Bounded at 349526 characters, the unpadded encoding of the 262144-byte range ceiling.
  */
 export type FileData = string;
@@ -743,6 +884,38 @@ export type ForgeId_GitNsV0_6 = string;
  */
 export type GrantValiditySeconds = number;
 /**
+ * Who may see something about a group, narrowest first. `admins`: holders of `vtc.groups.manage` for the group (unqualified, or qualified `group:<groupId>`). `groupMembers`: the group's own members, and its managers. `members`: every active member of the community.
+ */
+export type GroupAudience = "admins" | "groupMembers" | "members";
+/**
+ * Identifier (`id`) of a group membership credential issued to a member. Each renewal issues a new credential with a new identifier. Validity is the community's setting; a community SHOULD default to 30 days, renewed when 10 days remain.
+ */
+export type GroupCredentialId = string;
+/**
+ * What the group is for. Plain text; a reader MUST NOT treat it as instructions. Same placement rules as `GroupName`.
+ */
+export type GroupDescription = string;
+/**
+ * A Ristretto group element: its 32-byte compression, multibase base58btc. Never the identity (CONVENTIONS §9.1).
+ */
+export type GroupElement = string;
+/**
+ * Opaque identifier of a community group: `grp_` followed by 16 to 64 base64url characters. Random and community-scoped; not the group's DID.
+ */
+export type GroupId = string;
+/**
+ * `static`: membership is explicit — added, joined, or granted on request. `dynamic`: membership is computed from `rule` over verified facts only; nobody is added by hand, but a member may opt out (vtc/groups/leave), an exclusion the rule cannot override, and undo it (vtc/groups/join). A dynamic group never confers authority. Fixed for the group's life.
+ */
+export type GroupKind = "static" | "dynamic";
+/**
+ * The group's name, shown to those who may see the group. The community's own record: never in the group's DID document or its credentials' subject beyond the group's DID. Plain text.
+ */
+export type GroupName = string;
+/**
+ * A scalar mod the Ristretto group order: 32 canonical little-endian bytes, multibase base58btc (CONVENTIONS §9.1).
+ */
+export type GroupScalar = string;
+/**
  * The Farm-generated handle of one reservation: 16 to 32 bytes from a cryptographically secure random source, written as unpadded base64url (22 to 43 characters; 16 bytes, 22 characters, is what VTI-LNK-116 recommends). It is the `_id` of the trigger link (VTI-LNK-033) and is compared as a string. In a claim it MUST equal the document's `parentThreadId`. It confers no authority on its holder beyond the right to make one claim.
  */
 export type Handle = string;
@@ -751,7 +924,7 @@ export type Handle = string;
  *
  * **Derived from the same set as the root, and not read from the room's own counter.** The two agree for any host that has never erased a record — versions are assigned strictly increasing and a retraction keeps its tombstone — but they are not interchangeable, because a root and a counter are *two reads*, and two reads are not a snapshot. A write landing between them yields a pair that is individually correct and jointly false: two members holding roots taken over different trees, labelled with one version. That reads as equivocation and is not, and a **false accusation discredits the mechanism rather than the host** — the worst outcome available here. Taken from the committed set, the version cannot disagree with the root it labels, whatever else is happening to the room.
  *
- * The corollary is worth stating: a host that **erases** a record — as distinct from retracting it, which leaves a tombstone in the tree — moves the root without necessarily moving this value, and two members straddling that erasure would see one version over two roots. Erasure is a retention act with its own answer, and a family that exposes one owes this definition another look.
+ * **A prune is the one mutation that removes leaves, and it takes a version too.** A host that **erases** records — as distinct from retracting them, which leaves a tombstone in the tree — moves the root, and taken from the records alone this value need not move with it: it would stay put, or even fall if the erased record held the highest version, and two members straddling the erasure would see one version over two roots, which reads as equivocation and is not. So on a room whose records have been pruned (`rooms/records/prune`), this value is the higher of the highest version among the records the tree covers and the `version` of the room's latest `RecordPrune`, computed from the same snapshot as the root. A prune takes the next version from the room's counter exactly as a put or a curation does, so the pair stays a snapshot: a root and a head that agree before a prune and a root and a head that agree after it, never one head over two roots. A room that has never been pruned is unaffected.
  *
  * **This is what makes two roots comparable at all**, and without it the comparison this family is built on cannot be performed. A room moves: every put, curate and retraction assigns a new version, so two roots taken at two moments differ legitimately and a reader learns nothing from the difference. Shown two different roots, a host that equivocated and a host that was merely written to are indistinguishable — the first can always answer *the room moved between your reads*, and nothing contradicts it.
  *
@@ -763,13 +936,26 @@ export type Handle = string;
  */
 export type HeadVersion = number;
 /**
+ * The media types a directory image may have — those a `CardBlobRef` admits.
+ */
+export type ImageMediaType = "image/png" | "image/jpeg" | "image/webp" | "image/avif";
+/**
+ * Who may ask the community to introduce them to this member. `anyone`: any active member who can find the entry. `groups`: only members who share a community group with them. `connections`: only members holding an attributed, in-force verified relationship with them. `off`: nobody. A refused introduction is never reported to its sender.
+ */
+export type Introductions = "anyone" | "groups" | "connections" | "off";
+/**
  * `issued` is outstanding and revocable; `consumed` and `expired` are terminal.
  */
 export type InviteStatus = "issued" | "consumed" | "expired";
 /**
- * Application-chosen identifier for a record within a namespace. Opaque to the maintainer: it MUST NOT be parsed, normalized, or case-folded, and prefix matching in `list` is a byte-prefix comparison over the UTF-8 encoding. Applications SHOULD use `/`-delimited hierarchical keys (`community/acme`, `contact/z6Mk…`) so that `prefix` can address a record family, but the delimiter is a convention between an application and itself — the maintainer attaches no meaning to it.
+ * How a member enters a static group by themselves. `closed`: only a manager adds them. `request`: a member asks and a manager decides. `open`: a member joins at once, subject to the community's `groups` policy. A group carrying authority is always `closed`.
  */
-export type Key = string;
+export type JoinPolicy = "closed" | "request" | "open";
+export type JoinRequestId = string;
+/**
+ * An optional note from the member to the group's managers. Plain text.
+ */
+export type JoinRequestMessage = string;
 /**
  * Where the private key came from. `derived` means the maintainer generated it from a seed it holds and can reproduce it from `derivationPath`; `imported` means it arrived from outside and exists only as stored material; `internal` means the maintainer generated it from a CSPRNG and it is reproducible from nothing at all. The distinction is operationally load-bearing: a `derived` key survives a seed restore, an `imported` one is lost unless it was backed up separately, and an `internal` one cannot be recovered by any means once the maintainer's storage is gone. This member is also the only way a consumer can confirm that a `keys/create` request for an `internal` key was honoured rather than silently downgraded to a derived one — see that specification's `internal` member.
  */
@@ -799,6 +985,14 @@ export type KeyStatus = "active" | "revoked";
  */
 export type KeyType = "ed25519" | "x25519" | "p256" | "mldsa44" | "mldsa65";
 /**
+ * A question or option key, unique within its manifest or question.
+ */
+export type Key_VotingV0_1 = string;
+/**
+ * Application-chosen identifier for a record within a namespace. Opaque to the maintainer: it MUST NOT be parsed, normalized, or case-folded, and prefix matching in `list` is a byte-prefix comparison over the UTF-8 encoding. Applications SHOULD use `/`-delimited hierarchical keys (`community/acme`, `contact/z6Mk…`) so that `prefix` can address a record family, but the delimiter is a convention between an application and itself — the maintainer attaches no meaning to it.
+ */
+export type Key_VtaV0_1 = string;
+/**
  * The interaction kind: a 1:1 direct message, a multi-party group, or a broadcast channel.
  */
 export type Kind = "dm" | "group" | "channel";
@@ -814,6 +1008,33 @@ export type LifecycleReason = string;
  * Where an effective limit came from. `policy`: the community's rooms policy at the room's creation. `override`: an administrator's vtc/rooms/limits/set. `default`: the community's configured defaults, where neither applies. The host-wide ceiling bounds all three.
  */
 export type LimitSource = "policy" | "override" | "default";
+/**
+ * A colour the holder picked for a list, as a six-digit lowercase sRGB hex value (`#1f8a70`). A rendering hint: a consumer MAY map it to the nearest colour of its own palette that keeps contrast in light and dark themes, and MUST NOT rely on colour alone to tell lists apart.
+ */
+export type ListColour = string;
+/**
+ * Identifier of one of the holder's contact lists: a ULID in Crockford base32, uppercase, assigned by the agent when the list is created. Meaningful only inside the context that holds the list; it is never sent to anyone but the holder's own clients.
+ */
+export type ListId = string;
+/**
+ * The lists a contact is on, as a set: order carries no meaning. A contact on no list has no `lists` member, never an empty array, so there is one way to say "none".
+ *
+ * @minItems 1
+ * @maxItems 64
+ */
+export type ListIds = [ListId, ...ListId[]];
+/**
+ * The holder's name for one of their lists ("Mentors", "Met at the spring meetup"), on one line: no control characters. Unique within a context, compared exactly.
+ */
+export type ListName = string;
+/**
+ * Where the holder wants a list among their lists: ascending, ties broken by `name`. A sort key, not a position, so moving one list does not renumber the others; gaps are expected.
+ */
+export type ListOrder = number;
+/**
+ * Whether members can find the entry. `listed`: it appears when members browse. `findable`: it does not appear when browsing, but a search that matches it under `search` returns it. `hidden`: no member finds it by browsing or searching; administrators still see it, and members who share a group that shows its members see it in that group's member list.
+ */
+export type Listing = "listed" | "findable" | "hidden";
 /**
  * The two-digit number the service chooses at claim, shows only to the starter (through redeem), and the approver types from the starter's screen. A string so that a leading zero survives.
  */
@@ -834,13 +1055,39 @@ export type MemberActions = [MemberAction] | [MemberAction, MemberAction] | [Mem
  */
 export type MemberState = "offered" | "admitted" | "removed";
 /**
+ * How the member came to be in the group. `added`: by a manager. `joined`: they joined an open group. `requestApproved`: a manager approved their request. `rule`: a dynamic group's rule admits them.
+ */
+export type MembershipSource = "added" | "joined" | "requestApproved" | "rule";
+/**
+ * An RFC 9162 audit or consistency path: the node hashes, in the order §2.1.3 / §2.1.4 define.
+ *
+ * @maxItems 64
+ */
+export type MerklePath = DigestMultibase[];
+/**
+ * A one-line summary of the last failure, for an administrator: the step, the config and the backend's error code or status (`put to eu-s3-primary: 503 SlowDown`). Never a credential, a presigned URL, a signed request, a room identifier or anything derived from a room's contents.
+ */
+export type MigrationLastError = string;
+/**
+ * Why a migration is `paused`. `capacity`: the destination config cannot hold the rest. `source`: a config the blobs are being moved off keeps failing to serve them. `destination`: the destination config keeps refusing writes, or is no longer `active`. `credential`: the community cannot obtain a credential for one of the configs.
+ */
+export type MigrationPauseCause = "capacity" | "source" | "destination" | "credential";
+/**
+ * `queued`: approved and waiting for another migration on this community to finish; nothing copied yet (a community that runs one migration at a time). `running`: copying, including while it retries a failing step with backoff. `paused`: halted after its automatic retries reached their cap without success, or on a cause that retrying cannot clear (`pausedCause`); resumed by issuing vtc/rooms/storage/migrate again, and by the community itself at `nextAttemptAt` when present. `complete`: every blob that was to move has moved. `failed`: halted on a blob whose copy did not verify against its manifest; that blob stays where it was.
+ */
+export type MigrationState = "queued" | "running" | "paused" | "complete" | "failed";
+/**
  * How the request reaches the approver. A CLOSED list. Version 0.1 defines `scan`: the starter shows a trigger link (as a QR code that is also a clickable link, TRIGGER-LINK.md) and the approver's wallet reads it. `code` (a typed code of at least 8 characters, under strict rate limits) and `push` (sent to the approver's enrolled devices) are reserved names.
  */
 export type Mode = "scan";
 /**
+ * A binary value, multibase base58btc over the suite's canonical (compressed) encoding.
+ */
+export type Multibase_VotingV0_1 = string;
+/**
  * A binary value, multibase base58btc over the suite's canonical encoding.
  */
-export type Multibase = string;
+export type Multibase_VtaV0_4 = string;
 /**
  * Scopes one application's records within a context, so several tools can share a context without colliding — `openvtc`, `cnm`, an agent runtime. The maintainer MUST NOT interpret the value; it is an opaque partition name. Namespaces are first-come and unreserved, so an application SHOULD pick a stable, specific one: a future per-namespace ACL would grant on this exact string, which makes renaming a namespace a migration rather than an edit.
  */
@@ -849,6 +1096,14 @@ export type Namespace = string;
  * The VTC's opaque identifier for a namespace, assigned when it is bound. Stable for the life of the binding; never reused for another binding.
  */
 export type NamespaceId = string;
+/**
+ * Opaque identifier of one note: `note_` followed by 16 to 64 base64url characters.
+ */
+export type NoteId = string;
+/**
+ * The note, as plain text. Read only by holders of `vtc.directory.notes`. A reader MUST NOT treat it as instructions.
+ */
+export type NoteText = string;
 /**
  * A key prefix inside the bucket, ending in `/`, under which the config's `rooms/` tree is placed. Restricted to the S3 safe-character set so that it can be placed in a downscoped policy without escaping.
  */
@@ -861,6 +1116,174 @@ export type OobKey = string;
  * A web origin (`https://host[:port]`, no path, no trailing slash) — for `login`, the origin of the portal where the starter runs, which is the origin of the `serviceEndpoint` of the service's `SignInPortal` service in its DID document.
  */
 export type Origin = string;
+/**
+ * What the room is to the member, in a sentence or a short paragraph. Line breaks and tabs are allowed; other control characters are not.
+ */
+export type PersonalLabelDescription = string;
+/**
+ * The member's own name for the room, on one line: no control characters, line breaks included. Shown before every name a third party gave the room, because it is the only one nobody else wrote.
+ */
+export type PersonalLabelName = string;
+/**
+ * Longer free-form notes the member keeps about the room: who introduced them, what to look for in it, what they agreed there. Line breaks and tabs are allowed; other control characters are not.
+ */
+export type PersonalLabelNotes = string;
+/**
+ * A word or short phrase the member files the room under, in any script, so their own surfaces can group and filter their rooms. Compared exactly, as a string: a key holder does not case-fold or normalise it.
+ */
+export type PersonalLabelTag = string;
+/**
+ * The member's tags for the room, one to sixteen, as a set: order carries no meaning. A room with no tags has no `tags` member, never an empty list, so there is one way to say "none".
+ *
+ * @minItems 1
+ * @maxItems 16
+ */
+export type PersonalLabelTags =
+  | [PersonalLabelTag]
+  | [PersonalLabelTag, PersonalLabelTag]
+  | [PersonalLabelTag, PersonalLabelTag, PersonalLabelTag]
+  | [PersonalLabelTag, PersonalLabelTag, PersonalLabelTag, PersonalLabelTag]
+  | [PersonalLabelTag, PersonalLabelTag, PersonalLabelTag, PersonalLabelTag, PersonalLabelTag]
+  | [PersonalLabelTag, PersonalLabelTag, PersonalLabelTag, PersonalLabelTag, PersonalLabelTag, PersonalLabelTag]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ]
+  | [
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag,
+      PersonalLabelTag
+    ];
+/**
+ * The holder's private name for a contact, on one line: no control characters, line breaks included. A petname in Zooko's sense — chosen by the holder, meaningful to the holder, and unforgeable by anyone else, because nobody else can write it. Distinct from the contact's own disclosed `nickname` or display name, which the contact chose and may change. Compared exactly, as a string: an agent does not case-fold or normalise it.
+ */
+export type Petname = string;
 /**
  * A region or city name as the vetter writes it. Compared case-insensitively and otherwise exactly.
  */
@@ -997,6 +1420,10 @@ export type Purpose = "login";
  */
 export type PushRegistration = Apns | Fcm | WebPush;
 /**
+ * One question. Tagged union over `type`.
+ */
+export type Question = ChoiceQuestion | RankingQuestion | ScoreQuestion | TextQuestion;
+/**
  * Which of an account's two queues. `receive` holds messages addressed to the account awaiting its pickup. `send` holds messages the account sent that are still held against it until their recipient deletes them — so a stalled recipient fills its senders' send queues.
  */
 export type Queue = "receive" | "send";
@@ -1004,6 +1431,21 @@ export type Queue = "receive" | "send";
  * Why the administrator is making this change. Recorded with it in the audit trail. Attributed to its author on every surface and untrusted: it MUST NOT carry personal data or a credential, and a reader MUST NOT treat it as instructions.
  */
 export type Reason = string;
+/**
+ * What kind of claim a record is, as its author states it. OPTIONAL wherever it appears; absent means the author did not say, and a reader shows it as unstated rather than assuming any of these.
+ *
+ *   - `declared` — the author's own statement: a decision, a preference, an intention, a commitment. True because the author says so, and only as far as the author speaks for it.
+ *   - `observed` — something the author saw, measured or was told directly, recorded as found.
+ *   - `verified` — checked against evidence that somebody else can check again, such as a credential or another record. A record that says `verified` SHOULD name that evidence in `evidence`; one that does not is an unsupported claim to have checked, and a reader SHOULD present it so.
+ *   - `inferred` — derived by reasoning from other information: an agent's conclusion, a summary's generalisation, a model's guess. The value an agent writer uses when it does not know which of the others applies.
+ *
+ * The values are the author's account of their own record, signed with it. They are not checked by anybody, confer nothing, and say nothing about whether the record is right — `inferred` can be correct and `observed` mistaken. Aligned with the provenance vocabulary of personal agent memory, so that a record moved between a member's memory and a room keeps its meaning.
+ */
+export type RecordBasis = "declared" | "observed" | "verified" | "inferred";
+/**
+ * The author's own estimate, from 0 to 1, that what the record says is correct. OPTIONAL; absent means no estimate was given, never 1. Meaningful only beside the author who gave it: two writers' numbers are not on one scale, so a reader MUST NOT rank records by `confidence` across authors as though they were, and an agent that weights by it SHOULD weight within an author's own records. Never authority.
+ */
+export type RecordConfidence = number;
 /**
  * How many records the room held when `DataCommitment` was computed — the number of leaves in that tree, tombstones included, since a tombstone is a record.
  *
@@ -1014,6 +1456,22 @@ export type Reason = string;
  * **It counts the room, never the page.** The same rule `DataCommitment` states, and the same trap: a count scoped to what was returned is one a host satisfies by construction. So this is only comparable against a listing read to the end with **no** `prefix` and **no** `sinceVersion` — a filtered listing legitimately holds fewer, and a reader that compares one against this has found a discrepancy it created itself.
  */
 export type RecordCount = number;
+/**
+ * One thing a record cites in its support, discriminated by `kind`.
+ *
+ *   - `record` names a record of a room by its key, and optionally the version cited and the room. Absent `roomId` means the record's own room.
+ *   - `credential` names a credential by its `id`, and optionally a digest of the credential as cited.
+ *
+ * **A reference, never a locator, and never proof.** A reader MUST NOT fetch, resolve or dereference a `credentialId` because a record names it, and MUST NOT read a record of another room on the strength of a citation: the rule that a room's identifiers are identifiers and not addresses (`AuthorityPresentation`) applies here for the same reasons — fetching would signal to whoever answers which member read which record, and when. A reader MAY show a cited record of the same room that it already holds or reads anyway, and MAY match a cited credential against ones its member already holds. What the citation proves is only that the author cited it; whether the evidence exists, says what the author claims, or supports the record is for whoever follows it up to judge.
+ */
+export type RecordEvidence = RecordEvidenceRecord | RecordEvidenceCredential;
+/**
+ * What the author offers in support of the record: other records and credentials, by reference. OPTIONAL; absent means none was named, and an empty array is not a permitted spelling of that. Order carries no meaning. Bounded so that a reader's cost of showing a record's support is bounded too.
+ *
+ * @minItems 1
+ * @maxItems 32
+ */
+export type RecordEvidenceList = [RecordEvidence, ...RecordEvidence[]];
 /**
  * The path from one record's leaf to the room's `DataCommitment` — a Merkle inclusion proof, in the vocabulary this work already uses for it.
  *
@@ -1048,6 +1506,10 @@ export type RecordTrace = {
  * Whether the record asserts an authorization or a recognition relationship.
  */
 export type RecordType = "authorization" | "recognition";
+/**
+ * The instant after which the record's author no longer stands behind it as current. OPTIONAL; absent means the record does not expire. A reader hides a record whose `validUntil` has passed from default listings, search and recall, and shows it only on explicit request (`SealedRecordBody`, **Expiry**). No host enforces it.
+ */
+export type RecordValidUntil = string;
 /**
  * What it takes to let a value LEAVE. Distinct from `Sensitivity`, which governs showing it to the holder.
  *
@@ -1101,6 +1563,22 @@ export type ResumeToken = string;
  */
 export type RetentionPolicy = "chained" | "fromJoin";
 /**
+ * One withdrawal in a `RevocationList`, discriminated by `kind`.
+ *
+ *   - `credential` withdraws one credential, named by its `id`. It matches the membership credential or any authority link whose `id` equals `credentialId`.
+ *   - `subject` withdraws a party: every credential the room's chain gave them **before** `revokedAt`. It matches the membership credential or any authority link whose `credentialSubject` id **or** `issuer` is `subject` and whose `validFrom` is earlier than `revokedAt`. Matching the issuer as well as the subject withdraws what the party delegated before their removal, which no re-admission revives. A credential carrying no `validFrom` is treated as issued before every entry.
+ *   - `room` withdraws every credential whose `validFrom` is earlier than `revokedAt`, whoever holds it. It is how a room resets access — after a compromise, or on a `private` room, where naming a party would disclose who was a member.
+ *
+ * **Keyed on time, so a party can come back.** A `subject` or `room` entry withdraws what was issued before it and nothing after, so a room that re-admits a removed party issues fresh credentials and they verify. A `credential` entry is permanent for that one credential, which nobody re-issues.
+ *
+ * **Tiers.** On a `private` room a host MUST refuse a list carrying a `credential` or `subject` entry: a presentation there withholds the credential and its subject, so such an entry is one the host cannot apply and a disclosure of who was in the room. Only `room` entries are permitted, and a host serving a `private` room MUST refuse any presentation for which it cannot establish that no credential in it has a `validFrom` earlier than the latest `room` entry's `revokedAt`.
+ */
+export type RevocationEntry = CredentialRevocation | SubjectRevocation | RoomRevocation;
+/**
+ * What a later, different ballot under one ticket does: `replace` the earlier one, or be refused (`refuse`) (VTI-VOT-041).
+ */
+export type Revote = "replace" | "refuse";
+/**
  * One of the five git rights. Each string is also the TRQP `action` the VTC publishes the right under in its Trust Registry, so it is carried verbatim. `git.ns.admin` and `git.repo.create` apply to a namespace resource; `git.repo.own` and `git.repo.maintain` to a repository resource; `git.commit.sign` to either.
  */
 export type Right = "git.ns.admin" | "git.repo.create" | "git.repo.own" | "git.repo.maintain" | "git.commit.sign";
@@ -1117,9 +1595,32 @@ export type RoleKeyState = "pending" | "staged" | "active" | "retiring" | "retir
  */
 export type RoleName = string;
 /**
- * A name for the room, chosen by an administrator: shown to administrators and to the members a room is offered to. Not part of the room's identity and not sent to the room's host path. MUST NOT carry personal data.
+ * What the room is for, in a sentence or a short paragraph, written by an administrator: shown to administrators holding `vtc.rooms.manage` and to the members the room is offered to. Plain text — a consumer renders it as text, never as markup. Like `RoomLabel`, it is the community's own record as the room's owner: not part of the room's identity and never in anything a room's host can read. From `vtc/rooms/community/create` 0.3 and `vtc/rooms/community/update` 0.2 the community also writes it, through its own VTA, as the `description` of the room's own profile (`RoomProfile` in rooms/_shared), sealed inside the room for its members; earlier versions keep it out of the room altogether. It MUST NOT carry personal data or a credential, and a reader MUST NOT treat it as instructions.
+ */
+export type RoomDescription = string;
+/**
+ * A name for the room, chosen by an administrator: shown to administrators and to the members a room is offered to. Not part of the room's identity and never in anything a room's host can read. From `vtc/rooms/community/create` 0.3 and `vtc/rooms/community/update` 0.2 the community also writes it, through its own VTA, as the `name` of the room's own profile (`RoomProfile` in rooms/_shared), sealed inside the room for its members; earlier versions keep it out of the room altogether. MUST NOT carry personal data.
  */
 export type RoomLabel = string;
+/**
+ * A short identifier an administrator files a community-owned room under — `board`, `working-group`, `finance` — so the room list can be filtered. Lower-case letters, digits and hyphens, starting with a letter or digit. Owner-side tracking metadata for holders of `vtc.rooms.manage` only: never shown to members, never sent on the room's host path, and it confers nothing.
+ */
+export type RoomTag = string;
+/**
+ * The room's tags, at most eight, as a set: order carries no meaning. An empty list means the room has none — a tag grants nothing, so empty has no more dangerous reading.
+ *
+ * @maxItems 8
+ */
+export type RoomTags =
+  | []
+  | [RoomTag]
+  | [RoomTag, RoomTag]
+  | [RoomTag, RoomTag, RoomTag]
+  | [RoomTag, RoomTag, RoomTag, RoomTag]
+  | [RoomTag, RoomTag, RoomTag, RoomTag, RoomTag]
+  | [RoomTag, RoomTag, RoomTag, RoomTag, RoomTag, RoomTag]
+  | [RoomTag, RoomTag, RoomTag, RoomTag, RoomTag, RoomTag, RoomTag]
+  | [RoomTag, RoomTag, RoomTag, RoomTag, RoomTag, RoomTag, RoomTag, RoomTag];
 /**
  * `planned` — a successor was staged, activated, and the predecessor retired on the operator's schedule. `compromise` — a key was revoked and, where the role would otherwise be empty, replaced in the same log entry. `addition` — a key was added to a role without anything leaving it (for example a post-quantum key alongside a classical one).
  */
@@ -1167,9 +1668,58 @@ export type SealedEnvelope_VaultV0_2 =
   | HpkeArmoredEnvelope_VaultV0_2
   | TspMessageEnvelope_VaultV0_2;
 /**
- * A sealed-transfer bundle: OpenPGP-style ASCII armor around an HPKE-sealed `SealedPayloadV1` (base mode, X25519-HKDF-SHA256 KEM, HKDF-SHA256 KDF, ChaCha20-Poly1305 AEAD, info string `vta-sealed-transfer/v1`), with a producer assertion and Bundle-Id, Chunk and Digest-Algo headers bound into the associated data. Each task states the key it is sealed to: a single-use wrapping key from keys/import-wrapping-key for external/accounts/secret/set, and the caller's key-agreement key for external/credentials/issue. Its cleartext is an ExternalSecretPayload or an ExternalCredentialPayload. The only form in which secret material crosses the wire in this family, in either direction: the seal is what keeps a terminating proxy, a relay, a request log or a debug dump of "the response" from ever holding a usable secret, whatever transport carried the document.
+ * The cleartext inside the sealed block of vtc/storage/credentials/set/0.2, discriminated by `kind`, which must equal the config's kind. It names the config it is for inside the seal, so that a block captured on its way to one config cannot be replayed into another: a community MUST refuse a block whose `configId` differs from the request's. Never appears on the wire outside a seal, and is never returned. A `local` config has no credential.
+ */
+export type SealedStorageCredential =
+  | {
+      kind: "s3";
+      configId: StorageConfigId;
+      /**
+       * The access key's identifier.
+       */
+      accessKeyId: string;
+      /**
+       * The secret half.
+       */
+      secretAccessKey: string;
+      /**
+       * Present when the pair is a temporary one that needs it. A temporary pair stops working at its own expiry, after which the config reports failures until another is set; it is accepted for evaluation, never recommended.
+       */
+      sessionToken?: string;
+    }
+  | {
+      kind: "gcs";
+      configId: StorageConfigId;
+      /**
+       * The service-account key exactly as Google issues it — the JSON key file, as an object, its member names carried verbatim in Google's own snake_case. Members beyond the four required (`project_id`, `client_id`, `token_uri`, `universe_domain` and the rest) are permitted, and a community MAY discard them: it authenticates with `client_email`, `private_key_id` and `private_key` alone, against Google's own token endpoint, and never against a `token_uri` the key file names.
+       */
+      serviceAccountKey: {
+        type: "service_account";
+        client_email: string;
+        private_key_id: string;
+        /**
+         * The PKCS #8 PEM private key.
+         */
+        private_key: string;
+        [k: string]: unknown | undefined;
+      };
+    }
+  | {
+      kind: "walrus";
+      configId: StorageConfigId;
+      /**
+       * The private key in Sui's Bech32 `suiprivkey` encoding (SIP-15), which carries its signature scheme.
+       */
+      suiPrivateKey: string;
+    };
+/**
+ * A sealed-transfer bundle: OpenPGP-style ASCII armor around an HPKE-sealed `SealedPayloadV1` (base mode, X25519-HKDF-SHA256 KEM, HKDF-SHA256 KDF, ChaCha20-Poly1305 AEAD, info string `vta-sealed-transfer/v1`), with a producer assertion and Bundle-Id, Chunk and Digest-Algo headers bound into the associated data. Each task states the key it is sealed to: a single-use wrapping key from keys/import-wrapping-key for external/accounts/secret/set, and the caller's key-agreement key for external/credentials/issue. Its cleartext is an ExternalSecretPayload, an ExternalCredentialPayload or, from external/credentials/issue 0.2 for `s3-static-presign`, a PresignedRequestSet. The only form in which secret material crosses the wire in this family, in either direction: the seal is what keeps a terminating proxy, a relay, a request log or a debug dump of "the response" from ever holding a usable secret, whatever transport carried the document.
  */
 export type SealedTransferBundle = string;
+/**
+ * `open`: ballots are recorded on the board as cast. `sealed`: ballots are encrypted to a jointly generated election key and decrypted after voting closes. `talliedEncrypted`: ballots are encrypted and only the totals are ever decrypted (VTI-VOT-060). The encrypted levels are cast with `voting/ballot/cast-encrypted/0.1`, under an election key the trustees generate with `voting/trustees/*` (CONVENTIONS §9).
+ */
+export type SecrecyLevel = "open" | "sealed" | "talliedEncrypted";
 /**
  * Which secret is set, without being a way to test guesses at it. `hmacsha256:` followed by the base64url encoding, without padding, of the first 16 bytes of HMAC-SHA256 over the secret's bytes under a fingerprint key the custodian holds and never discloses. Comparable only between fingerprints made by the same custodian: a re-entered value can be confirmed, while the same secret at two custodians gives unrelated fingerprints. Never a bare hash of the secret, which would let anyone who reads it run a dictionary against it offline; and deliberately not a DigestMultibase, since multihash has no code for a keyed digest.
  */
@@ -1235,6 +1785,10 @@ export type Sensitivity = "normal" | "high";
  */
 export type ServiceKind = "didcomm" | "rest" | "tsp" | "webauthn";
 /**
+ * The id of the witness/session document the VTA built in vta/witness/open: the session's name, the thread every document of the session is on, and the value the VWC carries as taskContext. The VTA keys its state for the session by it.
+ */
+export type SessionId = string;
+/**
  * `EdDSA` pairs with an `ed25519` key; `ES256` pairs with a `p256` key; `ML-DSA-44` and `ML-DSA-65` pair with `mldsa44` and `mldsa65` keys respectively. An `x25519` key performs key agreement and can sign nothing, so no algorithm here is valid for one. These are JOSE algorithm identifiers, externally owned, so they are carried verbatim and never re-cased (SPEC.md §4.10 rule 5); the ML-DSA names are those RFC 9964 registers in the JOSE Web Signature and Encryption Algorithms registry, which is why their hyphenated casing differs from the `keyType` values beside them — those are specification-defined. The set is expected to grow as algorithms are registered. The enumeration remains closed: an unrecognised algorithm is refused rather than silently substituted with a supported one.
  */
 export type SignAlgorithm = "EdDSA" | "ES256" | "ML-DSA-44" | "ML-DSA-65";
@@ -1246,6 +1800,21 @@ export type SigningKeyDid = string;
  * What a delegated key may be accepted for. `console`: the operations an administration console performs on the identity's behalf, authorized by the identity's own standing. Never an approver's signature on a consent or approval decision, whatever the scope: those require an `assertionMethod` key of the approver's own DID document, which a delegated key never is. A closed enumeration so a consumer cannot be asked for a scope it does not define; a later version adds values.
  */
 export type SigningKeyScope = "console";
+/**
+ * The task families a `login` grant lets the starter key sign documents for, as the approving DID, for the session the grant arms (auth/oob/grant/0.2). Offered by the service in step 2, copied unchanged into the grant, and bounded further by the exclusions auth/oob/grant/0.2 states. Absent means the starter key signs nothing beyond the family's own tasks.
+ *
+ * @minItems 1
+ * @maxItems 8
+ */
+export type SigningScope =
+  | [TaskFamily]
+  | [TaskFamily, TaskFamily]
+  | [TaskFamily, TaskFamily, TaskFamily]
+  | [TaskFamily, TaskFamily, TaskFamily, TaskFamily]
+  | [TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily]
+  | [TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily]
+  | [TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily]
+  | [TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily, TaskFamily];
 /**
  * A single binding target for a vault entry. Tagged union over the discriminator `kind`. A VaultEntry's `targets` array MAY mix any number of these.
  */
@@ -1275,7 +1844,7 @@ export type Slot = string;
  *
  * `sealed` (discouraged): a long-lived credential stored by the community, set with vtc/storage/credentials/set. Protects against every administrator through every surface the community offers; does not protect against whoever operates the machine.
  */
-export type StorageAuth =
+export type StorageAuth_VtcV0_1 =
   | {
       mode: "vta-account";
       context: ExternalAccountContextId;
@@ -1283,6 +1852,33 @@ export type StorageAuth =
     }
   | {
       mode: "ambient";
+    }
+  | {
+      mode: "sealed";
+    };
+/**
+ * How the community authenticates to a config's backend. Absent on a `local` config, which needs none.
+ *
+ * `vta-account` (RECOMMENDED): an external account in the community's VTA, named by the context that owns it and its identifier there. The VTA holds the long-lived authority; the community holds nothing that outlives a credential lifetime, and asks for credentials scoped to one room's prefix for at most 15 minutes, every issuance audited at the VTA. Required for a `walrus` config other than a `sealed` one, since the VTA's `sui-signer` account signs its storage transactions.
+ *
+ * `ambient`: the cloud identity of the machine the community runs on (an instance role, workload identity), downscoped to one room's prefix by the community itself under the rules of vtc/storage/configs/create/0.2 — on `s3`, by assuming `roleArn` (or the role the host is configured with) with an inline session policy; on `gcs`, by a Credential Access Boundary. Not audited or rate-limited by the VTA, and usable by anything on that machine that reaches the metadata endpoint. Not valid for `walrus`; `roleArn` is valid only on `s3`.
+ *
+ * `sealed` (discouraged): a long-lived credential stored by the community, set with vtc/storage/credentials/set (0.2: a `SealedStorageCredential`). Protects against every administrator through every surface the community offers; does NOT protect against whoever operates the machine, and a community labels it so wherever the config is shown.
+ *
+ * `ambient` and `sealed` are host-operator choices: a community MAY refuse either by its own host configuration, whatever its administrators ask.
+ */
+export type StorageAuth_VtcV0_2 =
+  | {
+      mode: "vta-account";
+      context: ExternalAccountContextId;
+      account: ExternalAccountId;
+    }
+  | {
+      mode: "ambient";
+      /**
+       * `s3` only: the IAM role the community assumes, with the machine's ambient identity, to obtain each room-scoped session. Absent, the community assumes the role its host configuration names, and with none configured, the role of the ambient identity itself (which must then trust itself to be assumed). Refused on any other kind with `authNotAllowed`.
+       */
+      roleArn?: AwsRoleArn;
     }
   | {
       mode: "sealed";
@@ -1314,6 +1910,10 @@ export type SyncEvent_SyncV0_2 =
   | AclChangedEvent_SyncV0_2
   | PolicyChangedEvent_SyncV0_2;
 /**
+ * A family of Trust Tasks, named by a slug prefix of whole segments (SPEC §6.1 grammar): `vtc/directory` names every task whose slug is `vtc/directory` or begins `vtc/directory/`, at any version. A prefix matches on segment boundaries only, so `vtc/dir` names nothing under `vtc/directory`.
+ */
+export type TaskFamily = string;
+/**
  * The length of one tick of the drip, as an ISO 8601 duration in days and/or hours — at least `PT1H`. A label's tick `t` is the window starting `t` tick lengths after the label's start (`vtc/vetting/vetters/pcs-tokens`).
  */
 export type TickLength = string;
@@ -1339,6 +1939,33 @@ export type Topic_VtcAdminEventsV0_2 =
   | "config"
   | "rooms";
 /**
+ * One kind of change a console can be told about. A closed set: a topic not listed here is a new MINOR version of this component, not an `ext` member, because each topic is bound to the read that authorizes it.
+ */
+export type Topic_VtcAdminEventsV0_3 =
+  | "actions"
+  | "acknowledgements"
+  | "joinRequests"
+  | "members"
+  | "singleAdminMode"
+  | "config"
+  | "rooms"
+  | "directory"
+  | "groups";
+/**
+ * One kind of change a console can be told about. A closed set: a topic not listed here is a new MINOR version of this component, not an `ext` member, because each topic is bound to the read that authorizes it.
+ */
+export type Topic_VtcAdminEventsV0_4 =
+  | "actions"
+  | "acknowledgements"
+  | "joinRequests"
+  | "members"
+  | "singleAdminMode"
+  | "config"
+  | "rooms"
+  | "directory"
+  | "groups"
+  | "communityRooms";
+/**
  * How the traffic reached or left the mediator. `peerMediator` is mediator-to-mediator forwarding.
  */
 export type TrafficChannel = "websocket" | "rest" | "peerMediator" | "internal";
@@ -1362,6 +1989,25 @@ export type TrafficStage =
  * Handle for one upload (begin → chunk → commit or abort) or one download (get → chunk). Host-generated and unguessable, which is what lets a reference to another party's transfer be answered as not-found without confirming that it exists. Bound at creation to the party that opened it: the subject the host authenticated for the opening request. Opaque: a producer quotes what it was given.
  */
 export type TransferId = string;
+/**
+ * How a blob's bytes move. `proxied`: through the host, as chunk documents (rooms/blobs/upload/chunk, rooms/blobs/chunk). `direct`: straight between the member and the storage the room is assigned to, over time-limited URLs the host issues for one object and one method each; the host authorizes every object and verifies every upload, and never carries a byte. Which mode applies is the host's answer, from what the producer accepts, what the room's storage can do, and the room's tier.
+ */
+export type TransferMode = "direct" | "proxied";
+/**
+ * The trustees' ceremony as the board holds it: the `request` of every `trusteeStep` entry, in board order, each exactly as the ballot box received it (CONVENTIONS §9.6). Whoever acts on it verifies each step as its trustee's before taking it; nothing in it is believed for having been passed along.
+ *
+ * @minItems 1
+ * @maxItems 4224
+ */
+export type TrusteeCeremony = [SignedRequest, ...SignedRequest[]];
+/**
+ * A trustee's index: its position in the manifest's `trustees.dids`, counting from 1.
+ */
+export type TrusteeIndex = number;
+/**
+ * `enrolling`: transport keys are being published. `dealing`: dealings are. `confirming`: each trustee confirms or complains. `keyed`: the election key is formed. `decrypting`: voting has closed and partial decryptions are being published. `done`: every target is decrypted. `failed`: the key could not be formed in time.
+ */
+export type TrusteePhase = "enrolling" | "dealing" | "confirming" | "keyed" | "decrypting" | "done" | "failed";
 /**
  * A ULID in Crockford base32, uppercase. Used for `attributeId` and `profileId`. Chosen over a UUID because the leading 48 bits are a timestamp, so a key-ordered scan of the store is also creation-ordered and a `list` needs no secondary sort. Server-assigned on create; a producer MAY supply one to make a create idempotent, and a maintainer MUST reject a supplied value that already exists rather than silently overwriting.
  */
@@ -1649,50 +2295,6 @@ export interface AcceptsCriterion_VtcV0_2 {
    * The administrator who last registered the criterion.
    */
   createdByDid: string;
-}
-/**
- * The mediator's view of one served account.
- */
-export interface Account {
-  /**
-   * The account's controlling DID, or — for privacy, and for mediators that key accounts by a one-way hash and never hold the full DID — a stable hash of that DID (see `Vid`). Whichever form is used, it is the opaque account identifier the other `account/*`, `acl/*`, and `access-list/*` tasks accept.
-   */
-  did: Vid;
-  accountType: AccountType;
-  acl: MediatorAcl;
-  queueLimits?: QueueLimits;
-  /**
-   * Current count of queued send messages.
-   */
-  sendQueueCount?: number;
-  /**
-   * Current byte size of queued send messages.
-   */
-  sendQueueBytes?: number;
-  /**
-   * Current count of queued receive messages.
-   */
-  receiveQueueCount?: number;
-  /**
-   * Current byte size of queued receive messages.
-   */
-  receiveQueueBytes?: number;
-  /**
-   * Number of entries in the account's access list.
-   */
-  accessListCount?: number;
-  /**
-   * Unix epoch seconds at which the mediator last accepted a message addressed to this account. Present only when the request set `includeActivity` and the mediator has recorded such a message; MAY lag the true time by up to 60 seconds.
-   */
-  lastReceivedAt?: number;
-  /**
-   * Unix epoch seconds at which this account last completed authentication with the mediator, over any transport. Present only when the request set `includeActivity` and the mediator has recorded an authentication.
-   */
-  lastAuthenticatedAt?: number;
-  /**
-   * Lifetime counters the mediator keeps for this account. Present only when the request set `includeStats`.
-   */
-  stats?: AccountStats;
 }
 /**
  * Who may use an account, and how far. One binding per consumer per account. A binding is checked before anything is signed: the caller must be `consumer`, proven by the request's own proof; the request must sit inside `scopeCeiling`; its TTL must not exceed `maxTtlSeconds`; and the binding's rate must not be exhausted.
@@ -3379,6 +3981,94 @@ export interface AccountStats {
    */
   sentByProtocol?: ProtocolCounts;
 }
+/**
+ * The mediator's view of one served account.
+ */
+export interface Account_MessagingV0_1 {
+  /**
+   * The account's controlling DID, or — for privacy, and for mediators that key accounts by a one-way hash and never hold the full DID — a stable hash of that DID (see `Vid`). Whichever form is used, it is the opaque account identifier the other `account/*`, `acl/*`, and `access-list/*` tasks accept.
+   */
+  did: Vid;
+  accountType: AccountType;
+  acl: MediatorAcl;
+  queueLimits?: QueueLimits;
+  /**
+   * Current count of queued send messages.
+   */
+  sendQueueCount?: number;
+  /**
+   * Current byte size of queued send messages.
+   */
+  sendQueueBytes?: number;
+  /**
+   * Current count of queued receive messages.
+   */
+  receiveQueueCount?: number;
+  /**
+   * Current byte size of queued receive messages.
+   */
+  receiveQueueBytes?: number;
+  /**
+   * Number of entries in the account's access list.
+   */
+  accessListCount?: number;
+  /**
+   * Unix epoch seconds at which the mediator last accepted a message addressed to this account. Present only when the request set `includeActivity` and the mediator has recorded such a message; MAY lag the true time by up to 60 seconds.
+   */
+  lastReceivedAt?: number;
+  /**
+   * Unix epoch seconds at which this account last completed authentication with the mediator, over any transport. Present only when the request set `includeActivity` and the mediator has recorded an authentication.
+   */
+  lastAuthenticatedAt?: number;
+  /**
+   * Lifetime counters the mediator keeps for this account. Present only when the request set `includeStats`.
+   */
+  stats?: AccountStats;
+}
+/**
+ * The mediator's view of one served account.
+ */
+export interface Account_MessagingV0_2 {
+  /**
+   * The account's controlling DID, or — for privacy, and for mediators that key accounts by a one-way hash and never hold the full DID — a stable hash of that DID (see `Vid`). Whichever form is used, it is the opaque account identifier the other `account/*`, `acl/*`, and `access-list/*` tasks accept.
+   */
+  did: Vid;
+  accountType: AccountType;
+  acl: MediatorAcl;
+  queueLimits?: QueueLimits;
+  /**
+   * Current count of queued send messages.
+   */
+  sendQueueCount?: number;
+  /**
+   * Current byte size of queued send messages.
+   */
+  sendQueueBytes?: number;
+  /**
+   * Current count of queued receive messages.
+   */
+  receiveQueueCount?: number;
+  /**
+   * Current byte size of queued receive messages.
+   */
+  receiveQueueBytes?: number;
+  /**
+   * Number of entries in the account's access list.
+   */
+  accessListCount?: number;
+  /**
+   * The instant at which the mediator last accepted a message addressed to this account. Present only when the request set `includeActivity` and the mediator has recorded such a message; MAY lag the true time by up to 60 seconds.
+   */
+  lastReceivedAt?: string;
+  /**
+   * The instant at which this account last completed authentication with the mediator, over any transport. Present only when the request set `includeActivity` and the mediator has recorded an authentication.
+   */
+  lastAuthenticatedAt?: string;
+  /**
+   * Lifetime counters the mediator keeps for this account. Present only when the request set `includeStats`.
+   */
+  stats?: AccountStats;
+}
 export interface AclChangedEvent_SyncV0_1 {
   kind: "acl.changed";
   seq: number;
@@ -3749,6 +4439,31 @@ export interface AdminAccount {
    */
   accountType: AccountType;
 }
+export interface AdminNote {
+  noteId: NoteId;
+  entryId: EntryId;
+  /**
+   * DID of the administrator who wrote the note.
+   */
+  author: string;
+  createdAt: string;
+  /**
+   * The note. Absent from a note that has since been redacted, except in vtc/directory/notes/export, which returns every note as written.
+   */
+  text?: NoteText;
+  /**
+   * Optional date by which the note asks for a follow-up.
+   */
+  followUp?: string;
+  /**
+   * Present on a redaction: the earlier note this one withdraws.
+   */
+  redacts?: NoteId;
+  /**
+   * Present on a note that a later note redacted.
+   */
+  redactedBy?: NoteId;
+}
 /**
  * One right as the administrator's rights console shows it: a recorded `RightRecord` restated with the membership facts an administrator needs (`subjectMember`, `granterDeparted`), or a role-derived grant that carries no record. `git-ns/right/list` and `git-ns/right/issued-by-departed` are its only producers.
  */
@@ -3830,9 +4545,48 @@ export interface AdminRightRow_GitNsV0_6 {
   breakGlass?: BreakGlass;
 }
 /**
+ * A membership admitted directly, with the credentials issued for it — the success payload of vtc/members/admit and vtc/members/make-membership.
+ */
+export interface AdmittedMembership {
+  /**
+   * The DID admitted.
+   */
+  subject: string;
+  /**
+   * The community role the membership holds: for vtc/members/admit the one requested, for vtc/members/make-membership the role the entry already held.
+   */
+  role: string;
+  /**
+   * The new entry's label, when vtc/members/admit was given one. Absent for vtc/members/make-membership, which writes no entry.
+   */
+  label?: string;
+  /**
+   * Always `admitted`: a refusal is a trust-task-error, and a referred admission is answered with trust-task-next-step until it executes.
+   */
+  status: "admitted";
+  /**
+   * True when vtc/members/admit re-admitted a former member (a removed member record, no entry), as a rejoin would re-admit them. Always false for vtc/members/make-membership, which refuses a removed record.
+   */
+  returning: boolean;
+  approval: Approval;
+  /**
+   * The membership's slot on the community's revocation status list, which the VMC's credentialStatus names.
+   */
+  statusListIndex: number;
+  /**
+   * The Verifiable Membership Credential issued for the admission, delivered inline as vtc/join-requests/decide delivers it.
+   */
+  vmc: {};
+  /**
+   * The role credential issued for the admission: a Verifiable Authority Credential issued by the community whose `credentialSubject.authority` is `{ scope: <community DID>, actions: ["role:<name>"] }`, the shape vtc/join-requests/decide returns.
+   */
+  roleVac: {};
+  ext?: Ext;
+}
+/**
  * An agent name bound to a DID. A name is only ever authoritative in the DID→name direction: the DID document's `alsoKnownAs` is what proves the binding, because anyone controlling a domain can point a name at somebody else's DID.
  */
-export interface AgentNameEntry {
+export interface AgentNameEntry_VtaV0_1 {
   /**
    * The name, without the host — the full form is `<host>/@<name>`.
    */
@@ -3848,6 +4602,37 @@ export interface AgentNameEntry {
   ext?: Ext;
 }
 /**
+ * An agent name bound to a DID. A name is only ever authoritative in the DID→name direction: the DID document's `alsoKnownAs` is what proves the binding, because anyone controlling a domain can point a name at somebody else's DID.
+ */
+export interface AgentNameEntry_VtaV0_7 {
+  /**
+   * The name, without the host — the full form is `<host>/@<name>`.
+   */
+  name: string;
+  /**
+   * Whether the name currently resolves. A disabled name is still held — it is not available for anyone else to take.
+   */
+  enabled: boolean;
+  /**
+   * When the entry was created (RFC 3339).
+   */
+  createdAt?: string;
+  ext?: Ext;
+}
+/**
+ * The answer to one question. Exactly one member besides `question` is present, matching the question's type, or `abstain` for an optional question left unanswered.
+ */
+export interface Answer {
+  question: Key_VotingV0_1;
+  choice?: Key_VotingV0_1[];
+  ranking?: Key_VotingV0_1[];
+  scores?: {
+    [k: string]: number | undefined;
+  };
+  text?: string;
+  abstain?: true;
+}
+/**
  * A record as the maintainer holds it. `value` is absent in three distinct situations and a consumer MUST NOT conflate them: the record is a tombstone (`deleted` is true); the caller asked for a metadata-only view (`list` without `includeValues`); or the value genuinely is the JSON literal `null`, in which case `value` is PRESENT and null. This is why `deleted` is required rather than defaulted — a consumer that has to infer deletion from an absent value gets the tombstone case wrong exactly when convergence depends on it.
  */
 export interface AppStateRecord {
@@ -3856,7 +4641,7 @@ export interface AppStateRecord {
    */
   contextId: string;
   namespace: Namespace;
-  key: Key;
+  key: Key_VtaV0_1;
   /**
    * The namespace counter value this record's most recent write took. Supply it as `expectedVersion` on the next write to make that write conditional on nothing having changed in between.
    */
@@ -3912,7 +4697,7 @@ export interface ApplicationSummary {
   /**
    * The applicant's PCS identifier: what a vetter attests to, carried in a vetting/request's `ext`.
    */
-  id: Multibase;
+  id: Multibase_VtaV0_4;
   /**
    * The metadata of each attestation held, in the order received. Metadata names no vetter.
    */
@@ -4035,7 +4820,7 @@ export interface Attestation {
   /**
    * The attestation: a tag, a shown class credential and a proof. It names no vetter.
    */
-  attestation: Multibase;
+  attestation: Multibase_VtaV0_4;
   meta: StatementMeta;
   token: AttestationToken;
 }
@@ -4050,11 +4835,11 @@ export interface AttestationToken {
   /**
    * The serial revealed by the spend.
    */
-  serial: Multibase;
+  serial: Multibase_VtaV0_4;
   /**
    * The re-randomised token signature, verifiable under the published token key.
    */
-  shown: Multibase;
+  shown: Multibase_VtaV0_4;
 }
 /**
  * One atomic fact a holder keeps about themselves. Several attributes MAY share a `type` — three phone numbers, a legal name and a preferred name — which is why `attributeId` is the identity of a fact and `type` is not. The pool is flat and unordered; ordering is a profile's concern.
@@ -4228,6 +5013,10 @@ export interface AuthenticatorAttestationResponseRegistration {
 }
 /**
  * What a party presents to act on a room. Carries the whole authority chain: a host MUST NOT dereference an authority credential's `parent` to fetch a link it was not given. Resolving over the network would make verification depend on availability, turn every identifier into a request the host can be induced to make against an address the holder chooses, and signal credential use to whoever hosts the identifier. A host MUST bind the presenter to the chain's leaf. A chain that verifies is evidence that authority was conferred on somebody; it is not evidence that the party presenting it is that somebody. The leaf's subject MUST equal the party the host authenticated for this request — an identity the transport established or a document `proof` proved, never one named in a payload. A host that omits this check authorizes every captured presentation, and the omission is silent, because the chain still verifies.
+ *
+ * **Every credential is its issuer's attestation, and only its issuer's.** For the membership credential and for every link of `authority`, a host MUST verify the credential's `proof` with a key that the credential's own `issuer` lists for `assertionMethod` in its DID document, and MUST refuse a credential whose proof names a verification method that is not its issuer's. A proof that verifies under some other party's key is that party's statement, not the issuer's, and confers nothing. The same binding holds for every other document a room signs, such as a `RevocationList`.
+ *
+ * **A chain that verifies may still be revoked.** A host that has accepted a `RevocationList` for the room (`rooms/revocations/put`) MUST, from the moment it accepted it, refuse every presentation in which the membership credential or any link of `authority` is revoked by that list, under every task and every version of every task it serves for the room. A chain from which any link is revoked is refused whole: a credential delegated from a revoked one confers nothing, however it was attenuated. The refusal is the same `permissionDenied` as any other failed presentation.
  */
 export interface AuthorityPresentation {
   /**
@@ -4347,6 +5136,18 @@ export interface BackupEnvelope {
   ciphertext: string;
 }
 /**
+ * An open ballot: one answer per question of the manifest, in any order. The bytes a cast's proof binds are the RFC 8785 (JCS) canonicalization of this object as received.
+ */
+export interface Ballot {
+  electionId: ElectionId;
+  manifestDigest: DigestMultibase;
+  /**
+   * @minItems 1
+   * @maxItems 128
+   */
+  answers: [Answer, ...Answer[]];
+}
+/**
  * The ciphertext manifest of one blob, committed by the uploader before any byte moves. Its digest is the BlobRef. Every chunk is checked against `chunks.chunkDigests` on arrival and the reassembled blob against `digest`, so a host can neither accept nor serve bytes the uploader did not commit to. The manifest also appears, by its BlobRef, inside the sealed FileManifest the author signs; a reader who opens the record therefore knows which ciphertext its author meant, and a host cannot substitute a different blob under the same record.
  *
  * Consistency rules JSON Schema cannot state: `chunks.chunkCount` MUST equal ceil(size / chunks.chunkSize), and `chunks.chunkDigests` MUST have exactly `chunkCount` items. A party receiving a manifest violating either MUST refuse it.
@@ -4363,6 +5164,116 @@ export interface BlobManifest {
    * Digest of the whole ciphertext, over its bytes. Checked after reassembly, so a correct set of chunks in the wrong order is still caught.
    */
   digest: DigestMultibase;
+}
+export interface CastEntry {
+  kind: "cast";
+  cast: Cast;
+}
+/**
+ * The cast at `replaces` is no longer counted: a later cast under the same tag is.
+ */
+export interface ReplacementEntry {
+  kind: "replaced";
+  tag: Multibase_VotingV0_1;
+  replaces: number;
+  by: number;
+}
+export interface LifecycleEntry {
+  kind: "opened" | "closed" | "closedEarly" | "cancelled";
+  at: string;
+}
+export interface ResultEntry {
+  kind: "result";
+  result: ElectionResult;
+}
+export interface EncryptedCastEntry {
+  kind: "encryptedCast";
+  cast: EncryptedCast;
+}
+/**
+ * Not appended: each enrolment, dealing, confirmation and justification is a `trusteeStep` entry carrying the trustee's signed request (CONVENTIONS §9.6). A consumer MUST refuse a board holding this kind.
+ */
+export interface TransportKeyEntry {
+  kind: "transportKey";
+  transportKey: TransportKey;
+}
+/**
+ * Not appended: each enrolment, dealing, confirmation and justification is a `trusteeStep` entry carrying the trustee's signed request (CONVENTIONS §9.6). A consumer MUST refuse a board holding this kind.
+ */
+export interface DealingEntry {
+  kind: "dealing";
+  dealing: Dealing;
+}
+/**
+ * Not appended: each enrolment, dealing, confirmation and justification is a `trusteeStep` entry carrying the trustee's signed request (CONVENTIONS §9.6). A consumer MUST refuse a board holding this kind.
+ */
+export interface ConfirmationEntry {
+  kind: "confirmation";
+  trustee: TrusteeIndex;
+  /**
+   * @maxItems 64
+   */
+  complaints: TrusteeIndex[];
+}
+/**
+ * Not appended: each enrolment, dealing, confirmation and justification is a `trusteeStep` entry carrying the trustee's signed request (CONVENTIONS §9.6). A consumer MUST refuse a board holding this kind.
+ */
+export interface JustificationEntry {
+  kind: "justification";
+  dealer: TrusteeIndex;
+  recipient: TrusteeIndex;
+  share: GroupScalar;
+}
+export interface ElectionKeyEntry {
+  kind: "electionKey";
+  electionKey: ElectionKey;
+}
+export interface PartialDecryptionsEntry {
+  kind: "partials";
+  trustee: TrusteeIndex;
+  /**
+   * @minItems 1
+   * @maxItems 100000
+   */
+  partials: [PartialDecryption, ...PartialDecryption[]];
+}
+export interface UnsealedEntry {
+  kind: "unsealed";
+  leafIndex: number;
+  ballot: Ballot;
+}
+/**
+ * A sealed cast that did not open, or opened to no valid ballot: not counted (CONVENTIONS §9.7).
+ */
+export interface SpoiledEntry {
+  kind: "spoiled";
+  leafIndex: number;
+}
+/**
+ * One step of the trustees' ceremony — an enrolment, a dealing, a confirmation or a justification — as the trustee's own signed request, so that anyone reading the board can tell who took it (CONVENTIONS §9.6).
+ */
+export interface TrusteeStepEntry {
+  kind: "trusteeStep";
+  request: SignedRequest;
+}
+/**
+ * The community's voting/trustees/authorize request, exactly as the ballot box received it: the decryption targets of a closed election, pinned by digest to a head of the board (CONVENTIONS §9.7).
+ */
+export interface DecryptionAuthorizedEntry {
+  kind: "decryptionAuthorized";
+  request: SignedRequest;
+}
+/**
+ * A board's tree head (RFC 9162 §2.1). A head is signed by being carried in a document the ballot box signs; whoever keeps a head keeps that whole document.
+ */
+export interface BoardHead {
+  electionId: ElectionId;
+  treeSize: number;
+  /**
+   * The RFC 9162 Merkle tree hash (SHA-256) of the first `treeSize` entries, as a multihash.
+   */
+  rootHash: DigestMultibase;
+  issuedAt: string;
 }
 /**
  * Whether each step that turns commit trust on for a repository is in place, as last reported. A step that this forge's plan does not need reads `true`.
@@ -4539,6 +5450,49 @@ export interface CapabilityScopeNone {
   scope: "none";
 }
 /**
+ * A content-addressed image held in the community's blob store — an avatar or an `image` field. At most 256 KiB, images only, re-encoded by the community on upload (vtc/directory/images/upload: metadata stripped, dimensions capped) so its digest does not link the member across communities. A viewer reads the bytes with vtc/directory/images/get, which answers only where the same projection shows the value. `url` and `urlExpiresAt` MAY appear in a projection: a short-lived URL the community checks against the same projection, so a member-only image is never a public URL. A community that does not offer one leaves both out.
+ */
+export interface CardBlobRef {
+  /**
+   * Lowercase hex SHA-256 of the stored, re-encoded bytes.
+   */
+  sha256: string;
+  /**
+   * Media type of the stored bytes.
+   */
+  mediaType: "image/png" | "image/jpeg" | "image/webp" | "image/avif";
+  /**
+   * Size in bytes of the stored bytes.
+   */
+  size?: number;
+  /**
+   * Projection only: a URL the viewer can fetch the image from until `urlExpiresAt`.
+   */
+  url?: string;
+  /**
+   * Projection only: when `url` stops working.
+   */
+  urlExpiresAt?: string;
+}
+/**
+ * A card's stored values, keyed by field. Holds `member`-, `admin`- and `credential`-sourced fields only; derived fields (`role`, `joinedAt`, `did`, `personhood`) are read from the community's own records when a projection is made, never stored here. At most 64 values, and at most 16 KiB serialized excluding the blobs a `CardBlobRef` names.
+ */
+export interface CardValues {
+  [k: string]: FieldValue | undefined;
+}
+/**
+ * A whole Trust Task document — `id`, `type`, `payload` and every other member, `proof` included — carried between the VTA and the witness by the client: one the VTA built and signed for the client to send, or one the witness returned for the client to hand back. Typed as an open object so every member survives a round trip: carried exactly as built or received, never re-serialised, because its proof is over itself. Its envelope is checked by the VTA against the session record (CONVENTIONS.md §3), not by this schema.
+ */
+export interface CarriedDocument {}
+/**
+ * A ballot and the PCS attestation that admits it (VTI-VOT-030). `attestation` is the suite's canonical encoding of the attestation made for the election point with the ballot context bound in (CONVENTIONS §3); `tag` repeats its tag so a ballot box can refuse a duplicate before the pairing check.
+ */
+export interface Cast {
+  ballot: Ballot;
+  tag: Multibase_VotingV0_1;
+  attestation: Multibase_VotingV0_1;
+}
+/**
  * The terms of a `chunkedTrustTask` transfer, committed before any chunk moves. On export the recipient states them in the descriptor; on import the producer pre-commits them in the request and the recipient echoes them. Either way the manifest arrives in a document whose proof is REQUIRED, so the per-chunk digests are authenticated by the party that computed them and each chunk can be verified — and a single bad chunk re-fetched or refused — on arrival rather than only after reassembly.
  *
  * Consistency rules JSON Schema cannot state: `chunkCount` MUST equal ceil(expectedSizeBytes / chunkSize) for the bundle the manifest describes, and `chunkDigests` MUST have exactly `chunkCount` items. A party receiving a manifest violating either MUST refuse it.
@@ -4567,6 +5521,25 @@ export interface ChunkedDescriptor {
   expectedSha256: ExpectedSha256;
   expectedSizeBytes: ExpectedSizeBytes;
   expiresAt: ExpiresAt;
+}
+/**
+ * Which claim a `claim` field accepts, from which credentials and issuers.
+ */
+export interface ClaimSelector {
+  /**
+   * A `type` the presented credential MUST carry.
+   */
+  credentialType: string;
+  /**
+   * JSON Pointer (RFC 6901) to the claim within `credentialSubject`.
+   */
+  claimPath: string;
+  /**
+   * Issuers the community accepts for this field. Absent: the community's trusted issuers for the credential type, as its own policy decides.
+   *
+   * @maxItems 32
+   */
+  issuers?: string[];
 }
 /**
  * OPTIONAL. How the community asks to be shown to a prospective applicant: a name, an accent colour and a logo. Presentation only, self-asserted and unverified — `communityDid` identifies the community, never `branding`. Not part of any criterion, so not covered by a `requirementsDigest`. Every member is optional.
@@ -4665,7 +5638,7 @@ export interface CommunityProfileView {
  * One room the community owns, as its administrators see it.
  */
 export interface CommunityRoom {
-  room: HostedRoom;
+  room: HostedRoom_VtcV0_1;
   label: RoomLabel;
   /**
    * The storage config receiving the room's new uploads.
@@ -4687,6 +5660,92 @@ export interface CommunityRoom {
    * The administrator who created it.
    */
   createdBy?: string;
+}
+/**
+ * What vtc/rooms/community/{create,get,list}/0.2 and vtc/rooms/community/update/0.1 return: `CommunityRoom` plus the details an administrator keeps track of a room by — `description`, `tags`, and who last changed them and when. A separate definition, not a change to `CommunityRoom`, so that the 0.1 versions of those tasks keep the exact shape they published. The room's creation is `room.createdAt` and `createdBy`.
+ */
+export interface CommunityRoomV2_VtcV0_1 {
+  room: HostedRoom_VtcV0_1;
+  label: RoomLabel;
+  /**
+   * Absent when the room has none.
+   */
+  description?: RoomDescription;
+  /**
+   * Absent or empty when the room has none.
+   */
+  tags?: RoomTags;
+  /**
+   * The storage config receiving the room's new uploads.
+   */
+  storageConfig?: StorageConfigId;
+  /**
+   * Members in state `admitted`.
+   */
+  admitted: number;
+  /**
+   * Offers not yet accepted or withdrawn.
+   */
+  offered: number;
+  /**
+   * When the community's own `admin` authority over the room expires. A room whose owner's authority lapses can no longer advance its epoch, admit or remove; a community SHOULD renew it well before.
+   */
+  ownerAuthorityValidUntil?: string;
+  /**
+   * The administrator who created it.
+   */
+  createdBy?: string;
+  /**
+   * When `label`, `description` or `tags` last changed. Absent until the first change after creation. Distinct from `room.updatedAt`, which is the host record's and moves with the room's epoch and lifecycle.
+   */
+  detailsUpdatedAt?: string;
+  /**
+   * The administrator who made that change. Present exactly when `detailsUpdatedAt` is. The earlier values and who set them are in the community's audit trail, not here.
+   */
+  detailsUpdatedBy?: string;
+}
+/**
+ * What vtc/rooms/community/{create,get,list}/0.2 and vtc/rooms/community/update/0.1 return: `CommunityRoom` plus the details an administrator keeps track of a room by — `description`, `tags`, and who last changed them and when. A separate definition, not a change to `CommunityRoom`, so that the 0.1 versions of those tasks keep the exact shape they published. The room's creation is `room.createdAt` and `createdBy`.
+ */
+export interface CommunityRoomV2_VtcV0_3 {
+  room: HostedRoom_VtcV0_3;
+  label: RoomLabel;
+  /**
+   * Absent when the room has none.
+   */
+  description?: RoomDescription;
+  /**
+   * Absent or empty when the room has none.
+   */
+  tags?: RoomTags;
+  /**
+   * The storage config receiving the room's new uploads.
+   */
+  storageConfig?: StorageConfigId;
+  /**
+   * Members in state `admitted`.
+   */
+  admitted: number;
+  /**
+   * Offers not yet accepted or withdrawn.
+   */
+  offered: number;
+  /**
+   * When the community's own `admin` authority over the room expires. A room whose owner's authority lapses can no longer advance its epoch, admit or remove; a community SHOULD renew it well before.
+   */
+  ownerAuthorityValidUntil?: string;
+  /**
+   * The administrator who created it.
+   */
+  createdBy?: string;
+  /**
+   * When `label`, `description` or `tags` last changed. Absent until the first change after creation. Distinct from `room.updatedAt`, which is the host record's and moves with the room's epoch and lifecycle.
+   */
+  detailsUpdatedAt?: string;
+  /**
+   * The administrator who made that change. Present exactly when `detailsUpdatedAt` is. The earlier values and who set them are in the community's audit trail, not here.
+   */
+  detailsUpdatedBy?: string;
 }
 /**
  * A community's portable configuration: its profile plus the configuration overrides a maintainer stores for itself. Deliberately excludes per-host layers (environment variables, on-disk config files) — those describe where a maintainer runs, not what the community is, and carrying them would make an import overwrite the target host's own deployment settings.
@@ -4861,6 +5920,24 @@ export interface ContactDocument {
   }[];
 }
 /**
+ * One of the holder's lists, as their agent keeps it. A list is context-scoped, like the contacts it holds: it may hold contacts known by any persona in its context, and contacts from any number of communities, but never a contact of another context.
+ */
+export interface ContactList {
+  listId: ListId;
+  name: ListName;
+  colour?: ListColour;
+  order: ListOrder;
+  /**
+   * How many of the context's contacts are on the list now.
+   */
+  contactCount: number;
+  createdAt: string;
+  /**
+   * When the list's name, colour or order last changed. Adding a contact to the list or removing one does not move it.
+   */
+  updatedAt: string;
+}
+/**
  * One received version of a contact's document. Revisions exist because an address book that silently replaces a payment address is a phishing surface, and one that says what changed and when is a defence.
  */
 export interface ContactRevision {
@@ -4960,6 +6037,24 @@ export interface CredentialReference {
   expiresAt?: string | null;
 }
 /**
+ * Withdraws one credential — a membership credential or any authority link — by its `id`.
+ */
+export interface CredentialRevocation {
+  kind: "credential";
+  /**
+   * The `id` of the credential withdrawn, as `rooms/owner/issue-authority` and `rooms/owner/issue-membership` return it, or as an attenuated credential carries it.
+   */
+  credentialId: string;
+  /**
+   * When the room made this withdrawal.
+   */
+  revokedAt: string;
+  /**
+   * OPTIONAL. After this instant every credential the entry matches has expired anyway, so a host MAY discard the entry and the room MAY omit it from later lists. Absent means the entry is kept for as long as the room keeps a list.
+   */
+  until?: string;
+}
+/**
  * A JSON Schema (the W3C `credentialSchema` a credential of this type must conform to), carried as data. Any JSON Schema the community's validator compiles; this specification does not constrain its members. Absent means the type is registered with no schema constraint.
  */
 export interface CredentialSchema {
@@ -5014,7 +6109,7 @@ export interface CredentialScopeCeiling {
 /**
  * Whether a config can authenticate now, and how — never the credential. `status`: `vta-account`, `ambient` and `sealed` are usable; `required` means the config cannot store until a credential is provided (a `sealed` config never set, or set before a restore, which carries no credential); `none` is a `local` config.
  */
-export interface CredentialState {
+export interface CredentialState_VtcV0_1 {
   status: "vta-account" | "ambient" | "sealed" | "required" | "none";
   /**
    * Present with `vta-account`.
@@ -5034,6 +6129,32 @@ export interface CredentialState {
   setAt?: string;
   /**
    * Present with `vta-account`: how many rooms the community currently holds a live room-scoped credential for.
+   */
+  roomsHoldingCredentials?: number;
+}
+/**
+ * Whether a config can authenticate now, and how — never the credential. `status`: `vta-account`, `ambient` and `sealed` are usable; `required` means the config cannot store until a credential is provided (a `sealed` config never set, or set before a restore, which carries no credential); `notAllowed` means the config's mode is one the community's host configuration no longer permits, so it cannot store until its `auth` is changed; `none` is a `local` config.
+ */
+export interface CredentialState_VtcV0_2 {
+  status: "vta-account" | "ambient" | "sealed" | "required" | "notAllowed" | "none";
+  /**
+   * Present with `vta-account`.
+   */
+  context?: ExternalAccountContextId;
+  /**
+   * Present with `vta-account`.
+   */
+  account?: ExternalAccountId;
+  /**
+   * Present with `sealed`: a digest identifying the stored credential, so an administrator can tell which one is set without anyone being able to read it. Computed over the credential with a community-held key, never a bare hash of a low-entropy secret.
+   */
+  fingerprint?: DigestMultibase;
+  /**
+   * Present with `sealed`: when the stored credential was last set.
+   */
+  setAt?: string;
+  /**
+   * Present with `vta-account`, `ambient` and `sealed`: how many rooms the community currently holds a live room-scoped credential for.
    */
   roomsHoldingCredentials?: number;
 }
@@ -5059,6 +6180,23 @@ export interface DataIntegrityProof {
  */
 export interface DcqlQuery {
   [k: string]: unknown | undefined;
+}
+/**
+ * A trustee's contribution to the election key: Feldman commitments to its polynomial, a proof of knowledge of the constant term, and one share per trustee sealed to that trustee's transport key (CONVENTIONS §9.6).
+ */
+export interface Dealing {
+  dealer: TrusteeIndex;
+  /**
+   * @minItems 2
+   * @maxItems 64
+   */
+  commitments: [GroupElement, GroupElement, ...GroupElement[]];
+  pok: SigmaProof;
+  /**
+   * @minItems 2
+   * @maxItems 64
+   */
+  shares: [SealedShare, SealedShare, ...SealedShare[]];
 }
 /**
  * One presentation request awaiting the holder's decision, as the approver sees it.
@@ -5448,6 +6586,69 @@ export interface DidTemplateRecord_VtaV0_2 {
   createdBy: string;
 }
 /**
+ * A persisted template. The DidTemplate fields are flattened at the top level alongside the resolved scope and provenance metadata. Same shape returned by get/create/update and carried per-item by list.
+ */
+export interface DidTemplateRecord_VtaV0_7 {
+  /**
+   * Template schema version. 1 is the historical shape, whose keys are implicitly an Ed25519 signing key and an X25519 key-agreement key. 2 adds the `keys` block, which makes those explicit and allows others.
+   */
+  schemaVersion: 1 | 2;
+  name: string;
+  kind: string;
+  description?: string | null;
+  methods?: string[];
+  requiredVars?: string[];
+  optionalVars?: {
+    [k: string]: unknown | undefined;
+  };
+  defaults?: {
+    [k: string]: unknown | undefined;
+  };
+  /**
+   * The keys this template needs, by slot name. REQUIRES `schemaVersion` 2.
+   *
+   * A slot's name becomes a document placeholder by an explicit rule — uppercase, `-` to `_`, suffix `_KEY_MB` — so slot `signing` is rendered into `{SIGNING_KEY_MB}` and slot `ka` into `{KA_KEY_MB}`. Those are the two names a `schemaVersion` 1 template already uses, which is deliberate: a v1 template is exactly a v2 template whose `keys` block is `{signing: [ed25519], ka: [x25519]}`, so an implementation can read both through one path and raising the version cannot change how a v1 template renders.
+   *
+   * An implementation MUST refuse a template that declares a slot whose placeholder never appears in `document` — the key would be minted and never published, so verifiers would continue to see only the keys that are, while the operator believes the template migrated. It MUST likewise refuse a slot placeholder in `document` that no slot declares, which would render as an unsubstituted literal.
+   */
+  keys?: {
+    [k: string]:
+      | {
+          /**
+           * What the key is for. Deliberately coarser than DID Core's five verification relationships: the template says what the key is, and the `document` body says where it appears. Encoding the relationship here as well would let the two disagree.
+           */
+          purpose: "signing" | "keyAgreement";
+          /**
+           * Acceptable algorithms, MOST PREFERRED FIRST. A list rather than a single value because a fleet does not migrate atomically: `["mldsa44", "ed25519"]` means mint ML-DSA-44 where the implementation can and Ed25519 otherwise, so one template serves a VTA with post-quantum support and one without. An implementation MUST NOT substitute an algorithm absent from this list; running out of candidates is an error, never a silent downgrade — a deployment intended to be post-quantum would otherwise ship classical keys with nothing reporting it. `minItems: 1` for the same reason: an empty list would express no preference and inherit whatever the implementation defaulted to.
+           *
+           * @minItems 1
+           */
+          algorithms: [
+            "ed25519" | "x25519" | "p256" | "mldsa44" | "mldsa65",
+            ...("ed25519" | "x25519" | "p256" | "mldsa44" | "mldsa65")[]
+          ];
+        }
+      | undefined;
+  };
+  document: {};
+  /**
+   * Resolved scope of the stored template.
+   */
+  scope: Scope_VtaV0_1;
+  /**
+   * When the template was first stored (RFC 3339).
+   */
+  createdAt: string;
+  /**
+   * When the template was last written (RFC 3339).
+   */
+  updatedAt: string;
+  /**
+   * DID of the admin who last wrote the template.
+   */
+  createdBy: string;
+}
+/**
  * Authored template shape: a DID document with `{TOKEN}` placeholders plus the variable contract the VTA's renderer enforces.
  */
 export interface DidTemplate_VtaV0_1 {
@@ -5587,6 +6788,163 @@ export interface DidcommAuthcryptEnvelope_VaultV0_2 {
    */
   jwe: string;
 }
+/**
+ * A member's own directory record: their values, a visibility for each field, their discoverability and who may ask to be introduced. Returned whole only to its subject. Every other reader receives a `DirectoryEntry`.
+ */
+export interface DirectoryCard {
+  entryId: EntryId;
+  values: CardValues;
+  visibility: FieldVisibility;
+  discoverability: Discoverability;
+  introductions: Introductions;
+  /**
+   * The community groups whose members count as the `groups` audience for this card. Absent: every community group the subject belongs to. A group the subject has left stops counting at once.
+   *
+   * @maxItems 64
+   */
+  groupAudience?: string[];
+  externalCard?: ExternalCard;
+  /**
+   * Incremented on every accepted change to the card, by its subject or by an administrator's assertion.
+   */
+  revision: number;
+  /**
+   * When the card last changed.
+   */
+  updatedAt: string;
+  /**
+   * Ecosystem-defined extension members per SPEC.md §4.5.1. An extension member MUST NOT carry directory data that bypasses the projection.
+   */
+  ext?: Ext;
+}
+/**
+ * The statement itself. Every member is generated from the community's configuration when the statement is read. `statementDigest` names this exact statement, so an applicant can record which one it was shown.
+ */
+export interface DirectoryDisclosure {
+  /**
+   * Every active field, base and community-defined, in display order. A base field the community has disabled is absent, which is how a reader learns it is not collected.
+   *
+   * @maxItems 128
+   */
+  fields: DisclosedField[];
+  newCard: NewCardDefaults;
+  /**
+   * The widest audience a member's membership identifier — the DID they joined with — can reach through the directory: the ceiling of the base field `did`, or `admins` where that field is disabled. `members` or `public` means a member may choose to show it that widely; a new card never shows it beyond `admins` (VTI-DIR-042). Administrators always see it.
+   */
+  membershipIdentifiers: Audience;
+  /**
+   * Whether administrators keep notes about members. Notes are never on a card and never reach another member; a member may ask for the notes about them.
+   */
+  adminNotes: boolean;
+  groups?: GroupDisclosure;
+  /**
+   * Whether a member may publish a card beyond the community: their `public` values, signed by them, offered through the community's trust registry. Always the member's own choice, and off on a new card. False where the community cannot publish external cards.
+   */
+  externalCards: boolean;
+  /**
+   * Digest over the RFC 8785 (JCS) canonicalization of this statement with the `statementDigest` member removed, as a multibase-encoded multihash (SHA-256 and base58btc RECOMMENDED). Changes exactly when what the statement says changes.
+   */
+  statementDigest: DigestMultibase;
+  ext?: Ext;
+}
+/**
+ * One entry as a particular viewer sees it.
+ */
+export interface DirectoryEntry {
+  entryId: EntryId;
+  fields: EntryFields;
+  /**
+   * Present, and `true`, only when the viewer is one of the two parties to an attributed, in-force verified relationship with this entry's member that the community can see. Absent otherwise — never `false`, which would disclose that the community looked and found none. Relationships known only to the viewer's own agent are badged by that agent, not here.
+   */
+  connected?: boolean;
+  /**
+   * The community groups the viewer and this member both belong to, among those whose membership the viewer may see. Absent when there are none.
+   *
+   * @maxItems 64
+   */
+  sharedGroups?: string[];
+}
+/**
+ * Links a contact to the entry in a community's member directory it corresponds to, so the holder's own client can join that community's directory with the holder's address book — showing a star or a petname beside an entry — without either side telling the other. The community never learns the link exists; the contact never learns it either. A contact has at most one.
+ */
+export interface DirectoryRef {
+  /**
+   * The DID of the community whose directory holds the entry.
+   */
+  vtcDid: string;
+  /**
+   * The entry, as that community's directory identifies it.
+   */
+  entryId: DirectoryEntryId;
+}
+/**
+ * One active field of the community's directory, as an applicant needs to see it: what it is, who writes its value, the widest audience it may ever reach and the audience a new card gives it. Disabled and retired fields are not listed: no projection shows them.
+ */
+export interface DisclosedField {
+  key: FieldKey;
+  label: FieldLabel;
+  description?: FieldDescription;
+  type: FieldType;
+  /**
+   * Who writes the value. `admin` and `credential` matter most to an applicant: an `admin` field holds what the community asserts about the member, which the member reads and cannot change.
+   */
+  source: FieldSource;
+  /**
+   * The widest audience the field may ever reach, whatever the member chooses.
+   */
+  ceiling: Audience;
+  /**
+   * The audience a new card gives the field until its member chooses. Never wider than `ceiling`.
+   */
+  defaultVisibility: Audience;
+  /**
+   * Whether a member's search may match the field, within what the searcher may see.
+   */
+  searchable: boolean;
+  /**
+   * Whether members may filter on the field and see counts by its values. Absent: false.
+   */
+  facet?: boolean;
+}
+/**
+ * The statement a community publishes, and shows a member before they request a ticket, about how one election is run (VTI-VOT-090). Generated from the election's manifest and the community's configuration, never written by hand.
+ */
+export interface Disclosure {
+  /**
+   * The ballot box's DID.
+   */
+  ballotBox: string;
+  /**
+   * Who operates the ballot box, as the community names them.
+   */
+  ballotBoxOperator: string;
+  /**
+   * Whether the party operating the community's VTC also operates the ballot box.
+   */
+  sameOperator: boolean;
+  trustees?: Trustees;
+  boardVisibility: BoardVisibility;
+  auditors: string[];
+  revote: Revote;
+  /**
+   * Always false: a voter can prove how they voted, so the community cannot protect a member against being made to vote a certain way.
+   */
+  coercionResistance: false;
+}
+/**
+ * The member's three discoverability decisions, made separately.
+ */
+export interface Discoverability {
+  listing: Listing;
+  /**
+   * What a member's search may match. `byName`: `displayName` or `nickname`. `exactNickname`: only an exact `nickname`. `off`: nothing. A DID is never a search key for a non-administrator, whatever this says.
+   */
+  search: "byName" | "exactNickname" | "off";
+  /**
+   * Whether the member publishes a public card — the fields whose visibility is `public`, signed by the member — through the community's trust registry. A second consent, separate from registry-publication consent (`publishConsent`), which it requires. A community that cannot yet publish external cards refuses `true` with `notAvailable`.
+   */
+  external: boolean;
+}
 export interface DomainEntry {
   /**
    * Hosting domain name (e.g. `did.example.com`). Compared case-insensitively; producers SHOULD emit lowercase canonical form.
@@ -5693,6 +7051,149 @@ export interface DriftItem_GitNsV0_6 {
   expected?: string;
 }
 /**
+ * A dynamic group's membership rule: a member belongs when every condition holds and they have not opted out. The community evaluates it under its `groups` policy and recomputes membership whenever a fact it reads changes, always excluding opted-out entries.
+ */
+export interface DynamicRule {
+  /**
+   * @minItems 1
+   * @maxItems 16
+   */
+  all:
+    | [RuleCondition]
+    | [RuleCondition, RuleCondition]
+    | [RuleCondition, RuleCondition, RuleCondition]
+    | [RuleCondition, RuleCondition, RuleCondition, RuleCondition]
+    | [RuleCondition, RuleCondition, RuleCondition, RuleCondition, RuleCondition]
+    | [RuleCondition, RuleCondition, RuleCondition, RuleCondition, RuleCondition, RuleCondition]
+    | [RuleCondition, RuleCondition, RuleCondition, RuleCondition, RuleCondition, RuleCondition, RuleCondition]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ]
+    | [
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition,
+        RuleCondition
+      ];
+}
+/**
  * One consequence of executing the pending task, authored by the executor that is about to run it. An effect is produced by dry-running the real handler against the executor's own prior state — never by the requester, and never by re-implementing the handler's semantics elsewhere. A consent surface renders ONLY effects it received under the executor's signature.
  */
 export interface Effect_TaskConsentV0_1 {
@@ -5738,6 +7239,99 @@ export interface EffectiveLimits {
    * The host-wide largest-file ceiling, which no room or member limit can exceed.
    */
   hostCeilingBytes?: number;
+}
+/**
+ * `(a, b) = (r·G, M + r·Y)` under the election key `Y` (CONVENTIONS §9.2).
+ */
+export interface ElGamalCiphertext {
+  a: GroupElement;
+  b: GroupElement;
+}
+/**
+ * The election key and each trustee's public verification key, computed from the qualified dealings (CONVENTIONS §9.6). Anyone can recompute it from the board.
+ */
+export interface ElectionKey {
+  key: GroupElement;
+  /**
+   * The dealers whose dealings the key is formed from.
+   *
+   * @minItems 1
+   * @maxItems 64
+   */
+  qualified: [TrusteeIndex, ...TrusteeIndex[]];
+  /**
+   * @minItems 2
+   * @maxItems 64
+   */
+  verification: [
+    {
+      trustee: TrusteeIndex;
+      key: GroupElement;
+    },
+    {
+      trustee: TrusteeIndex;
+      key: GroupElement;
+    },
+    ...{
+      trustee: TrusteeIndex;
+      key: GroupElement;
+    }[]
+  ];
+}
+/**
+ * An election's result, computable by anyone who can read its board from the board and the registration alone (VTI-VOT-070).
+ */
+export interface ElectionResult {
+  electionId: ElectionId;
+  manifestDigest: DigestMultibase;
+  ballotsCounted: number;
+  questions: QuestionResult[];
+  /**
+   * The head of the board as it stood at close: the result counts exactly its entries.
+   */
+  head: BoardHead;
+}
+/**
+ * A ballot box's view of one election.
+ */
+export interface ElectionSummary {
+  electionId: ElectionId;
+  community: string;
+  manifestDigest: DigestMultibase;
+  state: ElectionState;
+  /**
+   * Distinct tags with a counted ballot.
+   */
+  ballotsAdmitted: number;
+  head: BoardHead;
+}
+/**
+ * A tallied-encrypted ballot: one EncryptedQuestion per manifest question, in the manifest's order. Never decrypted (VTI-VOT-064).
+ */
+export interface EncryptedBallot {
+  electionId: ElectionId;
+  manifestDigest: DigestMultibase;
+  /**
+   * @minItems 1
+   * @maxItems 64
+   */
+  questions: [EncryptedQuestion, ...EncryptedQuestion[]];
+}
+export interface EncryptedOption {
+  ciphertext: ElGamalCiphertext;
+  proof: DisjunctiveProof;
+}
+/**
+ * One choice question of a tallied-encrypted ballot: per option, in the manifest's order, an encryption of 0 or 1 with its proof; and a proof that the selections sum to a count the question admits (CONVENTIONS §9.5).
+ */
+export interface EncryptedQuestion {
+  question: Key_VotingV0_1;
+  /**
+   * @minItems 1
+   * @maxItems 64
+   */
+  options: [EncryptedOption, ...EncryptedOption[]];
+  sumProof: DisjunctiveProof;
 }
 export interface EncryptionParams {
   /**
@@ -5796,6 +7390,22 @@ export interface EndorsementType {
   createdByDid?: string;
 }
 /**
+ * The fields of one entry that a particular viewer may see, keyed by field: the intersection of the member's visibility, the community's ceiling and policy, plus any derived fields that intersection admits. A withheld field is ABSENT, never null.
+ */
+export interface EntryFields {
+  [k: string]: FieldValue | undefined;
+}
+export interface EnumOption {
+  /**
+   * The stored value.
+   */
+  value: string;
+  /**
+   * What a reader is shown for it.
+   */
+  label: string;
+}
+/**
  * What a room writes into its own witnessed log, so that a host serving a stale, forked or partial view of it becomes **evident rather than merely possible**.
  *
  * **Witnessed is the whole point.** Witnesses co-sign a `did:webvh` log entry, so a value that rides one is singular: the room cannot have told two members two different things about the same epoch without the log showing it. An anchor that did not ride a log entry would be a value the host could equally have made up, which is what every unanchored assertion in this family already is.
@@ -5843,6 +7453,10 @@ export interface EpochLink {
    */
   nonce: string;
 }
+/**
+ * A whole Trust Task document — `id`, `type`, `payload` and every other member, `proof` included — carried exactly as it was sent or received, never re-serialised: a task digest and a proof are taken over its members, and a re-serialised copy reproduces neither reliably. Typed as an open object so every member survives; the checks that give it meaning belong to the task that reads it.
+ */
+export interface EvidenceDocument {}
 /**
  * The authoritative SPEC §7.3 item 14 exposure class of the pending task, derived by the executor from the compiled handler it is about to invoke — never from the registry's declared value.
  */
@@ -5910,6 +7524,20 @@ export interface ExternalAccount {
   updatedAt: string;
 }
 /**
+ * Where the member's external card stands. Present on a card exactly when `discoverability.external` is true. `published`: the community is serving the card the member signed, and its trust registry points to it. `awaitingSignature`: the member's `public` values have changed since they signed, so the community has withdrawn the card it was serving and serves none until the member signs the current values (vtc/directory/card/publish). The community never serves a card the member did not sign, and never one that differs from their current `public` values.
+ */
+export interface ExternalCard {
+  state: "published" | "awaitingSignature";
+  /**
+   * Present while `published`: digest of the card served, as vtc/directory/card/publish defines it.
+   */
+  cardDigest?: DigestMultibase;
+  /**
+   * Present while `published`: when the card now served was published.
+   */
+  publishedAt?: string;
+}
+/**
  * One displayed value, with where it comes from and how to render it.
  */
 export interface Field {
@@ -5927,6 +7555,108 @@ export interface Field {
   value: {
     [k: string]: unknown | undefined;
   };
+}
+/**
+ * Per-type constraints. A member that does not apply to the field's type is refused by the community with `valueInvalid` when the definition is written.
+ */
+export interface FieldConstraints {
+  maxLength?: number;
+  minLength?: number;
+  /**
+   * ECMA-262 regular expression a text value MUST match.
+   */
+  pattern?: string;
+  /**
+   * The permitted values of an `enum` or `multiEnum` field.
+   *
+   * @minItems 1
+   * @maxItems 128
+   */
+  options?: [EnumOption, ...EnumOption[]];
+  maxItems?: number;
+  minDate?: string;
+  maxDate?: string;
+  claim?: ClaimSelector;
+}
+/**
+ * One field of the community's directory schema, as the community holds it. The audience order `admins` < `groups`/`connections` < `members` < `public` applies to `ceiling` and `defaultVisibility`; `defaultVisibility` is never wider than `ceiling`.
+ */
+export interface FieldDefinition {
+  key: FieldKey;
+  label: FieldLabel;
+  description?: FieldDescription;
+  type: FieldType;
+  constraints?: FieldConstraints;
+  source: FieldSource;
+  /**
+   * `true` for a base field, present in every community; `false` for a field this community defined.
+   */
+  base: boolean;
+  /**
+   * Where the field lands when an entry is exported as a JSContact Card (RFC 9553), e.g. `name.full`, `nicknames`, `speakToAs.pronouns`. Absent: a vendor-specific property named by the key.
+   */
+  jsContactPath?: string;
+  required: boolean;
+  ceiling: Audience;
+  defaultVisibility: Audience;
+  searchable: boolean;
+  facet: boolean;
+  order: number;
+  state: FieldState;
+  /**
+   * When the field was retired. Present only on a retired field.
+   */
+  retiredAt?: string;
+  /**
+   * When the values of a retired field are purged. Present only on a retired field.
+   */
+  purgeAfter?: string;
+  updatedAt?: string;
+  /**
+   * Ecosystem-defined extension members per SPEC.md §4.5.1. An extension member MUST NOT widen a ceiling.
+   */
+  ext?: Ext;
+}
+/**
+ * What an administrator supplies to define a community field. `key`, `type` and `source` are fixed for the field's life.
+ */
+export interface FieldInput {
+  key: FieldKey;
+  label: FieldLabel;
+  description?: FieldDescription;
+  type: FieldType;
+  constraints?: FieldConstraints;
+  /**
+   * As `FieldSource`, less `derived`, which only base fields carry.
+   */
+  source: "member" | "admin" | "credential";
+  /**
+   * Whether a card must hold a value for its entry to be listed. Never a condition of membership. Absent: false.
+   */
+  required?: boolean;
+  ceiling: Audience;
+  /**
+   * The audience a card gives the field until its member chooses. MUST NOT be wider than `ceiling`.
+   */
+  defaultVisibility: Audience;
+  /**
+   * Whether a member's search may match the field, within what the searcher may see. Absent: false.
+   */
+  searchable?: boolean;
+  /**
+   * Whether the field may be filtered on and counted. Only `enum`, `multiEnum` and `country` fields may be facets. Absent: false.
+   */
+  facet?: boolean;
+  /**
+   * Display order, ascending.
+   */
+  order?: number;
+}
+/**
+ * The audience the member chose for each field. A field with no entry here takes its definition's `defaultVisibility`. The community MUST NOT widen a member's choice: widening a field's ceiling or default changes no visibility already recorded.
+ */
+export interface FieldVisibility {
+  [k: string]: Audience | undefined;
 }
 /**
  * The `file` member of a sealed record body: everything that describes a file, sealed with the record, signed by the record's author, and never seen by the host. Defined here so that clients interoperate; no host task carries it, because the host receives only ciphertext.
@@ -6058,6 +7788,131 @@ export interface GitNamespace_GitNsV0_6 {
   state: "pending" | "bound";
 }
 /**
+ * A grant set the group confers: each capability is written onto every member's access-control entry as a resource grant whose source is the group, bounded by the member's role ceiling and by the binder's own holdings.
+ */
+export interface GrantsBindingSpec {
+  kind: "grants";
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  grants: [CapabilityRef, ...CapabilityRef[]];
+}
+/**
+ * A community group, as a caller who may see it sees it. Members a caller may not see are absent: `memberCount` only to those who may see the group's members, `managers` and `credentialAuthorityValidUntil` only to its managers.
+ */
+export interface Group {
+  groupId: GroupId;
+  /**
+   * The group's own DID, minted by the community's VTA for this group alone. It issues the group's membership credentials. Its DID document carries no name or description.
+   */
+  groupDid: string;
+  name: GroupName;
+  description?: GroupDescription;
+  kind: GroupKind;
+  /**
+   * Present exactly when `kind` is `dynamic`.
+   */
+  rule?: DynamicRule;
+  /**
+   * Present exactly when `kind` is `static`.
+   */
+  joinPolicy?: JoinPolicy;
+  /**
+   * Who may see that the group exists, and its name and description.
+   */
+  visibility: GroupAudience;
+  /**
+   * Who may see the group's member list. Separate from `visibility`: a group everyone sees may show its members only to administrators. Never wider than `visibility`.
+   */
+  showMembers: GroupAudience;
+  /**
+   * Whether the group's DID issues its members a membership credential. Default true.
+   */
+  issuesCredentials: boolean;
+  /**
+   * `true` while the group has a `grants` or `role` binding. Such a group is `static` and `closed` for as long as it does.
+   */
+  carriesAuthority: boolean;
+  /**
+   * Active members. Only to callers who may see the member list.
+   */
+  memberCount?: number;
+  /**
+   * Entries holding `vtc.groups.manage` qualified to this group, read from the access-control list. Informational: managers are appointed by an access-control grant (vtc/groups/managers/add), never by this record.
+   *
+   * @maxItems 256
+   */
+  managers?: EntryId[];
+  /**
+   * When the community's authorization credential to the group expires. The community renews it well before.
+   */
+  credentialAuthorityValidUntil?: string;
+  createdAt: string;
+  /**
+   * The creating administrator's directory entry, where they have one.
+   */
+  createdBy?: EntryId;
+  updatedAt?: string;
+  /**
+   * Ecosystem-defined extension members per SPEC.md §4.5.1. An extension member MUST NOT carry authority.
+   */
+  ext?: Ext;
+}
+export interface GroupBinding {
+  bindingId: BindingId;
+  binding: BindingSpec;
+  /**
+   * `pending`: waiting for the consent the community requires. `active`: in force; the community's reconciler keeps members' admissions and grants in line with it. `removing`: being withdrawn; the reconciler is removing what only this binding provided.
+   */
+  state: "pending" | "active" | "removing";
+  createdAt: string;
+  createdBy?: string;
+}
+/**
+ * Present when the community has groups. A member of a group holds a credential, issued by the group's own identifier, that evidences their membership, and can present it outside the community — which is why an applicant is told.
+ */
+export interface GroupDisclosure {
+  /**
+   * How long each group membership credential is valid for, as an ISO 8601 duration in weeks, days, hours, minutes and seconds (`P30D`). It is renewed while the member stays in the group, and a credential already issued stays valid until it expires even after its holder leaves.
+   */
+  credentialValidity: string;
+}
+export interface GroupJoinRequest {
+  requestId: JoinRequestId;
+  groupId: GroupId;
+  entryId: EntryId;
+  message?: JoinRequestMessage;
+  createdAt: string;
+  state: "pending" | "approved" | "declined" | "withdrawn";
+  decidedAt?: string;
+  /**
+   * The manager who decided. Shown to managers only.
+   */
+  decidedBy?: string;
+}
+export interface GroupMember {
+  entryId: EntryId;
+  source: MembershipSource;
+  since: string;
+  /**
+   * `active`: a member. `pending`: an addition to a group carrying authority that is waiting for the consent the community requires for a grant.
+   */
+  state: "active" | "pending";
+  /**
+   * The member's directory fields that the caller may see, projected exactly as vtc/directory/entries/show would project them. Absent when the caller may see none.
+   */
+  fields?: EntryFields;
+  /**
+   * The member's current group membership credential, or null when the group issues none.
+   */
+  credentialId?: GroupCredentialId | null;
+  /**
+   * When the member's current group credential expires. Shown to the member themselves and to managers only.
+   */
+  credentialValidUntil?: string;
+}
+/**
  * The applicant's proof that distinct eligible vetters of the community vetted it, as a join submission carries it under `extensions.hiddenVetting`. Built by vta/pcs/prove, verified by the community.
  */
 export interface HiddenVettingSubmission {
@@ -6068,7 +7923,7 @@ export interface HiddenVettingSubmission {
   /**
    * The applicant's PCS identifier for this application.
    */
-  id: Multibase;
+  id: Multibase_VtaV0_4;
   /**
    * The DID the applicant joins as. Bound to `id` by `idBinding`.
    */
@@ -6090,7 +7945,7 @@ export interface HiddenVettingSubmission {
   /**
    * The issuance proof, which carries the attestations.
    */
-  proof: Multibase;
+  proof: Multibase_VtaV0_4;
 }
 /**
  * One histogram's distribution, in the Prometheus cumulative-bucket convention: each bucket's `count` includes every observation at or below its `le`.
@@ -6132,7 +7987,7 @@ export interface HistogramBucket {
 /**
  * One room, as its host holds it — member for member the `HostedRoom` of vtc/rooms/list/0.1, which defines it inside its own payload schema. Nothing derived from the room's contents, and no member list: the host has none.
  */
-export interface HostedRoom {
+export interface HostedRoom_VtcV0_1 {
   roomId: string;
   ownerDid: string;
   visibility: Visibility;
@@ -6144,6 +7999,22 @@ export interface HostedRoom {
   mirrorOf?: string;
   createdAt: number;
   updatedAt: number;
+}
+/**
+ * One room, as its host holds it — member for member the `HostedRoom` of vtc/rooms/list/0.2, which defines it inside its own payload schema. Nothing derived from the room's contents, and no member list: the host has none.
+ */
+export interface HostedRoom_VtcV0_3 {
+  roomId: string;
+  ownerDid: string;
+  visibility: Visibility;
+  retentionPolicy: RetentionPolicy;
+  epoch: number;
+  lifecycle: "live" | "lapsed" | "dormant" | "reclaimable";
+  epochExpiresAt?: string;
+  retentionDays: number;
+  mirrorOf?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 /**
  * OpenPGP-style ASCII-armored HPKE bundle — the existing OpenVTC sealed-transfer wire form (X25519-HKDF-SHA256 KEM + ChaCha20-Poly1305 AEAD, framed in armor with Bundle-Id / Digest-Algo headers and a CRC24 checksum). Producer assertion (`did-signed` / `attested` / `pinned-only`) is the integrity / authenticity anchor.
@@ -6316,6 +8187,12 @@ export interface IssuedCredentialBase {
    * When the credential's validUntil falls due.
    */
   expiresAt: string;
+}
+/**
+ * One entry exported as a JSContact `Card` (RFC 9553). Member names inside are JSContact's own and are carried verbatim. `uid` is `urn:vtc-directory:<EntryId>`. Base fields map as their definitions' `jsContactPath` says (`displayName` → `name.full`, `nickname` → `nicknames`, `avatar` → `media` of kind `photo`, `pronouns` → `speakToAs.pronouns`, `bio` → `notes`, `links` → `links`); community fields and derived fields are exported as vendor-specific properties named by their field key. Additional members are permitted because JSContact defines them. Carried as an open object so that no JSContact member is lost in transit: a consumer MUST check that `@type` is `Card`, `version` is `1.0` and `uid` is `urn:vtc-directory:<EntryId>`, which this schema does not constrain.
+ */
+export interface JSContactCard {
+  [k: string]: unknown | undefined;
 }
 /**
  * Whether this community answers vtc/join-requests/manifest to a caller it cannot identify.
@@ -6534,12 +8411,63 @@ export interface LimitTarget {
    */
   member?: string;
 }
+/**
+ * The community's listing settings. `defaultListing`: the listing a new card starts with (default `listed`). There is no floor: every member may always choose `hidden`, and a community cannot hold an entry above its member's choice. Raising `defaultListing` affects new cards only.
+ */
+export interface ListingDefaults {
+  defaultListing: Listing;
+}
 export interface LocalSettings {
   kind: "local";
   /**
    * Absolute path of the directory the community writes blobs under, on its own host. Created owner-only. Not carried by the community's backup: back it up beside it.
    */
   root: string;
+}
+/**
+ * What an election asks and how it is decided (VTI-VOT-010). Its digest (`manifestDigest`) is the SHA-256 multihash of its RFC 8785 (JCS) canonicalization, and every cast is bound to it (VTI-VOT-011).
+ */
+export interface Manifest {
+  electionId: ElectionId;
+  /**
+   * The community's DID.
+   */
+  community: string;
+  title?: string;
+  description?: string;
+  /**
+   * @minItems 1
+   * @maxItems 128
+   */
+  questions: [Question, ...Question[]];
+  secrecy: SecrecyLevel;
+  roll: RollRule;
+  registrationOpens: string;
+  votingOpens: string;
+  votingCloses: string;
+  revote: Revote;
+  board: {
+    visibility: BoardVisibility;
+    auditors: string[];
+  };
+  /**
+   * The DID of the voting service that holds the board.
+   */
+  ballotBox: string;
+  trustees?: Trustees;
+  /**
+   * Whether the community treats the result as deciding something; creating a binding election takes another administrator's consent (VTI-VOT-081).
+   */
+  binding: boolean;
+  allowEarlyClose: boolean;
+  /**
+   * Open elections only: whether running totals may be read while voting is open (VTI-VOT-061).
+   */
+  resultsBeforeClose: boolean;
+  /**
+   * Counted ballots required before any text answer is disclosed (VTI-VOT-065).
+   */
+  textReleaseThreshold: number;
 }
 /**
  * The mediator's per-account access-control capability set, expressed as named booleans (the transport-agnostic form of the mediator's internal capability flags). On a set request, members omitted are left unchanged; a get/response carries the full realized set.
@@ -6950,6 +8878,23 @@ export interface MonitorFilter {
   failuresOnly?: boolean;
 }
 /**
+ * The discoverability a card has when the community creates it, before its member chooses. A new card is never published beyond the community (VTI-DIR-042), so there is no member for that here: `externalCards` says whether the member may turn it on.
+ */
+export interface NewCardDefaults {
+  /**
+   * The listing a new card starts with: the community's `defaultListing` (vtc/directory/fields/list). Every member may always choose `hidden`.
+   */
+  listing: Listing;
+  /**
+   * What a member's search may match, as the card's `discoverability.search`.
+   */
+  search: "byName" | "exactNickname" | "off";
+  /**
+   * From whom a new card accepts introductions. Absent where the community does not deliver introductions.
+   */
+  introductions?: Introductions;
+}
+/**
  * A community's offer of admission to a room it owns, as the member it is addressed to sees it.
  */
 export interface Offer {
@@ -6985,6 +8930,70 @@ export interface OfferCredentials {
    * The Verifiable Authority Credential granting `actions` until `validUntil`.
    */
   authority: string;
+}
+/**
+ * What vtc/rooms/offers/list/0.2 returns: `Offer` plus `description`. A separate definition, not a change to `Offer`, so that vtc/rooms/offers/list/0.1 keeps the exact shape it published. `label` and `description` are the room's as they stand when the offer is read, not as they stood when it was made.
+ */
+export interface OfferV2 {
+  roomId: string;
+  /**
+   * The room's host: this community.
+   */
+  host: string;
+  label: RoomLabel;
+  /**
+   * Absent when the room has none.
+   */
+  description?: RoomDescription;
+  visibility: Visibility;
+  actions: MemberActions;
+  validUntil: string;
+  offeredAt: string;
+  /**
+   * `open`: not yet accepted. `accepted`: accepted, kept listed while a repeated accept can still be answered.
+   */
+  state: "open" | "accepted";
+  credentials: OfferCredentials;
+}
+/**
+ * One witnessing session's outcome evidence. `session` is the initiating witness/session document; `outcome` is the terminal witness/session/submit #response that the initiating document's own specification declares as its outcome evidence, under the witness's proof, delivering the VWC and its vwcDigestMultibase. A consumer pairs them with a presented VWC by SPEC §4.9.4's four checks and the witnessing checks of witness/session/submit (This response is the outcome evidence).
+ */
+export interface OutcomeEvidence {
+  /**
+   * The witness/session document that opened the session. The VWC's taskContext is its id and its taskDigestMultibase is computed over it (SPEC §4.9.3).
+   */
+  session: EvidenceDocument;
+  /**
+   * The witness/session/submit #response that closed the session, under the witness's proof. It carries the VWC and its vwcDigestMultibase.
+   */
+  outcome: EvidenceDocument;
+}
+/**
+ * How the uploader will cut a blob for direct transfer, committed before any byte moves: one storage object, written in `partCount` parts of `partSize` bytes (the last may be shorter), each with its digest. Independent of the chunk manifest, because storage imposes part sizes a chunk document cannot carry; the chunk manifest still describes the blob and readers still check it.
+ *
+ * Consistency rules JSON Schema cannot state: `partCount` MUST equal ceil(size / partSize) for the manifest's `size`, and `partDigests` MUST have exactly `partCount` items. Every digest MUST be sha2-256, because it is what the storage itself checks the part against.
+ */
+export interface PartPlan {
+  /**
+   * Bytes per part. One part of the whole blob's size is a single-object write.
+   */
+  partSize: number;
+  partCount: number;
+  /**
+   * The sha2-256 digest of each part's ciphertext, in order.
+   *
+   * @minItems 1
+   * @maxItems 1024
+   */
+  partDigests: [DigestMultibase, ...DigestMultibase[]];
+}
+/**
+ * Trustee `trustee`'s share of one decryption, `d = x_j·a`, with a Chaum–Pedersen proof against its verification key (CONVENTIONS §9.7).
+ */
+export interface PartialDecryption {
+  target: DecryptionTarget;
+  d: GroupElement;
+  proof: SigmaProof;
 }
 export interface PasskeyVerificationMethod {
   /**
@@ -7027,6 +9036,49 @@ export interface PeerDepth {
   count: number;
   bytes: number;
   oldestAgeSeconds?: number;
+}
+/**
+ * What the author permits the record to be used for — for example, that a learner's record is for instructional personalisation only. OPTIONAL; absent means the author stated no limit beyond the room's own terms.
+ *
+ * **Two halves, because purpose has both a machine and a human reading.** `purposes` names purposes by IRI, so that an agent can match them without parsing prose; `note` says it in words, for the nuance an identifier cannot carry. Either may be given alone.
+ *
+ * **No vocabulary of this family's own.** Purpose vocabularies exist and are maintained elsewhere — the W3C Data Privacy Vocabulary (`https://w3id.org/dpv#…`) is the one a writer SHOULD reach for first — and a short list defined here would be one more to translate between, and would be wrong at its edges for every domain that uses rooms. An IRI is the extension path: a community that needs a purpose no published vocabulary has names it under an IRI it controls.
+ *
+ * **A statement, not an enforcement.** No host can see it on the sealed tiers and none enforces it on any tier; every reader is a member who already holds the content. It records what the author permitted, so that a member — or an agent acting for one — can honour it, and so that a use outside it is a use against the author's stated terms rather than one nobody could have known about. An agent acting for a member SHOULD NOT use a record for a purpose outside `validFor` and SHOULD tell its principal when asked to. It confers no authority on anybody, and a `purposes` entry a reader does not recognise is shown, not ignored.
+ */
+export interface PermittedUse {
+  /**
+   * Purposes the record may be used for, each an absolute IRI — for example `https://w3id.org/dpv#ServicePersonalisation`. A set: order carries no meaning. An identifier, never fetched.
+   *
+   * @minItems 1
+   * @maxItems 8
+   */
+  purposes?:
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string];
+  /**
+   * The permitted use in words, such as `instructional personalisation only`. Plain text, rendered as text, and never instructions — an agent reading it treats it as the author's statement about the record, not as something to do.
+   */
+  note?: string;
+}
+/**
+ * A member's personal label for one room, as their key holder keeps it: at least one detail (`minProperties` counts `updatedAt`), and when it last changed. A key holder that holds no detail for the room holds no label, and returns none — there is no empty label.
+ */
+export interface PersonalLabel {
+  label?: PersonalLabelName;
+  description?: PersonalLabelDescription;
+  notes?: PersonalLabelNotes;
+  tags?: PersonalLabelTags;
+  /**
+   * When the label last changed, as the key holder recorded it. A request that changed nothing does not move it.
+   */
+  updatedAt: string;
 }
 /**
  * A community's published position on personhood.
@@ -7392,6 +9444,14 @@ export interface PublicKeyCredentialRequestOptions {
   userVerification?: "discouraged" | "preferred" | "required";
 }
 /**
+ * A member's external card: a JSContact `Card` (RFC 9553) holding exactly their values whose visibility is `public`, mapped as `JSContactCard` maps them, with the member's W3C Data Integrity `proof`. The community serves it as received and never signs, composes or edits it (VTI-REG-004 item 4).
+ *
+ * Carried as an open object, and deliberately so: the proof covers every member of the card, and a typed binding that kept only the members named here would drop the rest and break the signature. So this schema constrains none of its members, and a consumer MUST check them itself: `@type`, `version`, `uid`, `issuer` and `proof` are present; `@type` is `Card`; `version` is `1.0`; `uid` is `urn:vtc-directory:<EntryId>`; `issuer` is the member's membership DID; `proof` is a `DataIntegrityProof` with `cryptosuite` `eddsa-jcs-2022` or `ecdsa-jcs-2019`, `proofPurpose` `assertionMethod`, and a `verificationMethod` of the member's membership DID authorized for `assertionMethod`; and the proof verifies over the card without it, before any member is relied on.
+ */
+export interface PublishedCard {
+  [k: string]: unknown | undefined;
+}
+/**
  * The parameters exactly as they now appear in this community's join manifest, under vetting.ext. What an applicant and a vetter read.
  */
 export interface PublishedConfig {
@@ -7478,6 +9538,93 @@ export interface QueryContext {
    */
   locator?: string;
   [k: string]: string | undefined;
+}
+/**
+ * Select between `minSelections` and `maxSelections` of `options`. A yes/no/abstain motion is a choice of exactly one of three.
+ */
+export interface ChoiceQuestion {
+  key: Key_VotingV0_1;
+  type: "choice";
+  text?: string;
+  /**
+   * @minItems 2
+   * @maxItems 256
+   */
+  options: [QuestionOption, QuestionOption, ...QuestionOption[]];
+  minSelections: number;
+  maxSelections: number;
+  optional: boolean;
+}
+/**
+ * Order `options`; a ballot ranks every option or, when `partial` is true, a prefix of them.
+ */
+export interface RankingQuestion {
+  key: Key_VotingV0_1;
+  type: "ranking";
+  text?: string;
+  /**
+   * @minItems 2
+   * @maxItems 64
+   */
+  options: [QuestionOption, QuestionOption, ...QuestionOption[]];
+  partial: boolean;
+  optional: boolean;
+}
+/**
+ * Give each option an integer score within [min, max].
+ */
+export interface ScoreQuestion {
+  key: Key_VotingV0_1;
+  type: "score";
+  text?: string;
+  /**
+   * @minItems 1
+   * @maxItems 256
+   */
+  options: [QuestionOption, ...QuestionOption[]];
+  min: number;
+  max: number;
+  optional: boolean;
+}
+/**
+ * Free text of at most `maxLength` characters.
+ */
+export interface TextQuestion {
+  key: Key_VotingV0_1;
+  type: "text";
+  text?: string;
+  maxLength: number;
+  optional: boolean;
+}
+export interface QuestionOption {
+  key: Key_VotingV0_1;
+  /**
+   * Display text. Absent from a manifest registered with a ballot box that holds no question text (VTI-VOT-014).
+   */
+  label?: string;
+}
+/**
+ * One question's totals. `choice`: selections per option. `ranking`: per option, how many ballots placed it at each position (index 0 = first). `score`: per option, the sum and the number of ballots that scored it. `text`: the answers, in board order, withheld (`withheld: true`) below the manifest's `textReleaseThreshold`. `abstained` counts ballots that left the question unanswered.
+ */
+export interface QuestionResult {
+  question: Key_VotingV0_1;
+  abstained: number;
+  choice?: {
+    [k: string]: number | undefined;
+  };
+  ranking?: {
+    [k: string]: number[] | undefined;
+  };
+  score?: {
+    [k: string]:
+      | {
+          sum: number;
+          count: number;
+        }
+      | undefined;
+  };
+  text?: string[];
+  withheld?: boolean;
 }
 /**
  * The depth of one queue and its effective limit.
@@ -7590,6 +9737,38 @@ export interface ReadVerification {
   };
 }
 /**
+ * Cites a credential.
+ */
+export interface RecordEvidenceCredential {
+  kind: "credential";
+  /**
+   * The credential's `id`. An identifier: never fetched because a record names it.
+   */
+  credentialId: string;
+  /**
+   * OPTIONAL. A digest of the credential as cited — the SHA-256 multihash of its RFC 8785 (JCS) canonicalization, `proof` included — so a reader holding a credential with this `id` can tell whether it is the one the author meant.
+   */
+  digest?: DigestMultibase;
+}
+/**
+ * Cites a record of a room.
+ */
+export interface RecordEvidenceRecord {
+  kind: "record";
+  /**
+   * The cited record's key, as in `rooms/records/put`. Opaque on the sealed tiers, like every key there.
+   */
+  key: string;
+  /**
+   * The version cited. OPTIONAL; present, it pins the citation to what the record said then, since a record can be rewritten under the same key. A reader that shows a later version SHOULD say that it is not the one cited.
+   */
+  version?: number;
+  /**
+   * The cited record's room. Absent means the citing record's own room. A citation into another room tells the reader that room's identifier, so a writer SHOULD NOT cite into a room the citing room's readers are not meant to learn of.
+   */
+  roomId?: string;
+}
+/**
  * What `rooms/records/list` returns. Never the body: ranking happens on the client, and a host that returned every body would make the caller pay for the whole room on every listing.
  */
 export interface RecordMetadata {
@@ -7665,6 +9844,50 @@ export interface RecordMetadataV2 {
   blobs?: [BlobRef];
 }
 /**
+ * The mark a prune leaves: **that** records were removed, when, and how many — never which, and never anything they said.
+ *
+ * A prune removes records outright, tombstones included, so the room's record tree loses leaves and an incremental reader has nothing left to learn the removal from. This is what it learns from instead. A host keeps the latest one per room and serves it with every listing that can carry it (`rooms/records/list` 0.3, as `lastPrune`); a reader whose own copy of the room was synchronised to a version below `version` MUST rebuild that copy from a full listing — no `sinceVersion` — and drop every record the full listing no longer holds. Without that, a record the room removed lives on in every cache that synchronised before the prune, and a record retracted while the reader was away comes back as current.
+ *
+ * **What a host keeps and what it does not.** A host keeps this marker, and in its audit trail the prune's `reason`, its requester where the tier discloses one, and the retention it was made under. It MUST NOT keep anything a pruned record said — body, ciphertext, cleartext, title, description, file or blob — and SHOULD NOT keep pruned records' keys: the count is the audit, and a list of keys on an `open` room, where keys may be descriptive, is content by another name.
+ */
+export interface RecordPrune {
+  /**
+   * The version the prune took from the room's counter, as a put or a curation would. No record carries it; it is what moves `HeadVersion` past the removal, so that a root taken before and a root taken after are never labelled with one version.
+   */
+  version: number;
+  /**
+   * When the host performed it.
+   */
+  at: string;
+  /**
+   * How many records were removed, tombstones included. A prune that removed nothing leaves no mark.
+   */
+  removed: number;
+}
+/**
+ * How long a room keeps its records, by age: the room's **record retention**. Records older than it states become **eligible** to be removed by `rooms/records/prune`; nothing is removed until a holder of `admin` asks for a prune, and nothing a prune removes can be brought back.
+ *
+ * **Not `retentionPolicy`, and not `retentionDays`.** Both names are taken in this family and mean other things. `retentionPolicy` (`RetentionPolicy`) is whether a room's *key chain* lets a member read epochs from before they joined, fixed at creation because key material either exists for an epoch or it does not. `retentionDays` (`rooms/create`) is how long a host keeps a whole room after it lapses unrenewed. This is a third question — how long the room keeps its *records* while it is live — and unlike the first it is a decision a room revisits, so it is changeable (`rooms/records/retention/set`). A name sharing either's would invite a reader to apply one's rules to the other.
+ *
+ * **Age is the host's to measure, so age is `updatedAt`.** On the sealed tiers a host can read nothing of a record but its key, version, status, pinning and when it last changed, so a policy the host applies can only be stated in those terms. That is also why it cannot use a record's own `validUntil`, which is sealed: expiry is a reader's rule, retention a host's. A curation is a change, so it restarts a record's age — a retraction starts a tombstone's.
+ *
+ * **Absent, or `{}`, means no record is ever eligible by age**, and that is the reading a host MUST apply whenever it cannot read a policy: removing data under a rule nobody stated is the failure this member exists to prevent. Every member can read the policy in force (`rooms/info`), so a record is never removed under a rule its readers could not have known.
+ */
+export interface RecordRetention {
+  /**
+   * Days a retracted record's tombstone is kept after its retraction. A tombstone whose `updatedAt` is more than this long ago is eligible. Tombstones exist so that a member syncing incrementally learns of a retraction (`rooms/records/curate`); this is how long a member may stay away and still learn of one that way rather than by rebuilding their copy of the room. Absent means tombstones are never eligible.
+   */
+  tombstoneDays?: number;
+  /**
+   * Days a record is kept after it last changed, whatever its standing. A record — `active`, `deprecated` or `retracted` — whose `updatedAt` is more than this long ago is eligible, **unless it is pinned**: pinning says what matters in the room, and a room that wants a pinned record gone unpins it first. Absent means records are never eligible by age.
+   */
+  recordDays?: number;
+  /**
+   * Ecosystem-defined extension members per SPEC.md §4.5.1. A host MUST NOT treat a member here as making more records eligible: a removal rule a member's reader cannot understand is one they were never told about.
+   */
+  ext?: Ext;
+}
+/**
  * A passkey already bound to a subject, as listed by `auth/passkey/list` and targeted by `auth/passkey/revoke/*`. This is the auth service's own management view of a credential — not a WebAuthn dictionary — so its members are camelCase per SPEC.md §4.10. The exception is `transports`, whose values are the externally-owned WebAuthn transport tokens and are carried verbatim.
  */
 export interface RegisteredCredential {
@@ -7698,6 +9921,46 @@ export interface RejectedKey {
    * Why the key was rejected — unknown key, wrong type, out-of-range, allowlist mismatch, etc.
    */
   reason: string;
+}
+/**
+ * What vtc/rooms/offers/list/0.3 returns in `renewals`: a renewal of an admission the member already holds, as the member it is addressed to sees it. `label` and `description` are the room's as they stand when it is read.
+ */
+export interface Renewal {
+  roomId: string;
+  /**
+   * The room's host: this community.
+   */
+  host: string;
+  label: RoomLabel;
+  /**
+   * Absent when the room has none.
+   */
+  description?: RoomDescription;
+  visibility: Visibility;
+  actions: MemberActions;
+  /**
+   * When the renewed authority expires.
+   */
+  validUntil: string;
+  /**
+   * When the authority it replaces expires: the renewal is listed until then, or until a later renewal or the member's removal supersedes it.
+   */
+  renews: string;
+  issuedAt: string;
+  credentials: RenewalCredentials;
+}
+/**
+ * The two credentials a renewal replaces, serialized as rooms/owner/{issue-membership,issue-authority} return them: a membership and an authority granting the same actions until the renewal's `validUntil`. No invitation: the member is already admitted, and a renewal never opens a second way in. The member's surface stores each with the member's key holder **in place of** the one it renews, never beside it.
+ */
+export interface RenewalCredentials {
+  /**
+   * The renewed Verifiable Membership Credential.
+   */
+  membership: string;
+  /**
+   * The renewed Verifiable Authority Credential granting `actions` until `validUntil`.
+   */
+  authority: string;
 }
 /**
  * One repository as the VTC records it.
@@ -7862,6 +10125,56 @@ export interface ResolvedClaim {
   updatedAt?: string;
 }
 /**
+ * Which `RevocationList` a party holds, without its entries: comparable between the room's key holder and a host, and between two hosts, without disclosing whom the room withdrew.
+ */
+export interface RevocationHead {
+  /**
+   * The list's `sequence`.
+   */
+  sequence: number;
+  /**
+   * SHA-256 multihash of the list's RFC 8785 (JCS) canonicalization, `proof` included. Two parties holding one sequence with different digests have been given two lists the room signed at one sequence.
+   */
+  digest: DigestMultibase;
+}
+/**
+ * The room's own statement of which credentials it has withdrawn before they expire — signed by the room, cumulative, and numbered, so that it means the same thing at every host it is delivered to.
+ *
+ * **Why the room signs it, and why it is cumulative.** A host authorizes from credentials the room issued and keeps no roster; a withdrawal kept only as a host's own state would make the room unmovable and the host part of the membership. A list the room signed is room state: it moves with the room, any host it is delivered to reaches the same decision, and nothing a host invents can be mistaken for it. It is cumulative — every list carries every entry still in force — so a host holding any one list holds the room's whole withdrawal state, and a host that missed a list loses nothing once it receives a later one.
+ *
+ * **Producing.** The room's key holder builds the object without `proof` and signs it with a W3C Data Integrity proof whose `verificationMethod` is a key the room's DID document lists for `assertionMethod` and whose `proofPurpose` is `assertionMethod`. A producer MUST support `eddsa-jcs-2022`. Each list's `sequence` is exactly one greater than the last list the room signed, and the producer MUST NOT sign two different lists at one `sequence`.
+ *
+ * **Accepting.** A host MUST refuse a list unless: (1) `roomId` is the room it is delivered for; (2) `proof` verifies with a key of `roomId` listed for `assertionMethod` — a list signed by any other key, however valid the signature, is not the room's; (3) `sequence` is greater than that of the list it holds, or equal with an identical list (a repeat, answered as accepted and changing nothing); (4) it is **append-only** against the list it holds: every entry of the held list appears in it unchanged, unless that entry's `until` has passed. A list that lowers the sequence is a rollback and one that drops a live entry is a reinstatement nobody signed for, and both are refused; two different lists at one `sequence` is the room's key equivocating, and the host keeps the list it holds.
+ *
+ * **Applying.** A credential is revoked by an accepted list when any entry matches it (see `RevocationEntry`). An entry whose `until` has passed MAY be discarded by a host and omitted from later lists; no other entry is ever dropped.
+ *
+ * **Size.** A list is bounded at 4096 entries. A room that would exceed it uses a `room` entry, which withdraws everything issued before it and lets the room re-issue to those who remain.
+ */
+export interface RevocationList {
+  /**
+   * The room whose credentials this list withdraws, exactly as on the wire. Signed, so a list cannot be replayed against another room.
+   */
+  roomId: string;
+  /**
+   * The list's position in the room's sequence: exactly one greater than the last list the room signed. A host accepts only a list whose sequence is above the one it holds, which is what stops a host, a relayer or an attacker holding an old list from rolling the room's withdrawals back.
+   */
+  sequence: number;
+  /**
+   * When the room signed this list.
+   */
+  issuedAt: string;
+  /**
+   * Every withdrawal still in force, in the order the room made them. Empty is valid: a room that has revoked nothing, or whose every entry has lapsed, can still state its sequence.
+   *
+   * @maxItems 4096
+   */
+  entries: RevocationEntry[];
+  /**
+   * The room's Data Integrity proof over every other member, made with a key the room's DID document lists for `assertionMethod`.
+   */
+  proof: {};
+}
+/**
  * The receipt for a successful revocation. Consumers MUST report the family's `alreadyRevoked` / `already_revoked` error when the credential was already revoked, rather than returning a second receipt silently — the caller has to be able to distinguish "I revoked it now" from "it was already gone".
  *
  * The counterpart to IssuedCredential: both concern a credential's lifecycle at its issuer.
@@ -7976,6 +10289,13 @@ export interface RightRecord_GitNsV0_6 {
    * Present exactly when the subject gave themselves this right through git-ns/right/break-glass. Absent for every other record.
    */
   breakGlass?: BreakGlass;
+}
+/**
+ * A grant set by reference: the capability ceiling of a defined role, conferred as resource grants exactly as a `grants` binding confers its list. It never assigns the role itself — an entry's administrative role and its community role stay direct assignments.
+ */
+export interface RoleBindingSpec {
+  kind: "role";
+  role: RoleName;
 }
 /**
  * One administrative role of a VTC: a name, the CEILING of capabilities an entry holding the role may hold, and the approve ceiling of capabilities it may approve.
@@ -8124,6 +10444,13 @@ export interface RoleSummary {
   preRotationCommitments?: number;
 }
 /**
+ * Who may be issued a ticket (VTI-VOT-021): the community's active members, its active members and the parties `listed` names, or only the parties `listed` names.
+ */
+export interface RollRule {
+  rule: "members" | "membersAndListed" | "listed";
+  listed?: string[];
+}
+/**
  * The outcome of a rollback. Distinct from ServiceMutationResult because a rollback can legitimately publish nothing: if the previous state already equals the current one there is no change to write, and `kind: "noOp"` says so with `logEntryVersionId` absent. Treating that as a failure would be wrong — the requested state holds — and treating it as an ordinary success would report a log entry that does not exist.
  */
 export interface RollbackResult {
@@ -8158,6 +10485,21 @@ export interface RollbackResult {
   ext?: Ext;
 }
 /**
+ * Links a room the community owns to the group: joining the group offers the member admission to the room with `actions`, valid for `validFor`, renewed while they stay in the group (collected with vtc/rooms/offers/list at 0.3 or later); leaving removes them unless another source still covers them.
+ */
+export interface RoomBindingSpec {
+  kind: "room";
+  /**
+   * The community-owned room's DID.
+   */
+  roomId: string;
+  actions: MemberActions;
+  /**
+   * How long each admission's authority runs, as an ISO 8601 duration in whole days (`P365D`). The community renews it while the member stays in the group.
+   */
+  validFor: string;
+}
+/**
  * How much a host is willing to store for one room, at the room and per member. A hosting decision, set by the host and never by anything in the room's credentials. An upload must fit every scope at once: the object against the smallest `maxFileBytes` that applies, and the member and the room with the file added.
  */
 export interface RoomLimits {
@@ -8188,6 +10530,97 @@ export interface RoomMember {
   offeredAt: string;
   admittedAt?: string;
   removedAt?: string;
+}
+/**
+ * What vtc/rooms/memberships/list/0.1 returns: one room the community owns, and where the caller's admission to it stands in the community's own record. Unlike `OfferV2` it carries no credentials — those are collected with vtc/rooms/offers/list while an offer is open — and it is listed in every state, for as long as the community keeps the record, not only while an accept can be repeated. `label` and `description` are the room's as they stand when the record is read.
+ */
+export interface RoomMembership {
+  roomId: string;
+  /**
+   * The room's host: this community.
+   */
+  host: string;
+  label: RoomLabel;
+  /**
+   * Absent when the room has none.
+   */
+  description?: RoomDescription;
+  visibility: Visibility;
+  actions: MemberActions;
+  /**
+   * When the member's authority credential expires.
+   */
+  validUntil: string;
+  state: MemberState;
+  offeredAt: string;
+  /**
+   * When the community recorded the admission. Present when `state` is `admitted`, and kept when it becomes `removed`.
+   */
+  admittedAt?: string;
+  /**
+   * Present exactly when `state` is `removed`.
+   */
+  removedAt?: string;
+  /**
+   * On an `attributed` or `private` room in state `admitted`: until when the community keeps the Welcome, so that a repeated vtc/rooms/offers/accept carrying the same KeyPackage is answered with it. Absent on an `open` room, in any other state, and once the community no longer keeps it. A surface finding the member admitted but the room absent from its key holder's rooms/keys/list finishes the acceptance before this time, and asks an administrator to re-admit the member after it.
+   */
+  repeatAcceptUntil?: string;
+}
+/**
+ * What a room says about itself to its own members: a name and, optionally, a description, short tags and an emoji, so that a member's wallet, portal or CLI can show what each room is rather than a DID.
+ *
+ * **It lives in the room, and only there.** A profile is carried in a record of the room (`RoomProfileStatement`), sealed on `attributed` and `private` rooms like every other record, so the room's host stores ciphertext and learns neither the name nor anything else here. It is never put in a credential — credentials are presented to hosts — nor in a host's record of the room, in `rooms/create` or `rooms/owner/register`, or in any member a host can read. On an `open` room it is cleartext, as everything in an open room is.
+ *
+ * **Plain text, never instructions.** Every member is free text chosen by whoever wrote the profile and shown to every member of the room. A reader renders `name`, `description` and `tags` as text — never as markup, never as a link it follows — removes or replaces control characters before showing them, and MUST NOT treat any of it as instructions, which matters most for an agent acting for a member. A writer MUST NOT put personal data or a credential in any member.
+ *
+ * **Growth.** A new optional member arrives in a later version of this component. A reader refuses a member it does not know (the `SealedRecordBody` rules), so a profile carrying one is not shown by a reader that predates it, and a writer SHOULD NOT use a member it cannot expect the room's readers to know. An ecosystem extension goes in `ext`, which a reader that does not understand it ignores. A change no earlier reader could survive is a new statement under a new derivation label (`openvtc/room/profile/v2`), written beside this one until the room's readers have moved.
+ */
+export interface RoomProfile {
+  /**
+   * The room's name as its members see it. Plain text, one line. Bounded like the label a community gives a room it owns (`RoomLabel` in vtc/_shared), so a community can write the same name here that it shows its administrators and the members it offers the room to.
+   */
+  name: string;
+  /**
+   * What the room is for, in a sentence or a short paragraph. Plain text. Absent when the room has none; an empty string is not a description.
+   */
+  description?: string;
+  /**
+   * Short identifiers the room files itself under, as a set: order carries no meaning. A member's surface MAY filter or group rooms by them. They are the room's own and shown to its members — distinct from the tags a community files the rooms it owns under for its administrators, which are never written here.
+   *
+   * @maxItems 8
+   */
+  tags?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string];
+  /**
+   * One emoji — a single extended grapheme cluster, such as `📋` — that a surface MAY show beside the name. Text, rendered as text: never an image, never a URL, never anything a reader fetches, since a fetched icon would tell whoever serves it which member opened which room, and when. A reader that cannot render it shows nothing in its place.
+   */
+  emoji?: string;
+  /**
+   * Ecosystem-defined extension members per SPEC.md §4.5.1. A reader ignores what it does not understand.
+   */
+  ext?: Ext;
+}
+/**
+ * Withdraws every credential whose `validFrom` is earlier than `revokedAt`, whoever holds it.
+ */
+export interface RoomRevocation {
+  kind: "room";
+  /**
+   * When the room made this withdrawal.
+   */
+  revokedAt: string;
+  /**
+   * OPTIONAL. After this instant every credential the entry matches has expired anyway, so a host MAY discard the entry and the room MAY omit it from later lists. Absent means the entry is kept for as long as the room keeps a list.
+   */
+  until?: string;
 }
 /**
  * One change to a role's key set, from preview to completion. The rotation history of a DID is the list of these; the log is the authority for what was published, and this record adds what the log cannot say — which change was which, and (custody projection only) who asked, who approved, and why.
@@ -8238,6 +10671,26 @@ export interface RotationRecord {
    * Planned rotations: the publishing entry's cache horizon — publication plus the longer of the document's TTL and the verifier cache cap (CONVENTIONS.md §11.1). The switch, and any retirement of the predecessor, happen no earlier. Public: it follows from the log and the published cap.
    */
   cacheHorizonAt?: string;
+}
+/**
+ * One test over a verified fact about a member. `fact: role` tests the member's community role; `fact: field` tests an `admin`- or `credential`-sourced directory field named by `field`; `fact: personhood` tests whether a personhood assertion is on file; `fact: joinedAt` tests when they joined. A rule never reads a self-asserted (`member`-sourced) field: a member must not be able to join a group by editing their card.
+ */
+export interface RuleCondition {
+  fact: "role" | "field" | "personhood" | "joinedAt";
+  /**
+   * Present exactly when `fact` is `field`.
+   */
+  field?: FieldKey;
+  /**
+   * `equals` compares with `value`; `oneOf` with any of `values`; `exists` needs neither; `before` and `after` compare a date fact with `value`.
+   */
+  op: "equals" | "oneOf" | "exists" | "before" | "after";
+  value?: string | boolean;
+  /**
+   * @minItems 1
+   * @maxItems 64
+   */
+  values?: [string, ...string[]];
 }
 export interface S3Settings {
   kind: "s3";
@@ -8326,11 +10779,18 @@ export interface Context_VtaV0_1 {
   contextId: string;
 }
 /**
+ * Bytes sealed to a key: a random group element encrypted as `kem`, and the bytes under ChaCha20-Poly1305 with a key derived from it, multibase base58btc (CONVENTIONS §9.4).
+ */
+export interface SealedPayload {
+  kem: ElGamalCiphertext;
+  body: string;
+}
+/**
  * A record as a host stores it on an `attributed` or `private` room. Title, description, body, author and tags are sealed together in one blob rather than separately: splitting them would let a host learn the shape of the material from ciphertext lengths, for no benefit, since a reader decrypts the whole record either way.
  */
 export interface SealedRecord {
   /**
-   * The sealed record, base64url. Bound by AEAD associated data to `roomId`, `key`, `version` and `epoch`, so a host that relocates it to another key, version, epoch or room produces a mismatch and the open fails. The record cannot be moved undetected even though the host holds every byte of it.
+   * The sealed record, base64url. Bound by AEAD associated data to `roomId`, `key`, the version it was sealed at, and `epoch`, so a host that relocates it to another key, version, epoch or room produces a mismatch and the open fails. The record cannot be moved undetected even though the host holds every byte of it. The version it was sealed at is `version` below where present, and the record's own `version` otherwise.
    */
   ciphertext: string;
   /**
@@ -8341,6 +10801,18 @@ export interface SealedRecord {
    * The key epoch this record was sealed under. Cleartext because the host must serve the right ciphertext, and bound into the associated data so that relabelling it fails authentication rather than causing a reader to try the wrong key.
    */
   epoch: number;
+  /**
+   * The version this ciphertext was sealed at, where that is no longer the record's own `version`. A record's version moves when it is curated (`rooms/records/curate`, which MUST assign a new one so that every `sinceVersion` watermark sees the change), but a curation other than a retraction keeps the body — and the body is bound, by the AEAD and by its author's signature (`SealedRecordBody`), to the version it was written at. Without this member a curated record would be opened at a version it was never sealed for, and would not open for anyone.
+   *
+   * A host MUST record the version a body was sealed at when it stores it, MUST NOT change it while that body is kept — a curation alters a record's standing, never its sealed content — and MUST include it whenever it differs from the record's `version`. It is absent where the two are equal, which is every record that has not been curated since it was written, so the members a record carries are unchanged until a curation needs this one. It is part of `sealed`, and so of the record the data commitment covers (`CommittedRecord`): a host cannot change it without changing the root.
+   *
+   * A reader opens and verifies the body at this version, and MUST refuse a record whose `sealed.version` is greater than its own `version` — a body cannot have been sealed for a version the room had not reached. A host that pairs a newer version with an older body of the same key is rolling the record back; that is a change to the committed record like any other, visible to the comparisons `CommittedRecord` exists for.
+   */
+  version?: number;
+}
+export interface SealedShare {
+  recipient: TrusteeIndex;
+  share: SealedPayload;
 }
 /**
  * Who the service says it is.
@@ -8604,6 +11076,17 @@ export interface Session_AuthV0_3 {
   ext?: Ext;
 }
 /**
+ * A non-interactive sigma proof as its challenge and response `(c, z)` (Schnorr or Chaum–Pedersen; CONVENTIONS §9.3).
+ */
+export interface SigmaProof {
+  c: GroupScalar;
+  z: GroupScalar;
+}
+/**
+ * A whole Trust Task request document — `id`, `type`, `issuer`, `payload` and every other member, `proof` included — exactly as the ballot box received it, never re-serialised: its proof is taken over its members, and a re-serialised copy does not reliably reproduce them. Typed as an open object so every member survives; CONVENTIONS §9.6 gives the checks that make it a trustee's step.
+ */
+export interface SignedRequest {}
+/**
  * One signing-key delegation, as its holder sees it. A delegation confers nothing of its own: it names an identity that already holds whatever standing it holds, and a document signed by the key is authorized by that identity's standing read at execution time.
  */
 export interface SigningKey {
@@ -8802,34 +11285,9 @@ export interface StepUpProof_VaultV0_2 {
   challengeId: string;
 }
 /**
- * One storage config as the community holds it. Carries no secret.
- */
-export interface StorageConfig {
-  id: StorageConfigId;
-  /**
-   * A display name for administrators (`EU — S3 (main account)`). Shown to a room's creator with the config's kind when the community lets them choose.
-   */
-  label: string;
-  settings: StorageSettings;
-  auth?: StorageAuth;
-  /**
-   * Total ciphertext bytes the community will store on this config, across every room assigned to it. A capacity, not a policy: an upload that would cross it is refused with scope `storage`. Absent means no capacity set.
-   */
-  capacityBytes?: number;
-  state: ConfigState;
-  /**
-   * True for the config a room is assigned to when neither the community's policy nor its creator names one.
-   */
-  isDefault?: boolean;
-  createdBy: string;
-  createdAt: string;
-  updatedBy?: string;
-  updatedAt?: string;
-}
-/**
  * What a config holds and whether it works, computed at the time of the read. Ciphertext bytes throughout.
  */
-export interface StorageConfigFacts {
+export interface StorageConfigFacts_VtcV0_1 {
   /**
    * Rooms assigned to this config.
    */
@@ -8846,7 +11304,7 @@ export interface StorageConfigFacts {
    * Bytes of orphaned blobs awaiting deletion after their grace window.
    */
   pendingDeleteBytes: number;
-  credential: CredentialState;
+  credential: CredentialState_VtcV0_1;
   health: StorageHealth;
   /**
    * Present on a `walrus` config.
@@ -8858,6 +11316,89 @@ export interface StorageConfigFacts {
     signerAddress?: string;
     nextExtensionDueAt?: string;
   };
+}
+/**
+ * What a config holds and whether it works, computed at the time of the read. Ciphertext bytes throughout.
+ */
+export interface StorageConfigFacts_VtcV0_2 {
+  /**
+   * Rooms assigned to this config.
+   */
+  rooms: number;
+  /**
+   * Blobs stored on this config that are not yet deleted, wherever their rooms are now assigned.
+   */
+  files: number;
+  /**
+   * Their total size. Counts against `capacityBytes` until the backend deletion has actually happened, unlike room and member usage, which stop counting an orphaned blob at once.
+   */
+  bytes: number;
+  /**
+   * Bytes of orphaned blobs awaiting deletion after their grace window.
+   */
+  pendingDeleteBytes: number;
+  credential: CredentialState_VtcV0_2;
+  health: StorageHealth;
+  /**
+   * Present on a `walrus` config.
+   */
+  walrus?: {
+    /**
+     * The Sui address that pays for storage, derived from the VTA account's key.
+     */
+    signerAddress?: string;
+    nextExtensionDueAt?: string;
+  };
+}
+/**
+ * One storage config as the community holds it. Carries no secret.
+ */
+export interface StorageConfig_VtcV0_1 {
+  id: StorageConfigId;
+  /**
+   * A display name for administrators (`EU — S3 (main account)`). Shown to a room's creator with the config's kind when the community lets them choose.
+   */
+  label: string;
+  settings: StorageSettings;
+  auth?: StorageAuth_VtcV0_1;
+  /**
+   * Total ciphertext bytes the community will store on this config, across every room assigned to it. A capacity, not a policy: an upload that would cross it is refused with scope `storage`. Absent means no capacity set.
+   */
+  capacityBytes?: number;
+  state: ConfigState;
+  /**
+   * True for the config a room is assigned to when neither the community's policy nor its creator names one.
+   */
+  isDefault?: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+/**
+ * One storage config as the community holds it. Carries no secret.
+ */
+export interface StorageConfig_VtcV0_2 {
+  id: StorageConfigId;
+  /**
+   * A display name for administrators (`EU — S3 (main account)`). Shown to a room's creator with the config's kind when the community lets them choose.
+   */
+  label: string;
+  settings: StorageSettings;
+  auth?: StorageAuth_VtcV0_2;
+  /**
+   * Total ciphertext bytes the community will store on this config, across every room assigned to it. A capacity, not a policy: an upload that would cross it is refused with scope `storage`. Absent means no capacity set.
+   */
+  capacityBytes?: number;
+  state: ConfigState;
+  /**
+   * True for the config a room is assigned to when neither the community's policy nor its creator names one.
+   */
+  isDefault?: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedBy?: string;
+  updatedAt?: string;
 }
 /**
  * The last evidence the community has that a config works. Every member is optional: a config never probed and never used has none.
@@ -8935,6 +11476,24 @@ export interface StreamDescriptor {
   expectedSha256: ExpectedSha256;
   expectedSizeBytes: ExpectedSizeBytes;
   expiresAt: ExpiresAt;
+}
+/**
+ * Withdraws a party: every credential naming them as subject or issuer whose `validFrom` is earlier than `revokedAt`.
+ */
+export interface SubjectRevocation {
+  kind: "subject";
+  /**
+   * The party withdrawn. Never the room itself.
+   */
+  subject: string;
+  /**
+   * When the room made this withdrawal.
+   */
+  revokedAt: string;
+  /**
+   * OPTIONAL. After this instant every credential the entry matches has expired anyway, so a host MAY discard the entry and the room MAY omit it from later lists. Absent means the entry is kept for as long as the room keeps a list.
+   */
+  until?: string;
 }
 /**
  * One attestation as a submission carries it: its metadata and its token. The attestation itself is inside the submission's `proof`, in the same order.
@@ -9098,6 +11657,38 @@ export interface TrafficOutcome {
    */
   detail?: string;
 }
+/**
+ * One time-limited URL at the room's storage, issued by the host for one object and one method. A bearer credential for its lifetime: whoever holds it may perform exactly that request. A host MUST bind it to one object, one method and — for a write — the part's exact length and checksum, so that storage itself refuses any other bytes, and MUST give it the shortest practical lifetime, never more than 5 minutes. No party logs it.
+ */
+export interface TransferTarget {
+  /**
+   * The part this target writes, or 0 for a read of the whole object.
+   */
+  index: number;
+  method: "PUT" | "GET";
+  /**
+   * Where to send the request. HTTPS only.
+   */
+  url: string;
+  /**
+   * Headers the request MUST carry exactly as given — for a write, the part's length and checksum, which the URL's signature covers. A client adds nothing the storage would treat as signed.
+   */
+  headers?: {
+    [k: string]: string | undefined;
+  };
+  /**
+   * When the storage stops honouring the URL. A request begun after it is refused by the storage.
+   */
+  expiresAt: string;
+}
+/**
+ * The group element a trustee's shares are sealed to, with a Schnorr proof of knowledge of its discrete log (CONVENTIONS §9.6).
+ */
+export interface TransportKey {
+  trustee: TrusteeIndex;
+  key: GroupElement;
+  pok: SigmaProof;
+}
 export interface TransportObservation {
   /**
    * The binding the document actually travelled on.
@@ -9125,6 +11716,16 @@ export interface TrustRecord {
     [k: string]: unknown | undefined;
   };
   record_type: RecordType;
+}
+/**
+ * The trustees of a sealed or tallied-encrypted election and the number of them decryption needs (VTI-VOT-062). Neither the community nor the ballot box may be one.
+ */
+export interface Trustees {
+  /**
+   * @minItems 2
+   */
+  dids: [string, string, ...string[]];
+  threshold: number;
 }
 /**
  * Trust Spanning Protocol message (https://trustoverip.github.io/tswg-tsp-specification/). Reserved variant; no OpenVTC component reads or emits this today. Listed in the union so implementations can declare intent to use TSP in discovery and so consumers reject `tsp-message` envelopes explicitly (`envelopeUnsupported`) until they're wired up — rather than silently failing in DIDComm parsing.
@@ -9524,6 +12125,31 @@ export interface VerdictWith {
   presentationDefinition?: {};
 }
 /**
+ * The value of a `credential`-sourced field: a claim the member disclosed from a credential they presented, with the issuer that attests it. A verified value always names its issuer, and a self-asserted value is never shaped as one. The community keeps only the disclosed claim and these facts about it — never the presentation.
+ */
+export interface VerifiedValue {
+  /**
+   * The disclosed claim value.
+   */
+  value: string | boolean | number;
+  /**
+   * DID of the credential's issuer, shown as the field's verification badge.
+   */
+  issuer: string;
+  /**
+   * The most specific `type` of the credential the claim came from.
+   */
+  credentialType?: string;
+  /**
+   * When the community verified the presentation.
+   */
+  verifiedAt: string;
+  /**
+   * When the credential expires, where it does. The community withdraws the value once it passes.
+   */
+  validUntil?: string;
+}
+/**
  * An event the vetter will attend and vet at. `endDate` is on or after `startDate` and no more than 31 days after it; JSON Schema cannot compare two members, so the community checks both and refuses a violation with `malformedRequest`.
  */
 export interface VetterEvent {
@@ -9561,7 +12187,7 @@ export interface VetterSummary {
   /**
    * The vetter's PCS identifier for this community.
    */
-  id: Multibase;
+  id: Multibase_VtaV0_4;
   /**
    * Class labels this vetter holds a credential under, newest first.
    */
@@ -9741,6 +12367,13 @@ export interface VettingRequirements {
   [k: string]: unknown | undefined;
 }
 /**
+ * The community's published voting parameters: the PCS suite and the voting verification key tickets are issued under (VTI-VOT-020). Distinct from its hidden-vetting helper key.
+ */
+export interface VotingParameters {
+  suite: "ps-ddh-bls12381";
+  votingKey: Multibase_VotingV0_1;
+}
+/**
  * An opaque, gateway-issued reference to a device's push channel (push wake-up binding, https://trusttasks.org/binding/push/0.1). The push gateway returns it to the device at registration; the device conveys it to its VTA (device/set-wake), and the VTA provisions it to authorized triggers (its mediator and/or itself). The raw platform push token (APNs/FCM/WebPush) is held ONLY by the gateway and is never represented here — the handle abstracts the platform, so adding new push methods (e.g. PWA Web Push) needs no change to triggers or VTA config. A handle is a bearer capability to *request* a wake (subject to the gateway's allowlist), never to read the channel.
  */
 export interface WakeHandle {
@@ -9864,8 +12497,8 @@ export interface WitnessKey {
 /**
  * The outcome of one write within a `vta/app-state/put-many` batch. Per-record rather than per-batch, because the default batch mode applies each write on its own merits: a caller flushing ten unrelated edits needs to know which one conflicted, not merely that something did.
  */
-export interface WriteResult {
-  key: Key;
+export interface WriteResult_VtaV0_1 {
+  key: Key_VtaV0_1;
   /**
    * `written`: applied, and `version` carries the new value. `conflict`: `expectedVersion` did not match; `currentVersion`, `currentValue` and `currentDeleted` carry the maintainer's view so the caller can resolve without a re-read. `tooLarge`: the value exceeded the per-record cap; `limitBytes` and `actualBytes` say by how much. `notFound`: a `mergePatch` write named an address with no live record. `skipped`: atomic mode only — this write was not attempted because another in the batch failed.
    */
@@ -9878,6 +12511,46 @@ export interface WriteResult {
    * On `written`: true when no live record existed at the address beforehand.
    */
   created?: boolean;
+  /**
+   * On `conflict`: the version the maintainer actually holds. Absent when the conflict is that no record exists (`expectedVersion` was positive and the address is empty).
+   */
+  currentVersion?: Version_VtaV0_1;
+  /**
+   * On `conflict`: the value the maintainer actually holds, returned WITH the rejection rather than left for the caller to re-read. A bare rejection has no fixed point under contention — between the rejection and the re-read the record can change again — so returning the winner's view removes the race rather than narrowing it. Absent when `currentDeleted` is true or no record exists.
+   */
+  currentValue?: {
+    [k: string]: unknown | undefined;
+  };
+  /**
+   * On `conflict`: true when the address holds a tombstone rather than a live record.
+   */
+  currentDeleted?: boolean;
+  /**
+   * On `tooLarge`: the maintainer's per-record cap in bytes.
+   */
+  limitBytes?: number;
+  /**
+   * On `tooLarge`: the size of the rejected value in bytes.
+   */
+  actualBytes?: number;
+}
+/**
+ * The outcome of one write within a `vta/app-state/put-many` batch. Per-record rather than per-batch, because the default batch mode applies each write on its own merits: a caller flushing ten unrelated edits needs to know which one conflicted, not merely that something did.
+ */
+export interface WriteResult_VtaV0_7 {
+  key: Key_VtaV0_1;
+  /**
+   * `written`: applied, and `version` carries the new value. `conflict`: `expectedVersion` did not match; `currentVersion`, `currentValue` and `currentDeleted` carry the maintainer's view so the caller can resolve without a re-read. `tooLarge`: the value exceeded the per-record cap; `limitBytes` and `actualBytes` say by how much. `notFound`: a `mergePatch` write named an address with no live record. `skipped`: atomic mode only — this write was not attempted because another in the batch failed.
+   */
+  outcome: "written" | "conflict" | "tooLarge" | "notFound" | "skipped";
+  /**
+   * The new version, on `written`.
+   */
+  version?: Version_VtaV0_1;
+  /**
+   * On `written`: true when no live record existed at the address beforehand.
+   */
+  wasCreated?: boolean;
   /**
    * On `conflict`: the version the maintainer actually holds. Absent when the conflict is that no record exists (`expectedVersion` was positive and the address is empty).
    */

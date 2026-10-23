@@ -114,7 +114,7 @@ dependencies = [
  "multibase",
  "serde",
  "serde_json",
- "serde_json_canonicalizer",
+ "serde_json_canonicalizer 0.3.2",
  "sha2 0.11.0",
  "thiserror",
  "tracing",
@@ -147,9 +147,9 @@ dependencies = [
 
 [[package]]
 name = "affinidi-did-common"
-version = "0.4.2"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2210e6f982142b24ba5bab49bbddcaff57cd6fac60e826c9291dbfbb9026db39"
+checksum = "e6c90c9876106ef6138fb858ec3b77354eda1d14b37a06441f28f4fd8838594d"
 dependencies = [
  "affinidi-crypto",
  "affinidi-encoding",
@@ -164,9 +164,9 @@ dependencies = [
 
 [[package]]
 name = "affinidi-did-resolver-cache-sdk"
-version = "0.8.41"
+version = "0.8.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "094243a0e7eb63c15982da638e1bc5fed91493d42cd20d325391a0ff9a883e46"
+checksum = "27c6932d624670cc7ae960b015416ae83019ed9160121814222a5a4d4cbb7a35"
 dependencies = [
  "affinidi-did-common",
  "affinidi-did-resolver-traits",
@@ -305,7 +305,7 @@ dependencies = [
  "crypto_secretbox",
  "ed25519-dalek",
  "rand 0.10.2",
- "salsa20",
+ "salsa20 0.10.2",
  "serde",
  "serde_json",
  "subtle",
@@ -631,9 +631,9 @@ dependencies = [
 
 [[package]]
 name = "affinidi-tsp"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32049a0b3373d56d281438370530812d494b4d35d457e8872a979b9dedc0c915"
+checksum = "1252b085fb12a2dd4e62221821f334689eeb27ba28359744ea7ff43012a67fac"
 dependencies = [
  "affinidi-cesr",
  "affinidi-did-common",
@@ -646,8 +646,7 @@ dependencies = [
  "hex",
  "hkdf 0.13.0",
  "rand 0.10.2",
- "rand_core 0.6.4",
- "salsa20",
+ "salsa20 0.11.0",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -743,7 +742,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -754,7 +753,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1497,7 +1496,7 @@ dependencies = [
  "cipher 0.4.4",
  "generic-array",
  "poly1305 0.8.0",
- "salsa20",
+ "salsa20 0.10.2",
  "subtle",
  "zeroize",
 ]
@@ -1513,9 +1512,9 @@ dependencies = [
 
 [[package]]
 name = "ctutils"
-version = "0.4.2"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e"
+checksum = "38d28fb6aa7dd680b3ffd1a3e64e115c177bdba63c0ae7f9cd48129ff05c4fa0"
 dependencies = [
  "cmov",
  "subtle",
@@ -1696,9 +1695,9 @@ dependencies = [
 
 [[package]]
 name = "did-scid"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a5831431ec1890277e48a90ce25e5093644ca6f5390e715357c1d948110a6f3"
+checksum = "afa21cb488ff54668bb6adf8c206ef4e144baac7213c3da157d407ced805280e"
 dependencies = [
  "affinidi-did-common",
  "didwebvh-rs",
@@ -1710,9 +1709,9 @@ dependencies = [
 
 [[package]]
 name = "didwebvh-rs"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f02bdbaaffc5b0bec1e3f8049e5e415476cfd56d23bc6bf692419e674ded93f9"
+checksum = "346ad3a3c4f10c0c8dc8c710c2511375cd14ffb5e5bc5b6e6f03617ce2dabb87"
 dependencies = [
  "affinidi-data-integrity",
  "affinidi-did-common",
@@ -1726,7 +1725,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "serde_json_canonicalizer",
+ "serde_json_canonicalizer 0.4.1",
  "serde_with",
  "sha2 0.11.0",
  "thiserror",
@@ -1924,7 +1923,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3157,7 +3156,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4024,7 +4023,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4082,7 +4081,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4093,9 +4092,9 @@ checksum = "f87165f0995f63a9fbeea62b64d10b4d9d8e78ec6d7d51fb2125fda7bb36788f"
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.15"
+version = "0.103.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+checksum = "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
 dependencies = [
  "aws-lc-rs",
  "ring",
@@ -4140,6 +4139,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97a22f5af31f73a954c10289c93e8a50cc23d971e80ee446f1f6f7137a088213"
 dependencies = [
  "cipher 0.4.4",
+]
+
+[[package]]
+name = "salsa20"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f874456e72520ff1375a06c588eaf074b0f01f9e9e1aada45bd9b7954a6e42c"
+dependencies = [
+ "cfg-if",
+ "cipher 0.5.2",
 ]
 
 [[package]]
@@ -4378,6 +4387,17 @@ name = "serde_json_canonicalizer"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe52319a927259afbfa5180c5157cd8167edfd3e8c254f9558c7fef44c5649f2"
+dependencies = [
+ "ryu-js",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "serde_json_canonicalizer"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87f7bb64f8c7e9f783fdfe883b5fe93a90bee1597c63705baa91842c5f698620"
 dependencies = [
  "ryu-js",
  "serde",
@@ -4631,7 +4651,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52d1cfed4120b4d927bf7c0f86d2087a4a7d6027c906d9f9d525a80573b9be51"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4760,7 +4780,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4850,9 +4870,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.52.3"
+version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
+checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "bytes",
  "libc",
@@ -5119,7 +5139,7 @@ dependencies = [
 
 [[package]]
 name = "trust-tasks"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "affinidi-secrets-resolver",
  "chrono",
@@ -5129,22 +5149,22 @@ dependencies = [
  "trust-tasks-didcomm",
  "trust-tasks-didcomm-v1",
  "trust-tasks-https",
- "trust-tasks-proof 0.31.2",
- "trust-tasks-rs 0.31.2",
+ "trust-tasks-proof 0.34.0",
+ "trust-tasks-rs 0.34.0",
  "trust-tasks-tsp",
  "uuid",
 ]
 
 [[package]]
 name = "trust-tasks-capability-client"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "chrono",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
- "trust-tasks-rs 0.31.2",
+ "trust-tasks-rs 0.34.0",
  "uuid",
 ]
 
@@ -5155,7 +5175,7 @@ dependencies = [
  "multibase",
  "serde",
  "serde_json",
- "serde_json_canonicalizer",
+ "serde_json_canonicalizer 0.3.2",
  "sha2 0.10.9",
  "thiserror",
 ]
@@ -5181,7 +5201,7 @@ dependencies = [
 
 [[package]]
 name = "trust-tasks-didcomm"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "affinidi-crypto",
  "affinidi-messaging-didcomm",
@@ -5197,13 +5217,13 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "trust-tasks-rs 0.31.2",
+ "trust-tasks-rs 0.34.0",
  "uuid",
 ]
 
 [[package]]
 name = "trust-tasks-didcomm-v1"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "affinidi-messaging-didcomm-v1",
  "async-trait",
@@ -5213,13 +5233,13 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "trust-tasks-rs 0.31.2",
+ "trust-tasks-rs 0.34.0",
  "uuid",
 ]
 
 [[package]]
 name = "trust-tasks-https"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "affinidi-secrets-resolver",
  "async-trait",
@@ -5232,8 +5252,8 @@ dependencies = [
  "thiserror",
  "tokio",
  "tower",
- "trust-tasks-proof 0.31.2",
- "trust-tasks-rs 0.31.2",
+ "trust-tasks-proof 0.34.0",
+ "trust-tasks-rs 0.34.0",
  "uuid",
 ]
 
@@ -5257,7 +5277,7 @@ dependencies = [
 
 [[package]]
 name = "trust-tasks-proof"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "affinidi-crypto",
  "affinidi-data-integrity",
@@ -5272,7 +5292,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "trust-tasks-rs 0.31.2",
+ "trust-tasks-rs 0.34.0",
 ]
 
 [[package]]
@@ -5292,7 +5312,7 @@ dependencies = [
 
 [[package]]
 name = "trust-tasks-rs"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5308,7 +5328,7 @@ dependencies = [
 
 [[package]]
 name = "trust-tasks-tsp"
-version = "0.31.2"
+version = "0.34.0"
 dependencies = [
  "affinidi-tsp",
  "async-trait",
@@ -5317,7 +5337,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "trust-tasks-rs 0.31.2",
+ "trust-tasks-rs 0.34.0",
 ]
 
 [[package]]
@@ -5719,9 +5739,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.7"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f31141ce3fc3e300ae89b78c0dd67f9708061d1d2eda54b8209346fd6be9a92c"
+checksum = "58ec80e73fd8baf57bf0d9615554c75348bda990d6d5bbeab964dd068319fecb"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -5748,7 +5768,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

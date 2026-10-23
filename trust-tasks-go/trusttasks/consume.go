@@ -286,8 +286,9 @@ const (
 //
 // Return a success response, or (nil, nil) for a specification that defines no
 // success response (§4.4.1) — which yields [OutcomeAccepted]. Return a [Refusal]
-// to refuse with a built error response. Any other error aborts the pipeline and
-// is returned to the caller of [ConsumeInbound] unchanged.
+// to refuse with a built error response. Any other error aborts the pipeline,
+// releases the item-11 claim so the document can be resent, and is returned to
+// the caller of [ConsumeInbound] unchanged.
 type Handler[P, R any] func(
 	ctx context.Context,
 	doc *Document[P],
@@ -556,6 +557,16 @@ func ConsumeInbound[P, R any](
 			}), nil
 		case VerdictFresh:
 			claimed = &claim{guard: guard, digest: digest}
+		default:
+			// A guard answering with a verdict this runtime does not know — the
+			// zero ReplayVerdict among them — has not said the document is fresh.
+			// Executing anyway would skip item 11, so fail closed, as for a guard
+			// that cannot answer at all.
+			return route(&RejectReason{
+				Code:      CodeUnavailable,
+				Message:   ReplayRecordUnavailable,
+				Retryable: true,
+			}), nil
 		}
 	}
 
@@ -563,6 +574,11 @@ func ConsumeInbound[P, R any](
 	if err != nil {
 		var refusal *Refusal
 		if !errors.As(err, &refusal) {
+			// The handler did not finish, so nothing says the effect happened.
+			// Holding the claim would answer every resend with an in-flight
+			// duplicate until the record expired: the document could not be
+			// retried, and the producer would never learn why.
+			claimed.release(ctx, doc.ID)
 			return zero, err
 		}
 		// §8.4: a retryable refusal has just invited the producer to re-send this

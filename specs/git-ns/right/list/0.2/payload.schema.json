@@ -7,11 +7,11 @@
   "additionalProperties": false,
   "properties": {
     "resource": {
-      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Resource",
+      "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Resource",
       "description": "Only rights on this resource or inside it. Absent: every resource."
     },
     "subject": {
-      "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
+      "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/Did",
       "description": "Only rights held by this DID. Absent: every subject."
     },
     "cursor": {
@@ -42,13 +42,13 @@
         "rights": {
           "type": "array",
           "items": {
-            "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/AdminRightRow"
+            "$ref": "../../../_shared/0.5/git-ns.schema.json#/$defs/AdminRightRow"
           },
           "description": "Rows matching `resource` and `subject`, ordered by `resource` then `subject`. A break-glass record waiting out a policy delay is included — it is exactly the one other administrators have a window to revoke."
         },
         "nextCursor": {
-          "type": ["string", "null"],
-          "description": "Continuation token for the next page, or `null` when this is the last."
+          "type": "string",
+          "description": "Continuation token for the next page; pass it back as the request's `cursor`. Absent on the last page — never `null`."
         },
         "ext": {
           "$ref": "../../../../_framework/0.2/framework.schema.json#/$defs/Ext"

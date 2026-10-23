@@ -18,6 +18,7 @@ mod acl {
     mod list {
         mod v0_1;
         mod v0_2;
+        mod v0_3;
     }
     mod revoke {
         mod v0_1;
@@ -39,6 +40,7 @@ mod acl {
 mod audit {
     mod list {
         mod v0_1;
+        mod v0_2;
     }
     mod verify {
         mod v0_1;
@@ -60,24 +62,33 @@ mod auth {
         }
         mod claim {
             mod v0_1;
+            mod v0_2;
         }
         mod grant {
             mod v0_1;
+            mod v0_2;
+            mod v0_3;
         }
         mod identify {
             mod v0_1;
         }
         mod prove {
             mod v0_1;
+            mod v0_2;
+            mod v0_3;
         }
         mod redeem {
             mod v0_1;
+            mod v0_2;
         }
         mod request {
             mod v0_1;
+            mod v0_2;
         }
         mod respond {
             mod v0_1;
+            mod v0_2;
+            mod v0_3;
         }
     }
     mod passkey {
@@ -289,6 +300,7 @@ mod consent {
     }
     mod list {
         mod v1_0;
+        mod v1_1;
     }
     mod request {
         mod v1_0;
@@ -338,6 +350,7 @@ mod device {
     mod list {
         mod v0_1;
         mod v0_2;
+        mod v0_3;
     }
     mod register {
         mod v0_1;
@@ -401,6 +414,7 @@ mod did_management {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod log {
             mod v0_1;
@@ -589,6 +603,8 @@ mod external {
     mod credentials {
         mod issue {
             mod v0_1;
+            mod v0_2;
+            mod v0_3;
         }
     }
     mod sign {
@@ -606,6 +622,7 @@ mod git_ns {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod unlink {
             mod v0_1;
@@ -615,6 +632,7 @@ mod git_ns {
         mod list {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
     }
     mod bridge {
@@ -630,6 +648,7 @@ mod git_ns {
                 mod v0_1;
                 mod v0_2;
                 mod v0_3;
+                mod v0_4;
             }
             mod v0_1;
             mod v0_2;
@@ -674,6 +693,7 @@ mod git_ns {
         mod show {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
     }
     mod repo {
@@ -721,10 +741,12 @@ mod git_ns {
         mod issued_by_departed {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
         mod list {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
         mod ratify {
             mod v0_1;
@@ -797,6 +819,7 @@ mod keys {
     }
     mod list {
         mod v0_1;
+        mod v0_2;
     }
     mod rename {
         mod v0_1;
@@ -814,6 +837,9 @@ mod keys {
         mod v0_1;
     }
     mod sign_csr {
+        mod v0_1;
+    }
+    mod sign_document {
         mod v0_1;
     }
     mod sign_jws {
@@ -848,6 +874,7 @@ mod messaging {
     mod account {
         mod add {
             mod v0_1;
+            mod v0_2;
         }
         mod change_queue_limits {
             mod v0_1;
@@ -857,15 +884,18 @@ mod messaging {
         }
         mod get {
             mod v0_1;
+            mod v0_2;
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod remove {
             mod v0_1;
         }
         mod update {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod acl {
@@ -928,6 +958,33 @@ mod persona {
             mod v1_0;
         }
     }
+    mod contact {
+        mod get {
+            mod v1_1;
+        }
+        mod list {
+            mod v1_1;
+        }
+        mod lists {
+            mod delete {
+                mod v1_0;
+            }
+            mod list {
+                mod v1_0;
+            }
+            mod put {
+                mod v1_0;
+                mod v1_1;
+            }
+            mod show {
+                mod v1_0;
+            }
+        }
+        mod put {
+            mod v1_1;
+            mod v1_2;
+        }
+    }
     mod facet {
         mod delete {
             mod v1_0;
@@ -948,6 +1005,7 @@ mod persona {
         }
         mod put {
             mod v1_0;
+            mod v1_1;
         }
     }
 }
@@ -973,10 +1031,12 @@ mod policy {
     mod list {
         mod v0_1;
         mod v0_2;
+        mod v0_3;
     }
     mod upsert {
         mod v0_1;
         mod v0_2;
+        mod v0_3;
     }
 }
 #[cfg(feature = "process-attestation")]
@@ -1039,9 +1099,11 @@ mod registry {
         }
         mod put {
             mod v0_1;
+            mod v0_2;
         }
         mod query {
             mod v0_1;
+            mod v0_2;
         }
         mod read {
             mod v0_1;
@@ -1059,28 +1121,35 @@ mod rooms {
         }
         mod get {
             mod v0_1;
+            mod v0_2;
         }
         mod upload {
             mod abort {
                 mod v0_1;
+                mod v0_2;
             }
             mod begin {
                 mod v0_1;
+                mod v0_2;
             }
             mod chunk {
                 mod v0_1;
+                mod v0_2;
             }
             mod commit {
                 mod v0_1;
+                mod v0_2;
             }
         }
     }
     mod create {
         mod v0_1;
+        mod v0_2;
     }
     mod epoch {
         mod chain {
             mod v0_1;
+            mod v0_2;
         }
         mod commits {
             mod v0_1;
@@ -1090,32 +1159,62 @@ mod rooms {
         }
         mod prune {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod info {
         mod v0_1;
+        mod v0_2;
     }
     mod keys {
+        mod act {
+            mod v0_1;
+            mod v0_2;
+            mod v0_3;
+            mod v0_4;
+            mod v0_5;
+            mod v0_6;
+        }
         mod backfill {
             mod v0_1;
+            mod v0_2;
         }
         mod browse {
             mod v0_1;
+            mod v0_2;
         }
         mod chain {
             mod v0_1;
+            mod v0_2;
         }
         mod file_key {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod key_package {
+            mod v0_2;
+        }
+        mod label {
             mod v0_1;
         }
         mod list {
             mod v0_1;
+            mod v0_2;
+        }
+        mod profile {
+            mod read {
+                mod v0_1;
+            }
+            mod write {
+                mod v0_1;
+            }
         }
         mod read {
             mod v0_1;
         }
         mod seal {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod owner {
@@ -1125,12 +1224,20 @@ mod rooms {
         mod group {
             mod add {
                 mod v0_1;
+                mod v0_2;
+                mod v0_3;
             }
             mod create {
                 mod v0_1;
             }
             mod remove {
                 mod v0_1;
+                mod v0_2;
+                mod v0_3;
+            }
+            mod renew {
+                mod v0_1;
+                mod v0_2;
             }
         }
         mod invite {
@@ -1145,6 +1252,10 @@ mod rooms {
         }
         mod register {
             mod v0_1;
+            mod v0_2;
+        }
+        mod revoke {
+            mod v0_1;
         }
     }
     mod records {
@@ -1153,9 +1264,28 @@ mod rooms {
         }
         mod list {
             mod v0_2;
+            mod v0_3;
+            mod v0_4;
+        }
+        mod prune {
+            mod v0_1;
         }
         mod put {
             mod v0_2;
+            mod v0_3;
+        }
+        mod retention {
+            mod set {
+                mod v0_1;
+            }
+        }
+    }
+    mod revocations {
+        mod get {
+            mod v0_1;
+        }
+        mod put {
+            mod v0_1;
         }
     }
     mod usage {
@@ -1205,6 +1335,9 @@ mod vault {
         mod get {
             mod v0_1;
         }
+        mod present {
+            mod v0_1;
+        }
         mod purge {
             mod v0_1;
         }
@@ -1233,6 +1366,7 @@ mod vault {
         mod v0_1;
         mod v0_2;
         mod v0_3;
+        mod v0_4;
     }
     mod proxy_login {
         mod v0_1;
@@ -1249,15 +1383,18 @@ mod vault {
     mod sync {
         mod v0_1;
         mod v0_2;
+        mod v0_3;
     }
     mod upsert {
         mod v0_1;
         mod v0_2;
         mod v0_3;
+        mod v0_4;
     }
     mod usage {
         mod v0_1;
         mod v0_2;
+        mod v0_3;
     }
 }
 #[cfg(feature = "vetting")]
@@ -1273,6 +1410,73 @@ mod vetting {
     }
     mod session {
         mod v0_1;
+    }
+}
+#[cfg(feature = "voting")]
+mod voting {
+    mod ballot {
+        mod cast {
+            mod v0_1;
+        }
+        mod cast_encrypted {
+            mod v0_1;
+        }
+    }
+    mod board {
+        mod consistency {
+            mod v0_1;
+        }
+        mod head {
+            mod v0_1;
+        }
+        mod inclusion {
+            mod v0_1;
+        }
+        mod read {
+            mod v0_1;
+        }
+    }
+    mod election {
+        mod cancel {
+            mod v0_1;
+        }
+        mod close {
+            mod v0_1;
+        }
+        mod register {
+            mod v0_1;
+        }
+        mod show {
+            mod v0_1;
+        }
+    }
+    mod result {
+        mod show {
+            mod v0_1;
+        }
+    }
+    mod trustees {
+        mod authorize {
+            mod v0_1;
+        }
+        mod confirm {
+            mod v0_1;
+        }
+        mod deal {
+            mod v0_1;
+        }
+        mod decrypt {
+            mod v0_1;
+        }
+        mod enrol {
+            mod v0_1;
+        }
+        mod justify {
+            mod v0_1;
+        }
+        mod status {
+            mod v0_1;
+        }
     }
 }
 #[cfg(feature = "vrc")]
@@ -1300,12 +1504,15 @@ mod vta {
         }
         mod list {
             mod v1_0;
+            mod v1_1;
         }
         mod put {
             mod v1_0;
+            mod v1_1;
         }
         mod put_many {
             mod v1_0;
+            mod v1_1;
         }
     }
     mod attestation {
@@ -1404,6 +1611,7 @@ mod vta {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod revoke {
             mod v0_1;
@@ -1413,6 +1621,7 @@ mod vta {
         mod create {
             mod v1_0;
             mod v2_0;
+            mod v3_1;
         }
         mod delete {
             mod v1_0;
@@ -1421,10 +1630,12 @@ mod vta {
         mod get {
             mod v1_0;
             mod v2_0;
+            mod v3_1;
         }
         mod list {
             mod v1_0;
             mod v2_0;
+            mod v3_1;
         }
         mod render {
             mod v1_0;
@@ -1433,6 +1644,7 @@ mod vta {
         mod update {
             mod v1_0;
             mod v2_0;
+            mod v3_1;
         }
     }
     mod health {
@@ -1510,11 +1722,56 @@ mod vta {
                 mod v0_1;
             }
         }
+        mod trustee {
+            mod deal {
+                mod v0_1;
+                mod v0_2;
+            }
+            mod decrypt {
+                mod v0_1;
+                mod v0_2;
+            }
+            mod enrol {
+                mod v0_1;
+            }
+            mod justify {
+                mod v0_1;
+                mod v0_2;
+            }
+            mod keys {
+                mod v0_1;
+                mod v0_2;
+            }
+            mod read {
+                mod v0_1;
+            }
+        }
         mod verify_attestation {
             mod v0_1;
         }
         mod vetter {
             mod show {
+                mod v0_1;
+            }
+        }
+        mod vote {
+            mod v0_1;
+        }
+        mod vote_encrypted {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod voter {
+            mod accept {
+                mod v0_1;
+            }
+            mod read {
+                mod v0_1;
+            }
+            mod receipt {
+                mod v0_1;
+            }
+            mod register {
                 mod v0_1;
             }
         }
@@ -1570,6 +1827,7 @@ mod vta {
             }
             mod list {
                 mod v1_0;
+                mod v1_1;
             }
             mod remove {
                 mod v1_0;
@@ -1582,6 +1840,7 @@ mod vta {
             mod create {
                 mod v1_0;
                 mod v1_1;
+                mod v1_2;
             }
             mod delete {
                 mod v1_0;
@@ -1642,6 +1901,27 @@ mod vta {
             }
         }
     }
+    mod witness {
+        mod accept {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod list {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod open {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod present {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod request {
+            mod v0_1;
+        }
+    }
 }
 #[cfg(feature = "vtc")]
 mod vtc {
@@ -1671,10 +1951,15 @@ mod vtc {
             mod event {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
+                mod v0_4;
             }
             mod subscribe {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
+                mod v0_4;
+                mod v0_5;
             }
         }
         mod invites {
@@ -1692,13 +1977,16 @@ mod vtc {
     mod auth {
         mod admin_session {
             mod v0_1;
+            mod v0_2;
         }
         mod recognise {
             mod challenge {
                 mod v0_1;
+                mod v0_2;
             }
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
     }
     mod backup {
@@ -1747,8 +2035,21 @@ mod vtc {
                 mod v0_1;
             }
         }
+        mod theme {
+            mod show {
+                mod v0_1;
+            }
+            mod update {
+                mod v0_1;
+            }
+        }
     }
     mod config {
+        mod did_hosting {
+            mod list {
+                mod v0_1;
+            }
+        }
         mod export {
             mod v0_1;
         }
@@ -1762,8 +2063,110 @@ mod vtc {
         }
     }
     mod directory {
+        mod card {
+            mod assert {
+                mod v0_1;
+            }
+            mod present {
+                mod v0_1;
+            }
+            mod public {
+                mod v0_1;
+            }
+            mod publish {
+                mod v0_1;
+            }
+            mod show {
+                mod v0_1;
+            }
+            mod update {
+                mod v0_1;
+            }
+        }
+        mod disclosure {
+            mod v0_1;
+        }
+        mod entries {
+            mod list {
+                mod v0_1;
+                mod v0_2;
+            }
+            mod show {
+                mod v0_1;
+            }
+        }
+        mod export {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod fields {
+            mod define {
+                mod v0_1;
+            }
+            mod list {
+                mod v0_1;
+            }
+            mod retire {
+                mod v0_1;
+            }
+            mod update {
+                mod v0_1;
+            }
+        }
+        mod images {
+            mod get {
+                mod v0_1;
+            }
+            mod upload {
+                mod v0_1;
+            }
+        }
+        mod introduce {
+            mod v0_1;
+        }
+        mod introduction {
+            mod v0_1;
+        }
+        mod notes {
+            mod append {
+                mod v0_1;
+            }
+            mod export {
+                mod v0_1;
+            }
+            mod list {
+                mod v0_1;
+                mod v0_2;
+            }
+        }
         mod query {
             mod v0_1;
+        }
+    }
+    mod elections {
+        mod cancel {
+            mod v0_1;
+        }
+        mod certify {
+            mod v0_1;
+        }
+        mod close {
+            mod v0_1;
+        }
+        mod create {
+            mod v0_1;
+        }
+        mod list {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod show {
+            mod v0_1;
+        }
+        mod tickets {
+            mod issue {
+                mod v0_1;
+            }
         }
     }
     mod endorsement_types {
@@ -1772,6 +2175,7 @@ mod vtc {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod register {
             mod v0_1;
@@ -1783,11 +2187,76 @@ mod vtc {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod revoke {
             mod v0_1;
         }
         mod show {
+            mod v0_1;
+        }
+    }
+    mod groups {
+        mod bindings {
+            mod add {
+                mod v0_1;
+            }
+            mod list {
+                mod v0_1;
+            }
+            mod remove {
+                mod v0_1;
+            }
+        }
+        mod create {
+            mod v0_1;
+        }
+        mod delete {
+            mod v0_1;
+        }
+        mod join {
+            mod v0_1;
+        }
+        mod leave {
+            mod v0_1;
+        }
+        mod list {
+            mod v0_1;
+            mod v0_2;
+        }
+        mod managers {
+            mod add {
+                mod v0_1;
+            }
+            mod remove {
+                mod v0_1;
+            }
+        }
+        mod members {
+            mod add {
+                mod v0_1;
+            }
+            mod list {
+                mod v0_1;
+                mod v0_2;
+            }
+            mod remove {
+                mod v0_1;
+            }
+        }
+        mod requests {
+            mod decide {
+                mod v0_1;
+            }
+            mod list {
+                mod v0_1;
+                mod v0_2;
+            }
+        }
+        mod show {
+            mod v0_1;
+        }
+        mod update {
             mod v0_1;
         }
     }
@@ -1831,11 +2300,13 @@ mod vtc {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod manifest {
             mod v0_1;
             mod v0_2;
             mod v0_3;
+            mod v0_4;
         }
         mod query {
             mod v0_1;
@@ -1881,6 +2352,9 @@ mod vtc {
         mod admin_remove {
             mod v0_1;
         }
+        mod admit {
+            mod v0_1;
+        }
         mod authority_reduced_notice {
             mod v0_1;
         }
@@ -1892,10 +2366,15 @@ mod vtc {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
+        }
+        mod make_membership {
+            mod v0_1;
         }
         mod personhood {
             mod assert {
                 mod v0_1;
+                mod v0_2;
             }
             mod challenge {
                 mod v0_1;
@@ -1905,6 +2384,9 @@ mod vtc {
             }
         }
         mod purge {
+            mod v0_1;
+        }
+        mod registry_consent {
             mod v0_1;
         }
         mod removal_notice {
@@ -1976,6 +2458,7 @@ mod vtc {
         mod records {
             mod list {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod sync_jobs {
@@ -1984,9 +2467,11 @@ mod vtc {
             }
             mod list {
                 mod v0_1;
+                mod v0_2;
             }
             mod retry {
                 mod v0_1;
+                mod v0_2;
             }
         }
     }
@@ -1998,6 +2483,7 @@ mod vtc {
         mod list {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
         mod publish {
             mod v0_1;
@@ -2036,12 +2522,19 @@ mod vtc {
         mod community {
             mod create {
                 mod v0_1;
+                mod v0_2;
+                mod v0_3;
+                mod v0_4;
             }
             mod get {
                 mod v0_1;
+                mod v0_2;
+                mod v0_3;
             }
             mod list {
                 mod v0_1;
+                mod v0_2;
+                mod v0_3;
             }
             mod members {
                 mod add {
@@ -2052,11 +2545,19 @@ mod vtc {
                 }
                 mod remove {
                     mod v0_1;
+                    mod v0_2;
                 }
+            }
+            mod update {
+                mod v0_1;
+                mod v0_2;
+                mod v0_3;
             }
         }
         mod get {
             mod v0_1;
+            mod v0_2;
+            mod v0_3;
         }
         mod limits {
             mod set {
@@ -2065,6 +2566,12 @@ mod vtc {
         }
         mod list {
             mod v0_1;
+            mod v0_2;
+        }
+        mod memberships {
+            mod list {
+                mod v0_1;
+            }
         }
         mod offers {
             mod accept {
@@ -2072,6 +2579,8 @@ mod vtc {
             }
             mod list {
                 mod v0_1;
+                mod v0_2;
+                mod v0_3;
             }
         }
         mod storage {
@@ -2080,6 +2589,7 @@ mod vtc {
             }
             mod migrate {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod usage {
@@ -2121,12 +2631,15 @@ mod vtc {
         mod configs {
             mod create {
                 mod v0_1;
+                mod v0_2;
             }
             mod get {
                 mod v0_1;
+                mod v0_2;
             }
             mod list {
                 mod v0_1;
+                mod v0_2;
             }
             mod probe {
                 mod v0_1;
@@ -2136,11 +2649,13 @@ mod vtc {
             }
             mod update {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod credentials {
             mod set {
                 mod v0_1;
+                mod v0_2;
             }
         }
     }
@@ -2218,6 +2733,7 @@ mod vtc {
             }
             mod list {
                 mod v0_1;
+                mod v0_2;
             }
             mod show {
                 mod v0_1;
@@ -2287,7 +2803,9 @@ mod witness {
     mod session {
         mod submit {
             mod v0_1;
+            mod v0_2;
         }
         mod v0_1;
+        mod v0_2;
     }
 }

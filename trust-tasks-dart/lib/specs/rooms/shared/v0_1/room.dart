@@ -54,6 +54,74 @@ extension type const RetentionPolicy(String value) {
   ];
 }
 
+/// Vendor-namespaced extension object per SPEC.md §4.5.1. Each immediate key MUST be a
+/// reverse-DNS namespace; structure under each namespace is opaque to the framework.
+typedef Ext = Map<String, dynamic>;
+
+/// How long a room keeps its records, by age: the room's **record retention**. Records
+/// older than it states become **eligible** to be removed by `rooms/records/prune`;
+/// nothing is removed until a holder of `admin` asks for a prune, and nothing a prune
+/// removes can be brought back. **Not `retentionPolicy`, and not `retentionDays`.**
+/// Both names are taken in this family and mean other things. `retentionPolicy`
+/// (`RetentionPolicy`) is whether a room's *key chain* lets a member read epochs from
+/// before they joined, fixed at creation because key material either exists for an
+/// epoch or it does not. `retentionDays` (`rooms/create`) is how long a host keeps a
+/// whole room after it lapses unrenewed. This is a third question — how long the room
+/// keeps its *records* while it is live — and unlike the first it is a decision a room
+/// revisits, so it is changeable (`rooms/records/retention/set`). A name sharing
+/// either's would invite a reader to apply one's rules to the other. **Age is the
+/// host's to measure, so age is `updatedAt`.** On the sealed tiers a host can read
+/// nothing of a record but its key, version, status, pinning and when it last changed,
+/// so a policy the host applies can only be stated in those terms. That is also why it
+/// cannot use a record's own `validUntil`, which is sealed: expiry is a reader's rule,
+/// retention a host's. A curation is a change, so it restarts a record's age — a
+/// retraction starts a tombstone's. **Absent, or `{}`, means no record is ever
+/// eligible by age**, and that is the reading a host MUST apply whenever it cannot
+/// read a policy: removing data under a rule nobody stated is the failure this member
+/// exists to prevent. Every member can read the policy in force (`rooms/info`), so a
+/// record is never removed under a rule its readers could not have known.
+class RecordRetention {
+  const RecordRetention({
+    this.tombstoneDays,
+    this.recordDays,
+    this.ext,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RecordRetention.fromJson(Map<String, dynamic> json) =>
+      RecordRetention(
+        tombstoneDays: json['tombstoneDays'] as int?,
+        recordDays: json['recordDays'] as int?,
+        ext: json['ext'] as Map<String, dynamic>?,
+      );
+
+  /// Days a retracted record's tombstone is kept after its retraction. A tombstone whose
+  /// `updatedAt` is more than this long ago is eligible. Tombstones exist so that a
+  /// member syncing incrementally learns of a retraction (`rooms/records/curate`); this
+  /// is how long a member may stay away and still learn of one that way rather than by
+  /// rebuilding their copy of the room. Absent means tombstones are never eligible.
+  final int? tombstoneDays;
+
+  /// Days a record is kept after it last changed, whatever its standing. A record —
+  /// `active`, `deprecated` or `retracted` — whose `updatedAt` is more than this long
+  /// ago is eligible, **unless it is pinned**: pinning says what matters in the room,
+  /// and a room that wants a pinned record gone unpins it first. Absent means records
+  /// are never eligible by age.
+  final int? recordDays;
+
+  /// Ecosystem-defined extension members per SPEC.md §4.5.1. A host MUST NOT treat a
+  /// member here as making more records eligible: a removal rule a member's reader
+  /// cannot understand is one they were never told about.
+  final Ext? ext;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        if (tombstoneDays != null) 'tombstoneDays': tombstoneDays!,
+        if (recordDays != null) 'recordDays': recordDays!,
+        if (ext != null) 'ext': ext!,
+      };
+}
+
 /// What a party presents to act on a room. Carries the whole authority chain: a host
 /// MUST NOT dereference an authority credential's `parent` to fetch a link it was not
 /// given. Resolving over the network would make verification depend on availability,
@@ -65,7 +133,21 @@ extension type const RetentionPolicy(String value) {
 /// party the host authenticated for this request — an identity the transport
 /// established or a document `proof` proved, never one named in a payload. A host that
 /// omits this check authorizes every captured presentation, and the omission is
-/// silent, because the chain still verifies.
+/// silent, because the chain still verifies. **Every credential is its issuer's
+/// attestation, and only its issuer's.** For the membership credential and for every
+/// link of `authority`, a host MUST verify the credential's `proof` with a key that
+/// the credential's own `issuer` lists for `assertionMethod` in its DID document, and
+/// MUST refuse a credential whose proof names a verification method that is not its
+/// issuer's. A proof that verifies under some other party's key is that party's
+/// statement, not the issuer's, and confers nothing. The same binding holds for every
+/// other document a room signs, such as a `RevocationList`. **A chain that verifies
+/// may still be revoked.** A host that has accepted a `RevocationList` for the room
+/// (`rooms/revocations/put`) MUST, from the moment it accepted it, refuse every
+/// presentation in which the membership credential or any link of `authority` is
+/// revoked by that list, under every task and every version of every task it serves
+/// for the room. A chain from which any link is revoked is refused whole: a credential
+/// delegated from a revoked one confers nothing, however it was attenuated. The
+/// refusal is the same `permissionDenied` as any other failed presentation.
 class AuthorityPresentation {
   const AuthorityPresentation({
     required this.membership,
@@ -120,6 +202,7 @@ class SealedRecord {
     required this.ciphertext,
     required this.nonce,
     required this.epoch,
+    this.version,
   });
 
   /// Read this payload from a decoded JSON object.
@@ -127,12 +210,15 @@ class SealedRecord {
         ciphertext: json['ciphertext'] as String,
         nonce: json['nonce'] as String,
         epoch: json['epoch'] as int,
+        version: json['version'] as int?,
       );
 
-  /// The sealed record, base64url. Bound by AEAD associated data to `roomId`, `key`,
-  /// `version` and `epoch`, so a host that relocates it to another key, version, epoch
-  /// or room produces a mismatch and the open fails. The record cannot be moved
-  /// undetected even though the host holds every byte of it.
+  /// The sealed record, base64url. Bound by AEAD associated data to `roomId`, `key`, the
+  /// version it was sealed at, and `epoch`, so a host that relocates it to another key,
+  /// version, epoch or room produces a mismatch and the open fails. The record cannot be
+  /// moved undetected even though the host holds every byte of it. The version it was
+  /// sealed at is `version` below where present, and the record's own `version`
+  /// otherwise.
   final String ciphertext;
 
   /// AEAD nonce, base64url.
@@ -143,11 +229,120 @@ class SealedRecord {
   /// fails authentication rather than causing a reader to try the wrong key.
   final int epoch;
 
+  /// The version this ciphertext was sealed at, where that is no longer the record's own
+  /// `version`. A record's version moves when it is curated (`rooms/records/curate`,
+  /// which MUST assign a new one so that every `sinceVersion` watermark sees the
+  /// change), but a curation other than a retraction keeps the body — and the body is
+  /// bound, by the AEAD and by its author's signature (`SealedRecordBody`), to the
+  /// version it was written at. Without this member a curated record would be opened at
+  /// a version it was never sealed for, and would not open for anyone. A host MUST
+  /// record the version a body was sealed at when it stores it, MUST NOT change it while
+  /// that body is kept — a curation alters a record's standing, never its sealed content
+  /// — and MUST include it whenever it differs from the record's `version`. It is absent
+  /// where the two are equal, which is every record that has not been curated since it
+  /// was written, so the members a record carries are unchanged until a curation needs
+  /// this one. It is part of `sealed`, and so of the record the data commitment covers
+  /// (`CommittedRecord`): a host cannot change it without changing the root. A reader
+  /// opens and verifies the body at this version, and MUST refuse a record whose
+  /// `sealed.version` is greater than its own `version` — a body cannot have been sealed
+  /// for a version the room had not reached. A host that pairs a newer version with an
+  /// older body of the same key is rolling the record back; that is a change to the
+  /// committed record like any other, visible to the comparisons `CommittedRecord`
+  /// exists for.
+  final int? version;
+
   /// Serialize to a JSON-encodable map, omitting absent members.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'ciphertext': ciphertext,
         'nonce': nonce,
         'epoch': epoch,
+        if (version != null) 'version': version!,
+      };
+}
+
+/// What kind of claim a record is, as its author states it. OPTIONAL wherever it
+/// appears; absent means the author did not say, and a reader shows it as unstated
+/// rather than assuming any of these. - `declared` — the author's own statement: a
+/// decision, a preference, an intention, a commitment. True because the author says
+/// so, and only as far as the author speaks for it. - `observed` — something the
+/// author saw, measured or was told directly, recorded as found. - `verified` —
+/// checked against evidence that somebody else can check again, such as a credential
+/// or another record. A record that says `verified` SHOULD name that evidence in
+/// `evidence`; one that does not is an unsupported claim to have checked, and a reader
+/// SHOULD present it so. - `inferred` — derived by reasoning from other information:
+/// an agent's conclusion, a summary's generalisation, a model's guess. The value an
+/// agent writer uses when it does not know which of the others applies. The values are
+/// the author's account of their own record, signed with it. They are not checked by
+/// anybody, confer nothing, and say nothing about whether the record is right —
+/// `inferred` can be correct and `observed` mistaken. Aligned with the provenance
+/// vocabulary of personal agent memory, so that a record moved between a member's
+/// memory and a room keeps its meaning.
+///
+/// An extension type rather than an enum: a value from a newer MINOR of this
+/// specification must not crash the parse (SPEC §5.2), and an enum would throw on one.
+/// Compare against the constants below, and treat anything else as unrecognised.
+extension type const RecordBasis(String value) {
+  static const RecordBasis declared = RecordBasis('declared');
+  static const RecordBasis observed = RecordBasis('observed');
+  static const RecordBasis verified = RecordBasis('verified');
+  static const RecordBasis inferred = RecordBasis('inferred');
+
+  /// Every value this specification's schema permits.
+  static const List<RecordBasis> values = <RecordBasis>[
+    declared,
+    observed,
+    verified,
+    inferred
+  ];
+}
+
+/// The author's own estimate, from 0 to 1, that what the record says is correct.
+/// OPTIONAL; absent means no estimate was given, never 1. Meaningful only beside the
+/// author who gave it: two writers' numbers are not on one scale, so a reader MUST NOT
+/// rank records by `confidence` across authors as though they were, and an agent that
+/// weights by it SHOULD weight within an author's own records. Never authority.
+typedef RecordConfidence = double;
+
+/// Cites a record of a room.
+class RecordEvidenceRecord {
+  const RecordEvidenceRecord({
+    required this.kind,
+    required this.key,
+    this.version,
+    this.roomId,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RecordEvidenceRecord.fromJson(Map<String, dynamic> json) =>
+      RecordEvidenceRecord(
+        kind: json['kind'],
+        key: json['key'] as String,
+        version: json['version'] as int?,
+        roomId: json['roomId'] as String?,
+      );
+
+  final Object? kind;
+
+  /// The cited record's key, as in `rooms/records/put`. Opaque on the sealed tiers, like
+  /// every key there.
+  final String key;
+
+  /// The version cited. OPTIONAL; present, it pins the citation to what the record said
+  /// then, since a record can be rewritten under the same key. A reader that shows a
+  /// later version SHOULD say that it is not the one cited.
+  final int? version;
+
+  /// The cited record's room. Absent means the citing record's own room. A citation into
+  /// another room tells the reader that room's identifier, so a writer SHOULD NOT cite
+  /// into a room the citing room's readers are not meant to learn of.
+  final String? roomId;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'kind': kind,
+        'key': key,
+        if (version != null) 'version': version!,
+        if (roomId != null) 'roomId': roomId!,
       };
 }
 
@@ -173,6 +368,120 @@ class SealedRecord {
 /// that were not valid base58 at all. base58btc is RECOMMENDED, for consistency with
 /// `did:key` and `did:webvh`.
 typedef DigestMultibase = String;
+
+/// Cites a credential.
+class RecordEvidenceCredential {
+  const RecordEvidenceCredential({
+    required this.kind,
+    required this.credentialId,
+    this.digest,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RecordEvidenceCredential.fromJson(Map<String, dynamic> json) =>
+      RecordEvidenceCredential(
+        kind: json['kind'],
+        credentialId: json['credentialId'] as String,
+        digest: json['digest'] as String?,
+      );
+
+  final Object? kind;
+
+  /// The credential's `id`. An identifier: never fetched because a record names it.
+  final String credentialId;
+
+  /// OPTIONAL. A digest of the credential as cited — the SHA-256 multihash of its RFC
+  /// 8785 (JCS) canonicalization, `proof` included — so a reader holding a credential
+  /// with this `id` can tell whether it is the one the author meant.
+  final DigestMultibase? digest;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'kind': kind,
+        'credentialId': credentialId,
+        if (digest != null) 'digest': digest!,
+      };
+}
+
+/// One thing a record cites in its support, discriminated by `kind`. - `record` names
+/// a record of a room by its key, and optionally the version cited and the room.
+/// Absent `roomId` means the record's own room. - `credential` names a credential by
+/// its `id`, and optionally a digest of the credential as cited. **A reference, never
+/// a locator, and never proof.** A reader MUST NOT fetch, resolve or dereference a
+/// `credentialId` because a record names it, and MUST NOT read a record of another
+/// room on the strength of a citation: the rule that a room's identifiers are
+/// identifiers and not addresses (`AuthorityPresentation`) applies here for the same
+/// reasons — fetching would signal to whoever answers which member read which record,
+/// and when. A reader MAY show a cited record of the same room that it already holds
+/// or reads anyway, and MAY match a cited credential against ones its member already
+/// holds. What the citation proves is only that the author cited it; whether the
+/// evidence exists, says what the author claims, or supports the record is for whoever
+/// follows it up to judge.
+typedef RecordEvidence = Object?;
+
+/// What the author offers in support of the record: other records and credentials, by
+/// reference. OPTIONAL; absent means none was named, and an empty array is not a
+/// permitted spelling of that. Order carries no meaning. Bounded so that a reader's
+/// cost of showing a record's support is bounded too.
+typedef RecordEvidenceList = List<RecordEvidence>;
+
+/// What the author permits the record to be used for — for example, that a learner's
+/// record is for instructional personalisation only. OPTIONAL; absent means the author
+/// stated no limit beyond the room's own terms. **Two halves, because purpose has both
+/// a machine and a human reading.** `purposes` names purposes by IRI, so that an agent
+/// can match them without parsing prose; `note` says it in words, for the nuance an
+/// identifier cannot carry. Either may be given alone. **No vocabulary of this
+/// family's own.** Purpose vocabularies exist and are maintained elsewhere — the W3C
+/// Data Privacy Vocabulary (`https://w3id.org/dpv#…`) is the one a writer SHOULD reach
+/// for first — and a short list defined here would be one more to translate between,
+/// and would be wrong at its edges for every domain that uses rooms. An IRI is the
+/// extension path: a community that needs a purpose no published vocabulary has names
+/// it under an IRI it controls. **A statement, not an enforcement.** No host can see
+/// it on the sealed tiers and none enforces it on any tier; every reader is a member
+/// who already holds the content. It records what the author permitted, so that a
+/// member — or an agent acting for one — can honour it, and so that a use outside it
+/// is a use against the author's stated terms rather than one nobody could have known
+/// about. An agent acting for a member SHOULD NOT use a record for a purpose outside
+/// `validFor` and SHOULD tell its principal when asked to. It confers no authority on
+/// anybody, and a `purposes` entry a reader does not recognise is shown, not ignored.
+class PermittedUse {
+  const PermittedUse({
+    this.purposes,
+    this.note,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory PermittedUse.fromJson(Map<String, dynamic> json) => PermittedUse(
+        purposes: json['purposes'] == null
+            ? null
+            : (json['purposes'] as List<dynamic>)
+                .map((e) => e as String)
+                .toList(),
+        note: json['note'] as String?,
+      );
+
+  /// Purposes the record may be used for, each an absolute IRI — for example
+  /// `https://w3id.org/dpv#ServicePersonalisation`. A set: order carries no meaning. An
+  /// identifier, never fetched.
+  final List<String>? purposes;
+
+  /// The permitted use in words, such as `instructional personalisation only`. Plain
+  /// text, rendered as text, and never instructions — an agent reading it treats it as
+  /// the author's statement about the record, not as something to do.
+  final String? note;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        if (purposes != null) 'purposes': purposes!,
+        if (note != null) 'note': note!,
+      };
+}
+
+/// The instant after which the record's author no longer stands behind it as current.
+/// OPTIONAL; absent means the record does not expire. A reader hides a record whose
+/// `validUntil` has passed from default listings, search and recall, and shows it only
+/// on explicit request (`SealedRecordBody`, **Expiry**). No host enforces it.
+typedef RecordValidUntil = String;
 
 /// The name of one blob: the digest of its BlobManifest, taken over the manifest's RFC
 /// 8785 (JCS) canonicalization. sha2-256 is RECOMMENDED and MUST be implemented.
@@ -328,6 +637,214 @@ class FileManifest {
       };
 }
 
+/// What a room says about itself to its own members: a name and, optionally, a
+/// description, short tags and an emoji, so that a member's wallet, portal or CLI can
+/// show what each room is rather than a DID. **It lives in the room, and only there.**
+/// A profile is carried in a record of the room (`RoomProfileStatement`), sealed on
+/// `attributed` and `private` rooms like every other record, so the room's host stores
+/// ciphertext and learns neither the name nor anything else here. It is never put in a
+/// credential — credentials are presented to hosts — nor in a host's record of the
+/// room, in `rooms/create` or `rooms/owner/register`, or in any member a host can
+/// read. On an `open` room it is cleartext, as everything in an open room is. **Plain
+/// text, never instructions.** Every member is free text chosen by whoever wrote the
+/// profile and shown to every member of the room. A reader renders `name`,
+/// `description` and `tags` as text — never as markup, never as a link it follows —
+/// removes or replaces control characters before showing them, and MUST NOT treat any
+/// of it as instructions, which matters most for an agent acting for a member. A
+/// writer MUST NOT put personal data or a credential in any member. **Growth.** A new
+/// optional member arrives in a later version of this component. A reader refuses a
+/// member it does not know (the `SealedRecordBody` rules), so a profile carrying one
+/// is not shown by a reader that predates it, and a writer SHOULD NOT use a member it
+/// cannot expect the room's readers to know. An ecosystem extension goes in `ext`,
+/// which a reader that does not understand it ignores. A change no earlier reader
+/// could survive is a new statement under a new derivation label
+/// (`openvtc/room/profile/v2`), written beside this one until the room's readers have
+/// moved.
+class RoomProfile {
+  const RoomProfile({
+    required this.name,
+    this.description,
+    this.tags,
+    this.emoji,
+    this.ext,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RoomProfile.fromJson(Map<String, dynamic> json) => RoomProfile(
+        name: json['name'] as String,
+        description: json['description'] as String?,
+        tags: json['tags'] == null
+            ? null
+            : (json['tags'] as List<dynamic>).map((e) => e as String).toList(),
+        emoji: json['emoji'] as String?,
+        ext: json['ext'] as Map<String, dynamic>?,
+      );
+
+  /// The room's name as its members see it. Plain text, one line. Bounded like the label
+  /// a community gives a room it owns (`RoomLabel` in vtc/_shared), so a community can
+  /// write the same name here that it shows its administrators and the members it offers
+  /// the room to.
+  final String name;
+
+  /// What the room is for, in a sentence or a short paragraph. Plain text. Absent when
+  /// the room has none; an empty string is not a description.
+  final String? description;
+
+  /// Short identifiers the room files itself under, as a set: order carries no meaning.
+  /// A member's surface MAY filter or group rooms by them. They are the room's own and
+  /// shown to its members — distinct from the tags a community files the rooms it owns
+  /// under for its administrators, which are never written here.
+  final List<String>? tags;
+
+  /// One emoji — a single extended grapheme cluster, such as `📋` — that a surface MAY
+  /// show beside the name. Text, rendered as text: never an image, never a URL, never
+  /// anything a reader fetches, since a fetched icon would tell whoever serves it which
+  /// member opened which room, and when. A reader that cannot render it shows nothing in
+  /// its place.
+  final String? emoji;
+
+  /// Ecosystem-defined extension members per SPEC.md §4.5.1. A reader ignores what it
+  /// does not understand.
+  final Ext? ext;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'name': name,
+        if (description != null) 'description': description!,
+        if (tags != null) 'tags': tags!,
+        if (emoji != null) 'emoji': emoji!,
+        if (ext != null) 'ext': ext!,
+      };
+}
+
+/// The room's profile as a record carries it: the `roomProfile` member of a
+/// `SealedRecordBody`, signed by its author like every record body, with the evidence
+/// a reader needs to decide whether the author was entitled to say it. **Where it is:
+/// one record per epoch, at a key only members can compute.** On an `attributed` or
+/// `private` room the profile written under epoch `E` is stored at the record key
+/// profile_key(E) = base64url-nopad(HKDF-SHA256(ikm = storage_key(E), salt = "", info
+/// = "openvtc/room/profile/v1" || roomId || u64be(E), L = 16)) where `storage_key(E)`
+/// is the room's storage key for epoch `E` — the one records sealed under `E` are
+/// sealed with, as for a file key (`blobs.schema.json`) — `roomId` is its UTF-8 bytes
+/// exactly as on the wire, `u64be` is as `blobs.schema.json` defines it, and `salt` is
+/// the empty string. The result is 22 characters, the shape of any random record key,
+/// so to the host it is one more opaque record and the family's rule that a sealed
+/// room's keys are opaque (`RecordMetadata.key`) holds for it as for any other. A
+/// member finds it knowing nothing but the room and the epoch, which is all a member
+/// who has just joined has. Since `storage_key(E)` never leaves a member's key holder,
+/// it is the key holder that computes it (`rooms/keys/profile/read`,
+/// `rooms/keys/profile/write`). On an `open` room, which has no storage key and hides
+/// nothing from its host, the profile is the record at the fixed key `room-profile`,
+/// and its `cleartext.body` is the UTF-8 JSON of the signed `SealedRecordBody` — the
+/// object the sealed tiers seal — so that a reader verifies one thing on every tier. A
+/// writer SHOULD also set `cleartext.title` to the profile's `name`. The record is
+/// written with `rooms/records/put` like any other, so a host enforces only `write` on
+/// it and cannot tell it from any other record. Whether its author could say what the
+/// room is called is therefore decided by readers, from what the statement carries.
+/// **Who may write it.** The author's `authority` must confer `curate` or `admin` at
+/// the room's scope: `admin` because naming the room is part of governing it, `curate`
+/// because it is the standing to judge what the room's shared knowledge is, and a
+/// room's name and purpose are the first thing a member reads of it. `write` alone
+/// never suffices: every member able to add a record could otherwise rename the room
+/// for everyone. **Accepting one.** A reader resolving a room's profile MUST apply to
+/// the record at the profile's location the `SealedRecordBody` reading rules (1)–(4) —
+/// on an `open` room to the body parsed from `cleartext.body`, with rule (4) against
+/// the author the host recorded — and MUST also refuse it unless: 1. it carries
+/// `roomProfile` and none of `title`, `description`, `body`, `tags` and `file`; 2. on
+/// a sealed tier, the epoch it was sealed under is `E`, the epoch whose key located
+/// it; 3. `authority` verifies as a host verifies a chain (`AuthorityPresentation`):
+/// at most 8 links, leaf first; every link's `proof` made with a key its own `issuer`
+/// lists for `assertionMethod`; the last link issued by `roomId`; no link widening
+/// what its parent conferred, in actions, scope or validity; the whole conferring
+/// `curate` or `admin` at this room's scope; the leaf's subject equal to the body's
+/// `author`, which stands in for a host's presenter binding; and every link valid at
+/// `issuedAt` rather than at the moment of reading. The reader MUST NOT dereference a
+/// link it was not given; 4. `issuedAt` is no later than five minutes after, and no
+/// earlier than one hour before, the `updatedAt` the host reports for the record; 5.
+/// where the reader holds a `RevocationList` for the room, verified as a host verifies
+/// one, no link of `authority` is revoked by an entry whose `revokedAt` is at or
+/// before `issuedAt`. A reader MUST ignore a profile that fails any of these, as
+/// though it were absent — and, unlike an ordinary record, SHOULD say that it did,
+/// naming the author where the tier discloses one: a profile written by somebody
+/// without the standing to write it is somebody trying to rename the room.
+/// **Revocation is not retroactive.** A profile written while its author held the
+/// standing to write it stays valid after that author is removed, their grant lapses,
+/// or a `room` entry resets every credential. The statement was made with authority;
+/// withdrawing the authority withdraws what the author may do next, not what they
+/// already did, and the alternative — every member's view of the room's name going
+/// blank when whoever named it is removed — is something nobody asked for. It is not a
+/// back door. A removed party cannot write afterwards, because a host refuses every
+/// presentation a list it holds revokes; a statement back-dated into a grant its
+/// author no longer holds fails item 4 unless the host colludes; and removal advances
+/// the room's epoch, after which the owner's key holder re-writes the profile under
+/// the new epoch as the owner (`rooms/keys/profile/write`), so on the ordinary path
+/// the removed author's statement is superseded by the same act that removes them.
+/// **Choosing among several.** There is at most one profile per epoch, because there
+/// is one record per key. A reader at epoch `C` takes the profile at `profile_key(C)`;
+/// if there is none, or it fails the checks above, it tries `C - 1`, and so on down to
+/// the earliest epoch it can derive a storage key for, and takes the first one it
+/// accepts — the newest. It MUST NOT prefer an older profile to a newer one it
+/// accepts. A record at a profile location that is `retracted` is a profile
+/// deliberately cleared — retraction is `rooms/records/curate`, for which a host
+/// requires `curate` — and the walk stops there: the room has no profile. A profile
+/// accepted below `C` is **stale**: written before the room's latest epoch advance and
+/// not re-written since. A member of a `fromJoin` room cannot walk back at all, which
+/// is why the profile is re-written at every advance. **Size.** A writer SHOULD set
+/// `padding` so that the UTF-8 JSON of the signed body is a multiple of 1024 bytes, so
+/// that a host comparing ciphertext lengths learns nothing about how long the name or
+/// the description is. A reader ignores `padding`.
+class RoomProfileStatement {
+  const RoomProfileStatement({
+    required this.profile,
+    required this.issuedAt,
+    required this.authority,
+    this.padding,
+    this.ext,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RoomProfileStatement.fromJson(Map<String, dynamic> json) =>
+      RoomProfileStatement(
+        profile: RoomProfile.fromJson(json['profile'] as Map<String, dynamic>),
+        issuedAt: json['issuedAt'] as String,
+        authority: (json['authority'] as List<dynamic>)
+            .map((e) => e as String)
+            .toList(),
+        padding: json['padding'] as String?,
+        ext: json['ext'] as Map<String, dynamic>?,
+      );
+
+  final RoomProfile profile;
+
+  /// When the author made this statement: signed with it, the instant `authority` is
+  /// evaluated at, and bounded against the host's `updatedAt` for the record so that it
+  /// cannot be back-dated into a grant the author no longer holds.
+  final String issuedAt;
+
+  /// The author's authority chain, LEAF FIRST, ending with a credential the room issued,
+  /// conferring `curate` or `admin` on `author` at this room's scope. The credentials
+  /// themselves, never a zero-knowledge presentation: a reader is a member, who already
+  /// sees `author`. Carried in the statement because readers, not the host, decide
+  /// whether its author could say it, and a reader fetches no link it was not given.
+  /// Capped at 8, as a presentation is.
+  final List<String> authority;
+
+  /// Ignored by readers; see **Size**. A writer SHOULD use spaces.
+  final String? padding;
+
+  /// Ecosystem-defined extension members per SPEC.md §4.5.1.
+  final Ext? ext;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'profile': profile.toJson(),
+        'issuedAt': issuedAt,
+        'authority': authority,
+        if (padding != null) 'padding': padding!,
+        if (ext != null) 'ext': ext!,
+      };
+}
+
 /// The plaintext inside `SealedRecord.ciphertext` on an `attributed` or `private`
 /// room, as JSON, signed by its author. Client to client: no host task carries it,
 /// because a host receives only ciphertext. Defined so that every member's client
@@ -340,15 +857,72 @@ class FileManifest {
 /// MUST, before showing any member of it or trusting its `file`: (1) parse it as this
 /// object and refuse an unknown member; (2) verify `proof` against `author`'s DID
 /// document, for `assertionMethod`; (3) check that `roomId`, `key` and `version` equal
-/// the location the record was read from; (4) on an `attributed` room, check that
-/// `author` equals the `author` the host recorded for the record. A reader MUST refuse
-/// a record that fails any of these, and MUST NOT show it with a warning instead.
-/// **Why the location is signed as well as sealed.** The AEAD stops the host
-/// relocating ciphertext, but every member can open and re-seal a record. Without
-/// `roomId`, `key` and `version` under the author's signature, a member could copy
-/// another member's signed body to a new key or a later version, and on a `private`
-/// room, where the host records no author, readers would attribute it to the original
-/// author.
+/// the location the record was sealed at — the record's `roomId` and `key`, and
+/// `sealed.version` where present, else the record's `version` (`SealedRecord`); (4)
+/// on an `attributed` room, check that `author` equals the `author` the host recorded
+/// for the record. A reader MUST refuse a record that fails any of these, and MUST NOT
+/// show it with a warning instead. **A record curated before `sealed.version`
+/// existed.** A host that predates `SealedRecord.version` moved such a record's
+/// version without recording the one it was sealed at, so it opens at neither. Where a
+/// record carries no `sealed.version` and does not open at its own `version`, a reader
+/// MAY try each earlier version in turn, newest first, and use the first at which it
+/// opens; rule (3) then checks the body against that version. It MUST NOT try a
+/// version greater than the record's own. The AEAD makes a wrong guess fail rather
+/// than mislead, and the author's signature over the location makes the version that
+/// opened the one the author wrote — so the search recovers the record without
+/// trusting the host for the answer. **Why the location is signed as well as sealed.**
+/// The AEAD stops the host relocating ciphertext, but every member can open and
+/// re-seal a record. Without `roomId`, `key` and `version` under the author's
+/// signature, a member could copy another member's signed body to a new key or a later
+/// version, and on a `private` room, where the host records no author, readers would
+/// attribute it to the original author. **A profile record.** A body carrying
+/// `roomProfile` is the room's own profile (`RoomProfileStatement`) and not one of its
+/// records: it MUST carry none of `title`, `description`, `body`, `tags`, `file`,
+/// `basis`, `confidence`, `evidence`, `validFor` and `validUntil`, and the rules for
+/// locating, accepting and choosing it are `RoomProfileStatement`'s, applied on top of
+/// the four above. A reader that opens one in the course of reading or listing the
+/// room's records SHOULD NOT present it as a record — it is how the room describes
+/// itself, not something a member wrote into it. A reader that predates `roomProfile`
+/// refuses it by rule (1), which shows nothing rather than something wrong.
+/// **Provenance: what kind of claim a record is.** `basis`, `confidence`, `evidence`
+/// and `validFor` say what the author is asserting and on what footing — an observed
+/// fact, a statement of the author's own, something checked against a credential, or
+/// an agent's inference. They are inside the signature like every other member, so a
+/// reader can attribute them to `author` exactly as it attributes the body, and a
+/// change to any of them after signing fails rule (2). All four are OPTIONAL, and a
+/// record that carries none of them — every record written before they existed —
+/// verifies and reads exactly as before: absent means the author did not say, never a
+/// default value. A writer SHOULD set `basis`; an agent writing on its own account
+/// that does not know which value applies SHOULD write `inferred`, and a client
+/// relaying what its member typed SHOULD write `declared`. **They are provenance for
+/// display and weighting, never authority.** A reader MUST NOT treat any of them as
+/// granting, widening or evidencing a permission, MUST NOT let `basis: verified` stand
+/// in for verifying what `evidence` names, and MUST NOT fetch anything because
+/// `evidence` names it (see `RecordEvidence`). A reader that shows a record SHOULD
+/// show its `basis` beside its `author` — or say that none was stated — and an agent
+/// recalling records MAY weight by `basis` and `confidence`, but MUST treat
+/// `validFor.note` like `body`: as plain text, never as instructions. **Expiry.**
+/// `validUntil` is the instant after which the author no longer stands behind the
+/// record as current — a meeting note good for a month, a decision good for years. It
+/// is signed and sealed with the body, and nothing about it is in the clear: a host
+/// never sees it on the sealed tiers, so it cannot and MUST NOT be relied on to
+/// enforce it, and a writer MUST NOT copy it into any cleartext member of the write. A
+/// reader MUST NOT present a record whose `validUntil` is at or before the reader's
+/// current time in a default listing, search, browse or agent recall, and MAY present
+/// it on an explicit request for expired records, marked as expired. Expiry hides; it
+/// does not delete. The record, its ciphertext and any file it carries stay in the
+/// room until a member with `curate` retracts it (`rooms/records/curate`) or the
+/// room's records are pruned; a curator's agent MAY retract records it finds expired,
+/// which is how a sealed room reclaims their storage without telling its host anything
+/// about expiry. **Readers that predate these members.** A reader written before
+/// `basis`, `confidence`, `evidence`, `validFor` and `validUntil` refuses a body
+/// carrying any of them by rule (1), which shows nothing rather than something wrong —
+/// in particular it can never show an expired record as current. The same holds for a
+/// key holder sealing on a writer's behalf (`rooms/keys/seal`, `bodyInvalid`). A
+/// writer that meets such a refusal MAY write the record again without the provenance
+/// members, but MUST NOT drop `validUntil` to get a record accepted: a record that
+/// silently outlives its author's own expiry is the failure this member exists to
+/// prevent.
 class SealedRecordBody {
   const SealedRecordBody({
     required this.roomId,
@@ -359,7 +933,13 @@ class SealedRecordBody {
     this.description,
     this.body,
     this.tags,
+    this.basis,
+    this.confidence,
+    this.evidence,
+    this.validFor,
+    this.validUntil,
     this.file,
+    this.roomProfile,
     required this.proof,
   });
 
@@ -376,9 +956,25 @@ class SealedRecordBody {
         tags: json['tags'] == null
             ? null
             : (json['tags'] as List<dynamic>).map((e) => e as String).toList(),
+        basis:
+            json['basis'] == null ? null : RecordBasis(json['basis'] as String),
+        confidence: json['confidence'] == null
+            ? null
+            : (json['confidence'] as num).toDouble(),
+        evidence: json['evidence'] == null
+            ? null
+            : (json['evidence'] as List<dynamic>).map((e) => e).toList(),
+        validFor: json['validFor'] == null
+            ? null
+            : PermittedUse.fromJson(json['validFor'] as Map<String, dynamic>),
+        validUntil: json['validUntil'] as String?,
         file: json['file'] == null
             ? null
             : FileManifest.fromJson(json['file'] as Map<String, dynamic>),
+        roomProfile: json['roomProfile'] == null
+            ? null
+            : RoomProfileStatement.fromJson(
+                json['roomProfile'] as Map<String, dynamic>),
         proof: json['proof'] as Map<String, dynamic>,
       );
 
@@ -389,7 +985,9 @@ class SealedRecordBody {
   final String key;
 
   /// The version the writer intended the record to take, as sealed with
-  /// `rooms/keys/seal`.
+  /// `rooms/keys/seal`: the version the body is bound to. A record curated since keeps
+  /// its body and moves to a new version, and carries this one as `sealed.version`
+  /// (`SealedRecord`).
   final int version;
 
   /// The DID of the party that wrote the record: the member, or the agent acting under
@@ -403,10 +1001,19 @@ class SealedRecordBody {
   /// rendered inert.
   final String? body;
   final List<String>? tags;
+  final RecordBasis? basis;
+  final RecordConfidence? confidence;
+  final RecordEvidenceList? evidence;
+  final PermittedUse? validFor;
+  final RecordValidUntil? validUntil;
 
   /// Present when the record carries a file. Its `blobRef` MUST be the one the record
   /// names in `blobs`.
   final FileManifest? file;
+
+  /// Present only on the room's profile record, which then carries no `title`,
+  /// `description`, `body`, `tags` or `file`. See `RoomProfileStatement`.
+  final RoomProfileStatement? roomProfile;
 
   /// The author's Data Integrity proof over every other member.
   final Map<String, dynamic> proof;
@@ -421,7 +1028,13 @@ class SealedRecordBody {
         if (description != null) 'description': description!,
         if (body != null) 'body': body!,
         if (tags != null) 'tags': tags!,
+        if (basis != null) 'basis': basis!.value,
+        if (confidence != null) 'confidence': confidence!,
+        if (evidence != null) 'evidence': evidence!,
+        if (validFor != null) 'validFor': validFor!.toJson(),
+        if (validUntil != null) 'validUntil': validUntil!,
         if (file != null) 'file': file!.toJson(),
+        if (roomProfile != null) 'roomProfile': roomProfile!.toJson(),
         'proof': proof,
       };
 }
@@ -473,6 +1086,52 @@ class EpochLink {
         'nonce': nonce,
       };
 }
+
+/// The earliest epoch whose storage key a room still lets anybody derive: its chain
+/// was pruned below it (`rooms/epoch/prune`), and every epoch under it is meant to be
+/// unreadable — at the host, and, as far as each of them conforms, at every member's
+/// key holder. Absent means the room's chain has never been pruned. **The off-by-one,
+/// stated once.** A rung (`EpochLink`) numbered `e` opens with epoch `e`'s key and
+/// yields epoch `e − 1`'s. A prune with `beforeEpoch: N` drops the rungs numbered
+/// below `N`, so rung `N` survives and still yields epoch `N − 1`'s key; the floor
+/// after it is therefore `N − 1`, never `N`. A party applying a floor `F` discards the
+/// rungs numbered `F` and below — rung `F` would yield `F − 1` — and every key for an
+/// epoch below `F`. **Monotonic.** A floor only rises. A host raises the room's to the
+/// higher of the floor it held and `beforeEpoch − 1` at each prune it performs, and
+/// never lowers it; every other party keeps the highest it has learnt for the room,
+/// from any source, and never lowers it either. A lower floor learnt later — from a
+/// stale response, or a host that has not been pruned — changes nothing. **A host**
+/// that holds a floor for a room MUST NOT store, accept or serve a rung numbered at or
+/// below it, and MUST serve the floor wherever a response can carry it
+/// (`rooms/epoch/chain` 0.2, `rooms/epoch/prune` 0.2). **A member's key holder** — and
+/// any client of the member that keeps the room's rungs or keys itself — on learning a
+/// floor `F` above the one it held, by any means (`rooms/epoch/chain` 0.2 in its own
+/// reads, `rooms/keys/backfill` 0.2, `rooms/keys/chain` 0.2 from its principal): 1.
+/// MUST discard every rung it holds for the room numbered `F` or below, and every
+/// storage key, file key or other key material it holds or has cached for an epoch
+/// below `F` — including one it derived in passing while applying commits through
+/// those epochs (`rooms/keys/commit`, `rooms/epoch/commits`); 2. MUST NOT store such a
+/// rung or key again from any source — a delivery from its principal, a backfill, a
+/// repair, a catch-up, or a host that has not been pruned — and MUST NOT ask for one;
+/// 3. MUST refuse to derive or use a key for an epoch below `F`, answering exactly as
+/// it answers for an epoch its chain does not reach (`beyondChain`, with an earliest
+/// epoch at or above `F`), whatever it still holds; 4. MUST keep `F` itself for as
+/// long as it holds anything for the room, since it is what makes items 2 and 3
+/// enforceable after the material is gone. A key holder SHOULD learn the floor
+/// whenever it fetches rungs or catches up, and SHOULD ask for it — a
+/// `rooms/epoch/chain` 0.2 read carries it whatever `fromEpoch` and `limit` it names —
+/// at least as often as it otherwise reads the room. One that never asks never learns,
+/// and keeps what it held. **What a floor does not do, stated plainly.** It is
+/// honoured by parties that conform; it does not reach into one that does not, and it
+/// recalls nothing. Plaintext a key holder already returned, records a member already
+/// opened, files already downloaded and decrypted, exports, and any key a member's own
+/// software extracted are beyond it. What it guarantees cryptographically is what the
+/// prune guarantees: a party that had not derived a key below the floor before the
+/// host erased its rungs can never derive it afterwards. What it adds is that every
+/// conforming key holder stops being able to — so that a restart, a new device or an
+/// agent's next recall reads nothing below the floor, rather than everything its
+/// holder happened to keep.
+typedef EpochFloor = int;
 
 /// Curation state. `retracted` is a tombstone: the body is gone, the key and version
 /// remain so incremental sync converges and the audit chain stays intact.
@@ -875,30 +1534,89 @@ typedef RecordCount = int;
 /// different trees, labelled with one version. That reads as equivocation and is not,
 /// and a **false accusation discredits the mechanism rather than the host** — the
 /// worst outcome available here. Taken from the committed set, the version cannot
-/// disagree with the root it labels, whatever else is happening to the room. The
-/// corollary is worth stating: a host that **erases** a record — as distinct from
-/// retracting it, which leaves a tombstone in the tree — moves the root without
-/// necessarily moving this value, and two members straddling that erasure would see
-/// one version over two roots. Erasure is a retention act with its own answer, and a
-/// family that exposes one owes this definition another look. **This is what makes two
-/// roots comparable at all**, and without it the comparison this family is built on
-/// cannot be performed. A room moves: every put, curate and retraction assigns a new
-/// version, so two roots taken at two moments differ legitimately and a reader learns
-/// nothing from the difference. Shown two different roots, a host that equivocated and
-/// a host that was merely written to are indistinguishable — the first can always
-/// answer *the room moved between your reads*, and nothing contradicts it. A version
-/// is assigned by exactly the mutations that change the tree — every put, curate and
-/// retraction takes the next one — so the highest of them names the **state** the root
-/// describes. Two roots carrying the same `headVersion` and differing is a host
-/// caught: there is no write to attribute the difference to. Two roots carrying
-/// different ones are simply two moments, and a reader should draw nothing from them.
-/// A host can lie about this number too, and it is then lying about the counter it
-/// also uses for optimistic concurrency (`expectedVersion`) and for incremental sync
-/// (`sinceVersion`) — so a member holding a signed acknowledgement of a write at
-/// version `V` contradicts any head below `V` directly. **Not a timestamp.** A time is
-/// host-asserted, unverifiable and useless for this: two roots a second apart are not
-/// evidence of anything, while two roots at one version are.
+/// disagree with the root it labels, whatever else is happening to the room. **A prune
+/// is the one mutation that removes leaves, and it takes a version too.** A host that
+/// **erases** records — as distinct from retracting them, which leaves a tombstone in
+/// the tree — moves the root, and taken from the records alone this value need not
+/// move with it: it would stay put, or even fall if the erased record held the highest
+/// version, and two members straddling the erasure would see one version over two
+/// roots, which reads as equivocation and is not. So on a room whose records have been
+/// pruned (`rooms/records/prune`), this value is the higher of the highest version
+/// among the records the tree covers and the `version` of the room's latest
+/// `RecordPrune`, computed from the same snapshot as the root. A prune takes the next
+/// version from the room's counter exactly as a put or a curation does, so the pair
+/// stays a snapshot: a root and a head that agree before a prune and a root and a head
+/// that agree after it, never one head over two roots. A room that has never been
+/// pruned is unaffected. **This is what makes two roots comparable at all**, and
+/// without it the comparison this family is built on cannot be performed. A room
+/// moves: every put, curate and retraction assigns a new version, so two roots taken
+/// at two moments differ legitimately and a reader learns nothing from the difference.
+/// Shown two different roots, a host that equivocated and a host that was merely
+/// written to are indistinguishable — the first can always answer *the room moved
+/// between your reads*, and nothing contradicts it. A version is assigned by exactly
+/// the mutations that change the tree — every put, curate and retraction takes the
+/// next one — so the highest of them names the **state** the root describes. Two roots
+/// carrying the same `headVersion` and differing is a host caught: there is no write
+/// to attribute the difference to. Two roots carrying different ones are simply two
+/// moments, and a reader should draw nothing from them. A host can lie about this
+/// number too, and it is then lying about the counter it also uses for optimistic
+/// concurrency (`expectedVersion`) and for incremental sync (`sinceVersion`) — so a
+/// member holding a signed acknowledgement of a write at version `V` contradicts any
+/// head below `V` directly. **Not a timestamp.** A time is host-asserted, unverifiable
+/// and useless for this: two roots a second apart are not evidence of anything, while
+/// two roots at one version are.
 typedef HeadVersion = int;
+
+/// The mark a prune leaves: **that** records were removed, when, and how many — never
+/// which, and never anything they said. A prune removes records outright, tombstones
+/// included, so the room's record tree loses leaves and an incremental reader has
+/// nothing left to learn the removal from. This is what it learns from instead. A host
+/// keeps the latest one per room and serves it with every listing that can carry it
+/// (`rooms/records/list` 0.3, as `lastPrune`); a reader whose own copy of the room was
+/// synchronised to a version below `version` MUST rebuild that copy from a full
+/// listing — no `sinceVersion` — and drop every record the full listing no longer
+/// holds. Without that, a record the room removed lives on in every cache that
+/// synchronised before the prune, and a record retracted while the reader was away
+/// comes back as current. **What a host keeps and what it does not.** A host keeps
+/// this marker, and in its audit trail the prune's `reason`, its requester where the
+/// tier discloses one, and the retention it was made under. It MUST NOT keep anything
+/// a pruned record said — body, ciphertext, cleartext, title, description, file or
+/// blob — and SHOULD NOT keep pruned records' keys: the count is the audit, and a list
+/// of keys on an `open` room, where keys may be descriptive, is content by another
+/// name.
+class RecordPrune {
+  const RecordPrune({
+    required this.version,
+    required this.at,
+    required this.removed,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RecordPrune.fromJson(Map<String, dynamic> json) => RecordPrune(
+        version: json['version'] as int,
+        at: json['at'] as String,
+        removed: json['removed'] as int,
+      );
+
+  /// The version the prune took from the room's counter, as a put or a curation would.
+  /// No record carries it; it is what moves `HeadVersion` past the removal, so that a
+  /// root taken before and a root taken after are never labelled with one version.
+  final int version;
+
+  /// When the host performed it.
+  final String at;
+
+  /// How many records were removed, tombstones included. A prune that removed nothing
+  /// leaves no mark.
+  final int removed;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'version': version,
+        'at': at,
+        'removed': removed,
+      };
+}
 
 /// What a room writes into its own witnessed log, so that a host serving a stale,
 /// forked or partial view of it becomes **evident rather than merely possible**.
@@ -1325,5 +2043,257 @@ class ReadVerification {
         if (anchor != null) 'anchor': anchor!.value,
         if (count != null) 'count': count!.value,
         if (head != null) 'head': head!.toJson(),
+      };
+}
+
+/// Withdraws one credential — a membership credential or any authority link — by its
+/// `id`.
+class CredentialRevocation {
+  const CredentialRevocation({
+    required this.kind,
+    required this.credentialId,
+    required this.revokedAt,
+    this.until,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory CredentialRevocation.fromJson(Map<String, dynamic> json) =>
+      CredentialRevocation(
+        kind: json['kind'],
+        credentialId: json['credentialId'] as String,
+        revokedAt: json['revokedAt'] as String,
+        until: json['until'] as String?,
+      );
+
+  final Object? kind;
+
+  /// The `id` of the credential withdrawn, as `rooms/owner/issue-authority` and
+  /// `rooms/owner/issue-membership` return it, or as an attenuated credential carries
+  /// it.
+  final String credentialId;
+
+  /// When the room made this withdrawal.
+  final String revokedAt;
+
+  /// OPTIONAL. After this instant every credential the entry matches has expired anyway,
+  /// so a host MAY discard the entry and the room MAY omit it from later lists. Absent
+  /// means the entry is kept for as long as the room keeps a list.
+  final String? until;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'kind': kind,
+        'credentialId': credentialId,
+        'revokedAt': revokedAt,
+        if (until != null) 'until': until!,
+      };
+}
+
+/// Withdraws a party: every credential naming them as subject or issuer whose
+/// `validFrom` is earlier than `revokedAt`.
+class SubjectRevocation {
+  const SubjectRevocation({
+    required this.kind,
+    required this.subject,
+    required this.revokedAt,
+    this.until,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory SubjectRevocation.fromJson(Map<String, dynamic> json) =>
+      SubjectRevocation(
+        kind: json['kind'],
+        subject: json['subject'] as String,
+        revokedAt: json['revokedAt'] as String,
+        until: json['until'] as String?,
+      );
+
+  final Object? kind;
+
+  /// The party withdrawn. Never the room itself.
+  final String subject;
+
+  /// When the room made this withdrawal.
+  final String revokedAt;
+
+  /// OPTIONAL. After this instant every credential the entry matches has expired anyway,
+  /// so a host MAY discard the entry and the room MAY omit it from later lists. Absent
+  /// means the entry is kept for as long as the room keeps a list.
+  final String? until;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'kind': kind,
+        'subject': subject,
+        'revokedAt': revokedAt,
+        if (until != null) 'until': until!,
+      };
+}
+
+/// Withdraws every credential whose `validFrom` is earlier than `revokedAt`, whoever
+/// holds it.
+class RoomRevocation {
+  const RoomRevocation({
+    required this.kind,
+    required this.revokedAt,
+    this.until,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RoomRevocation.fromJson(Map<String, dynamic> json) => RoomRevocation(
+        kind: json['kind'],
+        revokedAt: json['revokedAt'] as String,
+        until: json['until'] as String?,
+      );
+
+  final Object? kind;
+
+  /// When the room made this withdrawal.
+  final String revokedAt;
+
+  /// OPTIONAL. After this instant every credential the entry matches has expired anyway,
+  /// so a host MAY discard the entry and the room MAY omit it from later lists. Absent
+  /// means the entry is kept for as long as the room keeps a list.
+  final String? until;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'kind': kind,
+        'revokedAt': revokedAt,
+        if (until != null) 'until': until!,
+      };
+}
+
+/// One withdrawal in a `RevocationList`, discriminated by `kind`. - `credential`
+/// withdraws one credential, named by its `id`. It matches the membership credential
+/// or any authority link whose `id` equals `credentialId`. - `subject` withdraws a
+/// party: every credential the room's chain gave them **before** `revokedAt`. It
+/// matches the membership credential or any authority link whose `credentialSubject`
+/// id **or** `issuer` is `subject` and whose `validFrom` is earlier than `revokedAt`.
+/// Matching the issuer as well as the subject withdraws what the party delegated
+/// before their removal, which no re-admission revives. A credential carrying no
+/// `validFrom` is treated as issued before every entry. - `room` withdraws every
+/// credential whose `validFrom` is earlier than `revokedAt`, whoever holds it. It is
+/// how a room resets access — after a compromise, or on a `private` room, where naming
+/// a party would disclose who was a member. **Keyed on time, so a party can come
+/// back.** A `subject` or `room` entry withdraws what was issued before it and nothing
+/// after, so a room that re-admits a removed party issues fresh credentials and they
+/// verify. A `credential` entry is permanent for that one credential, which nobody
+/// re-issues. **Tiers.** On a `private` room a host MUST refuse a list carrying a
+/// `credential` or `subject` entry: a presentation there withholds the credential and
+/// its subject, so such an entry is one the host cannot apply and a disclosure of who
+/// was in the room. Only `room` entries are permitted, and a host serving a `private`
+/// room MUST refuse any presentation for which it cannot establish that no credential
+/// in it has a `validFrom` earlier than the latest `room` entry's `revokedAt`.
+typedef RevocationEntry = Object?;
+
+/// The room's own statement of which credentials it has withdrawn before they expire —
+/// signed by the room, cumulative, and numbered, so that it means the same thing at
+/// every host it is delivered to. **Why the room signs it, and why it is cumulative.**
+/// A host authorizes from credentials the room issued and keeps no roster; a
+/// withdrawal kept only as a host's own state would make the room unmovable and the
+/// host part of the membership. A list the room signed is room state: it moves with
+/// the room, any host it is delivered to reaches the same decision, and nothing a host
+/// invents can be mistaken for it. It is cumulative — every list carries every entry
+/// still in force — so a host holding any one list holds the room's whole withdrawal
+/// state, and a host that missed a list loses nothing once it receives a later one.
+/// **Producing.** The room's key holder builds the object without `proof` and signs it
+/// with a W3C Data Integrity proof whose `verificationMethod` is a key the room's DID
+/// document lists for `assertionMethod` and whose `proofPurpose` is `assertionMethod`.
+/// A producer MUST support `eddsa-jcs-2022`. Each list's `sequence` is exactly one
+/// greater than the last list the room signed, and the producer MUST NOT sign two
+/// different lists at one `sequence`. **Accepting.** A host MUST refuse a list unless:
+/// (1) `roomId` is the room it is delivered for; (2) `proof` verifies with a key of
+/// `roomId` listed for `assertionMethod` — a list signed by any other key, however
+/// valid the signature, is not the room's; (3) `sequence` is greater than that of the
+/// list it holds, or equal with an identical list (a repeat, answered as accepted and
+/// changing nothing); (4) it is **append-only** against the list it holds: every entry
+/// of the held list appears in it unchanged, unless that entry's `until` has passed. A
+/// list that lowers the sequence is a rollback and one that drops a live entry is a
+/// reinstatement nobody signed for, and both are refused; two different lists at one
+/// `sequence` is the room's key equivocating, and the host keeps the list it holds.
+/// **Applying.** A credential is revoked by an accepted list when any entry matches it
+/// (see `RevocationEntry`). An entry whose `until` has passed MAY be discarded by a
+/// host and omitted from later lists; no other entry is ever dropped. **Size.** A list
+/// is bounded at 4096 entries. A room that would exceed it uses a `room` entry, which
+/// withdraws everything issued before it and lets the room re-issue to those who
+/// remain.
+class RevocationList {
+  const RevocationList({
+    required this.roomId,
+    required this.sequence,
+    required this.issuedAt,
+    required this.entries,
+    required this.proof,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RevocationList.fromJson(Map<String, dynamic> json) => RevocationList(
+        roomId: json['roomId'] as String,
+        sequence: json['sequence'] as int,
+        issuedAt: json['issuedAt'] as String,
+        entries: (json['entries'] as List<dynamic>).map((e) => e).toList(),
+        proof: json['proof'] as Map<String, dynamic>,
+      );
+
+  /// The room whose credentials this list withdraws, exactly as on the wire. Signed, so
+  /// a list cannot be replayed against another room.
+  final String roomId;
+
+  /// The list's position in the room's sequence: exactly one greater than the last list
+  /// the room signed. A host accepts only a list whose sequence is above the one it
+  /// holds, which is what stops a host, a relayer or an attacker holding an old list
+  /// from rolling the room's withdrawals back.
+  final int sequence;
+
+  /// When the room signed this list.
+  final String issuedAt;
+
+  /// Every withdrawal still in force, in the order the room made them. Empty is valid: a
+  /// room that has revoked nothing, or whose every entry has lapsed, can still state its
+  /// sequence.
+  final List<RevocationEntry> entries;
+
+  /// The room's Data Integrity proof over every other member, made with a key the room's
+  /// DID document lists for `assertionMethod`.
+  final Map<String, dynamic> proof;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'roomId': roomId,
+        'sequence': sequence,
+        'issuedAt': issuedAt,
+        'entries': entries,
+        'proof': proof,
+      };
+}
+
+/// Which `RevocationList` a party holds, without its entries: comparable between the
+/// room's key holder and a host, and between two hosts, without disclosing whom the
+/// room withdrew.
+class RevocationHead {
+  const RevocationHead({
+    required this.sequence,
+    required this.digest,
+  });
+
+  /// Read this payload from a decoded JSON object.
+  factory RevocationHead.fromJson(Map<String, dynamic> json) => RevocationHead(
+        sequence: json['sequence'] as int,
+        digest: json['digest'] as String,
+      );
+
+  /// The list's `sequence`.
+  final int sequence;
+
+  /// SHA-256 multihash of the list's RFC 8785 (JCS) canonicalization, `proof` included.
+  /// Two parties holding one sequence with different digests have been given two lists
+  /// the room signed at one sequence.
+  final DigestMultibase digest;
+
+  /// Serialize to a JSON-encodable map, omitting absent members.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'sequence': sequence,
+        'digest': digest,
       };
 }

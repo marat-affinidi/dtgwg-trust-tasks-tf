@@ -58,16 +58,17 @@ Unlike the rest of the community-administrator-only reads in this family, this o
 
 It is a read. It changes nothing.
 
-## Changes from 0.1
-
-- **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
-- The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.5`).
-
-Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
-
 ## Status of this Document
 
 This specification is a **draft** ([SPEC §5.3](/SPEC.md#53-maturity-levels)). It targets framework version 0.6.0 and may change without a version bump while it remains a draft ([SPEC §5.2](/SPEC.md#52-compatibility-rules)).
+
+## Changes from 0.1
+
+- Response **`nextCursor`** narrows from `string | null` to **`string`**. On the last page the VTC omits it; it is never `null`.
+
+This applies the registry-wide pagination convention, under which the absence of `nextCursor` is the one way to say "last page". A VTC that sent `"nextCursor": null` under `0.1` omits the member instead. The request is unchanged, and nothing else in the payload moves.
+
+Breaking on the wire, released as a `MINOR` increment under [§5.2](/SPEC.md#52-compatibility-rules)'s `draft` allowance. `0.1` remains published.
 
 ## Conformance
 
@@ -98,7 +99,7 @@ The administrator sends the request to the VTC. See the top-level schema in [`pa
 1. Identifies the caller from the verified `proof` ([Authorization](#authorization)), refusing an unsigned document with `proofRequired`.
 2. Determines the caller's administered namespaces from its own records. Refuses with `git-ns/activity/list:notAdministrator` a caller who has none and does not hold the community-administrator capability, and a caller whose `namespace` is not one of them.
 3. Returns `items`: every audit row and bridge job in an administered namespace — or in `namespace` only, when given — restated as `ActivityItem`s, newest first.
-4. Returns at most `limit` items (clamped to 1..=500, default 100) and, when more match, a `nextCursor` to continue.
+4. Returns at most `limit` items (clamped to 1..=500, default 100) and, when more match, a `nextCursor` to continue; on the last page `nextCursor` is absent, never `null`.
 
 A VTC **MUST NOT** return an item outside the caller's administered namespaces, and **MUST NOT** change anything on this task.
 
@@ -130,7 +131,7 @@ A grant, a rename with its old name in `detail`, and a bridge job's queue state 
 ```json
 {
   "id": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f7002",
-  "type": "https://trusttasks.org/spec/git-ns/activity/list/0.1#response",
+  "type": "https://trusttasks.org/spec/git-ns/activity/list/0.2#response",
   "threadId": "urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f7001",
   "issuer": "did:webvh:QmVtcScid7:acme-vtc.example",
   "recipient": "did:webvh:QmCarolScid3:acme-vtc.example:carol",

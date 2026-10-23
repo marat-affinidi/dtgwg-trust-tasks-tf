@@ -15,6 +15,15 @@ fn request_example_1() {
     let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
     assert_eq!(rendered, expected, "request example failed round-trip");
 }
+#[test]
+fn response_example_1() {
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6d02\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/bridge/job/list/0.3#response\",\n  \"threadId\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f6d01\",\n  \"issuer\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"recipient\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol\",\n  \"issuedAt\": \"2026-09-26T09:20:01Z\",\n  \"payload\": {\n    \"jobs\": [\n      {\n        \"jobId\": \"job_01J8Z9F7K2\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"bridgeDid\": \"did:webvh:QmBridgeScid9:bridge.acme.example\",\n        \"kind\": \"closePullRequest\",\n        \"state\": \"failed\",\n        \"repo\": \"github.com/acme/widgets\",\n        \"number\": 42,\n        \"attempts\": 2,\n        \"createdAt\": \"2026-09-26T09:05:00Z\",\n        \"acceptedAt\": \"2026-09-26T09:05:02Z\",\n        \"lastError\": \"the installation lacks pull_requests:write\"\n      },\n      {\n        \"jobId\": \"job_01J8Z8C3D4\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"bridgeDid\": \"did:webvh:QmBridgeScid9:bridge.acme.example\",\n        \"kind\": \"bootstrap\",\n        \"state\": \"failed\",\n        \"repo\": \"github.com/acme/widgets\",\n        \"attempts\": 3,\n        \"createdAt\": \"2026-09-26T08:30:00Z\",\n        \"acceptedAt\": \"2026-09-26T08:30:05Z\",\n        \"lastError\": \"the installation lacks administration:write\"\n      }\n    ]\n  }\n}\n";
+    let doc: trust_tasks_rs::TrustTask<spec::Response> =
+        serde_json::from_str(JSON).expect("deserialize response example");
+    let rendered = serde_json::to_value(&doc).expect("re-serialize");
+    let expected: serde_json::Value = serde_json::from_str(JSON).expect("re-parse expected");
+    assert_eq!(rendered, expected, "response example failed round-trip");
+}
 /// Each fixture in `payload.invalid-examples.json` MUST be
 /// rejected by at least one of: serde deserialization, or
 /// JSON-Schema validation under the `validate` feature. The
@@ -84,7 +93,11 @@ fn rejects_invalid_response_examples() {
         ),
         (
             "Response variant: missing required `jobs` member.",
-            "{\n  \"nextCursor\": null\n}",
+            "{\n  \"nextCursor\": \"c2VxPTEwMA\"\n}",
+        ),
+        (
+            "Response variant: `nextCursor` is `null`. The last page omits `nextCursor`; it is never `null`.",
+            "{\n  \"jobs\": [],\n  \"nextCursor\": null\n}",
         ),
     ];
     for (i, (note, raw)) in fixtures.iter().enumerate() {

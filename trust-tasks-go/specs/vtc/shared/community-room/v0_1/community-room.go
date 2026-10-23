@@ -4,9 +4,37 @@
 package vtcsharedcommunityroomv0_1
 
 // RoomLabel A name for the room, chosen by an administrator: shown to administrators and
-// to the members a room is offered to. Not part of the room's identity and not sent to
-// the room's host path. MUST NOT carry personal data.
+// to the members a room is offered to. Not part of the room's identity and never in
+// anything a room's host can read. From `vtc/rooms/community/create` 0.3 and
+// `vtc/rooms/community/update` 0.2 the community also writes it, through its own VTA, as
+// the `name` of the room's own profile (`RoomProfile` in rooms/_shared), sealed inside
+// the room for its members; earlier versions keep it out of the room altogether. MUST NOT
+// carry personal data.
 type RoomLabel = string
+
+// RoomDescription What the room is for, in a sentence or a short paragraph, written by an
+// administrator: shown to administrators holding `vtc.rooms.manage` and to the members
+// the room is offered to. Plain text — a consumer renders it as text, never as markup.
+// Like `RoomLabel`, it is the community's own record as the room's owner: not part of the
+// room's identity and never in anything a room's host can read. From
+// `vtc/rooms/community/create` 0.3 and `vtc/rooms/community/update` 0.2 the community
+// also writes it, through its own VTA, as the `description` of the room's own profile
+// (`RoomProfile` in rooms/_shared), sealed inside the room for its members; earlier
+// versions keep it out of the room altogether. It MUST NOT carry personal data or a
+// credential, and a reader MUST NOT treat it as instructions.
+type RoomDescription = string
+
+// RoomTag A short identifier an administrator files a community-owned room under —
+// `board`, `working-group`, `finance` — so the room list can be filtered. Lower-case
+// letters, digits and hyphens, starting with a letter or digit. Owner-side tracking
+// metadata for holders of `vtc.rooms.manage` only: never shown to members, never sent on
+// the room's host path, and it confers nothing.
+type RoomTag = string
+
+// RoomTags The room's tags, at most eight, as a set: order carries no meaning. An empty
+// list means the room has none — a tag grants nothing, so empty has no more dangerous
+// reading.
+type RoomTags = []RoomTag
 
 // MemberAction What a member of a community-owned room may do there. `admin` is not among
 // them: minting epochs, admitting and removing members are the community's, as the room's
@@ -60,6 +88,49 @@ type CommunityRoom struct {
 
 	// The administrator who created it.
 	CreatedBy *string `json:"createdBy,omitempty"`
+}
+
+// CommunityRoomV2 What vtc/rooms/community/{create,get,list}/0.2 and
+// vtc/rooms/community/update/0.1 return: `CommunityRoom` plus the details an
+// administrator keeps track of a room by — `description`, `tags`, and who last changed
+// them and when. A separate definition, not a change to `CommunityRoom`, so that the 0.1
+// versions of those tasks keep the exact shape they published. The room's creation is
+// `room.createdAt` and `createdBy`.
+type CommunityRoomV2 struct {
+	Room  HostedRoom `json:"room"`
+	Label RoomLabel  `json:"label"`
+
+	// Absent when the room has none.
+	Description *RoomDescription `json:"description,omitempty"`
+
+	// Absent or empty when the room has none.
+	Tags *RoomTags `json:"tags,omitempty"`
+
+	// The storage config receiving the room's new uploads.
+	StorageConfig *StorageConfigID `json:"storageConfig,omitempty"`
+
+	// Members in state `admitted`.
+	Admitted int64 `json:"admitted"`
+
+	// Offers not yet accepted or withdrawn.
+	Offered int64 `json:"offered"`
+
+	// When the community's own `admin` authority over the room expires. A room whose owner's
+	// authority lapses can no longer advance its epoch, admit or remove; a community SHOULD
+	// renew it well before.
+	OwnerAuthorityValidUntil *string `json:"ownerAuthorityValidUntil,omitempty"`
+
+	// The administrator who created it.
+	CreatedBy *string `json:"createdBy,omitempty"`
+
+	// When `label`, `description` or `tags` last changed. Absent until the first change after
+	// creation. Distinct from `room.updatedAt`, which is the host record's and moves with the
+	// room's epoch and lifecycle.
+	DetailsUpdatedAt *string `json:"detailsUpdatedAt,omitempty"`
+
+	// The administrator who made that change. Present exactly when `detailsUpdatedAt` is. The
+	// earlier values and who set them are in the community's audit trail, not here.
+	DetailsUpdatedBy *string `json:"detailsUpdatedBy,omitempty"`
 }
 
 // RoomMember One party the community admitted to a room it owns, or offered admission to.
@@ -119,6 +190,118 @@ type Offer struct {
 	// still be answered.
 	State       OfferState       `json:"state"`
 	Credentials OfferCredentials `json:"credentials"`
+}
+
+// OfferV2State `open`: not yet accepted. `accepted`: accepted, kept listed while a
+// repeated accept can still be answered.
+type OfferV2State string
+
+// Values OfferV2State may take, per this specification's schema.
+const (
+	OfferV2StateOpen     OfferV2State = "open"
+	OfferV2StateAccepted OfferV2State = "accepted"
+)
+
+// OfferV2 What vtc/rooms/offers/list/0.2 returns: `Offer` plus `description`. A separate
+// definition, not a change to `Offer`, so that vtc/rooms/offers/list/0.1 keeps the exact
+// shape it published. `label` and `description` are the room's as they stand when the
+// offer is read, not as they stood when it was made.
+type OfferV2 struct {
+	RoomID string `json:"roomId"`
+
+	// The room's host: this community.
+	Host  string    `json:"host"`
+	Label RoomLabel `json:"label"`
+
+	// Absent when the room has none.
+	Description *RoomDescription `json:"description,omitempty"`
+	Visibility  Visibility       `json:"visibility"`
+	Actions     MemberActions    `json:"actions"`
+	ValidUntil  string           `json:"validUntil"`
+	OfferedAt   string           `json:"offeredAt"`
+
+	// `open`: not yet accepted. `accepted`: accepted, kept listed while a repeated accept can
+	// still be answered.
+	State       OfferV2State     `json:"state"`
+	Credentials OfferCredentials `json:"credentials"`
+}
+
+// RenewalCredentials The two credentials a renewal replaces, serialized as
+// rooms/owner/{issue-membership,issue-authority} return them: a membership and an
+// authority granting the same actions until the renewal's `validUntil`. No invitation:
+// the member is already admitted, and a renewal never opens a second way in. The member's
+// surface stores each with the member's key holder **in place of** the one it renews,
+// never beside it.
+type RenewalCredentials struct {
+	// The renewed Verifiable Membership Credential.
+	Membership string `json:"membership"`
+
+	// The renewed Verifiable Authority Credential granting `actions` until `validUntil`.
+	Authority string `json:"authority"`
+}
+
+// Renewal What vtc/rooms/offers/list/0.3 returns in `renewals`: a renewal of an admission
+// the member already holds, as the member it is addressed to sees it. `label` and
+// `description` are the room's as they stand when it is read.
+type Renewal struct {
+	RoomID string `json:"roomId"`
+
+	// The room's host: this community.
+	Host  string    `json:"host"`
+	Label RoomLabel `json:"label"`
+
+	// Absent when the room has none.
+	Description *RoomDescription `json:"description,omitempty"`
+	Visibility  Visibility       `json:"visibility"`
+	Actions     MemberActions    `json:"actions"`
+
+	// When the renewed authority expires.
+	ValidUntil string `json:"validUntil"`
+
+	// When the authority it replaces expires: the renewal is listed until then, or until a
+	// later renewal or the member's removal supersedes it.
+	Renews      string             `json:"renews"`
+	IssuedAt    string             `json:"issuedAt"`
+	Credentials RenewalCredentials `json:"credentials"`
+}
+
+// RoomMembership What vtc/rooms/memberships/list/0.1 returns: one room the community
+// owns, and where the caller's admission to it stands in the community's own record.
+// Unlike `OfferV2` it carries no credentials — those are collected with
+// vtc/rooms/offers/list while an offer is open — and it is listed in every state, for as
+// long as the community keeps the record, not only while an accept can be repeated.
+// `label` and `description` are the room's as they stand when the record is read.
+type RoomMembership struct {
+	RoomID string `json:"roomId"`
+
+	// The room's host: this community.
+	Host  string    `json:"host"`
+	Label RoomLabel `json:"label"`
+
+	// Absent when the room has none.
+	Description *RoomDescription `json:"description,omitempty"`
+	Visibility  Visibility       `json:"visibility"`
+	Actions     MemberActions    `json:"actions"`
+
+	// When the member's authority credential expires.
+	ValidUntil string      `json:"validUntil"`
+	State      MemberState `json:"state"`
+	OfferedAt  string      `json:"offeredAt"`
+
+	// When the community recorded the admission. Present when `state` is `admitted`, and kept
+	// when it becomes `removed`.
+	AdmittedAt *string `json:"admittedAt,omitempty"`
+
+	// Present exactly when `state` is `removed`.
+	RemovedAt *string `json:"removedAt,omitempty"`
+
+	// On an `attributed` or `private` room in state `admitted`: until when the community
+	// keeps the Welcome, so that a repeated vtc/rooms/offers/accept carrying the same
+	// KeyPackage is answered with it. Absent on an `open` room, in any other state, and once
+	// the community no longer keeps it. A surface finding the member admitted but the room
+	// absent from its key holder's rooms/keys/list finishes the acceptance before this time,
+	// and asks an administrator to re-admit the member after it.
+	RepeatAcceptUntil *string `json:"repeatAcceptUntil,omitempty"`
 }
 
 // Reason Why the administrator is making this change. Recorded with it in the audit
