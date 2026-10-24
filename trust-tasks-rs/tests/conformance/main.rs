@@ -112,6 +112,7 @@ mod auth {
                 }
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod redeem {
                 mod finish {
@@ -184,6 +185,7 @@ mod auth {
             mod v0_2;
             mod v0_3;
             mod v0_4;
+            mod v0_5;
         }
         mod approve_response {
             mod v0_1;
@@ -202,6 +204,7 @@ mod auth {
             }
             mod invite {
                 mod v0_1;
+                mod v0_2;
             }
             mod list {
                 mod v0_1;
@@ -483,18 +486,22 @@ mod did_management {
     mod registry {
         mod admin_register {
             mod v0_1;
+            mod v0_2;
         }
         mod check {
             mod v0_1;
+            mod v0_2;
         }
         mod deregister {
             mod v0_1;
         }
         mod get {
             mod v0_1;
+            mod v0_2;
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod purge_domain {
             mod v0_1;
@@ -531,6 +538,7 @@ mod did_management {
         }
         mod register {
             mod v0_1;
+            mod v0_2;
         }
         mod stats_sync {
             mod v0_1;
@@ -542,6 +550,7 @@ mod did_management {
         }
         mod timeseries {
             mod v0_1;
+            mod v0_2;
         }
     }
 }
@@ -550,40 +559,50 @@ mod external {
     mod accounts {
         mod archive {
             mod v0_1;
+            mod v0_2;
         }
         mod bindings {
             mod grant {
                 mod v0_1;
+                mod v0_2;
             }
             mod revoke {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod create {
             mod v0_1;
+            mod v0_2;
         }
         mod delete {
             mod v0_1;
         }
         mod get {
             mod v0_1;
+            mod v0_2;
         }
         mod keys {
             mod rotate {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod list {
             mod v0_1;
+            mod v0_2;
         }
         mod probe {
             mod v0_1;
+            mod v0_2;
         }
         mod restore {
             mod v0_1;
+            mod v0_2;
         }
         mod resume {
             mod v0_1;
+            mod v0_2;
         }
         mod secret {
             mod set {
@@ -595,9 +614,11 @@ mod external {
         }
         mod suspend {
             mod v0_1;
+            mod v0_2;
         }
         mod update {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod credentials {
@@ -918,11 +939,13 @@ mod messaging {
         }
         mod status {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod monitor {
         mod event {
             mod v0_1;
+            mod v0_2;
         }
         mod subscribe {
             mod v0_1;
@@ -1165,6 +1188,7 @@ mod rooms {
     mod info {
         mod v0_1;
         mod v0_2;
+        mod v0_3;
     }
     mod keys {
         mod act {
@@ -1174,6 +1198,7 @@ mod rooms {
             mod v0_4;
             mod v0_5;
             mod v0_6;
+            mod v0_7;
         }
         mod backfill {
             mod v0_1;
@@ -1182,6 +1207,7 @@ mod rooms {
         mod browse {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
         mod chain {
             mod v0_1;
@@ -1266,9 +1292,11 @@ mod rooms {
             mod v0_2;
             mod v0_3;
             mod v0_4;
+            mod v0_5;
         }
         mod prune {
             mod v0_1;
+            mod v0_2;
         }
         mod put {
             mod v0_2;
@@ -1434,6 +1462,7 @@ mod voting {
         }
         mod read {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod election {
@@ -1445,9 +1474,11 @@ mod voting {
         }
         mod register {
             mod v0_1;
+            mod v0_2;
         }
         mod show {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod result {
@@ -1521,9 +1552,11 @@ mod vta {
         }
         mod mnemonic_export {
             mod v1_0;
+            mod v1_1;
         }
         mod mnemonic_status {
             mod v0_1;
+            mod v0_2;
         }
         mod report {
             mod v0_1;
@@ -1679,6 +1712,7 @@ mod vta {
         }
         mod enroll_submit {
             mod v0_1;
+            mod v0_2;
         }
         mod list {
             mod v0_1;
@@ -1726,6 +1760,7 @@ mod vta {
             mod deal {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod decrypt {
                 mod v0_1;
@@ -1733,17 +1768,21 @@ mod vta {
             }
             mod enrol {
                 mod v0_1;
+                mod v0_2;
             }
             mod justify {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod keys {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod read {
                 mod v0_1;
+                mod v0_2;
             }
         }
         mod verify_attestation {
@@ -1756,10 +1795,12 @@ mod vta {
         }
         mod vote {
             mod v0_1;
+            mod v0_2;
         }
         mod vote_encrypted {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
         mod voter {
             mod accept {
@@ -1767,12 +1808,14 @@ mod vta {
             }
             mod read {
                 mod v0_1;
+                mod v0_2;
             }
             mod receipt {
                 mod v0_1;
             }
             mod register {
                 mod v0_1;
+                mod v0_2;
             }
         }
     }
@@ -1784,6 +1827,7 @@ mod vta {
     mod services {
         mod disable {
             mod v1_0;
+            mod v1_1;
         }
         mod drain {
             mod cancel {
@@ -1791,27 +1835,34 @@ mod vta {
             }
             mod list {
                 mod v1_0;
+                mod v1_1;
             }
         }
         mod enable {
             mod v1_0;
+            mod v1_1;
         }
         mod get {
             mod v1_0;
+            mod v1_1;
         }
         mod list {
             mod v1_0;
+            mod v1_1;
         }
         mod report {
             mod v0_1;
+            mod v0_2;
         }
         mod rollback {
             mod v1_0;
             mod v1_1;
+            mod v1_2;
         }
         mod update {
             mod v1_0;
             mod v1_1;
+            mod v1_2;
         }
     }
     mod webvh {
@@ -1878,6 +1929,7 @@ mod vta {
             mod update {
                 mod v1_0;
                 mod v2_0;
+                mod v2_1;
             }
         }
         mod servers {
@@ -1930,18 +1982,22 @@ mod vtc {
             mod acknowledge {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod cancel {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod list {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod show {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
         }
         mod bootstrap {
@@ -1953,6 +2009,7 @@ mod vtc {
                 mod v0_2;
                 mod v0_3;
                 mod v0_4;
+                mod v0_5;
             }
             mod subscribe {
                 mod v0_1;
@@ -1960,6 +2017,7 @@ mod vtc {
                 mod v0_3;
                 mod v0_4;
                 mod v0_5;
+                mod v0_6;
             }
         }
         mod invites {
@@ -2155,13 +2213,16 @@ mod vtc {
         }
         mod create {
             mod v0_1;
+            mod v0_2;
         }
         mod list {
             mod v0_1;
             mod v0_2;
+            mod v0_3;
         }
         mod show {
             mod v0_1;
+            mod v0_2;
         }
         mod tickets {
             mod issue {
@@ -2421,6 +2482,7 @@ mod vtc {
         }
         mod step_up_passkey_notice {
             mod v0_1;
+            mod v0_2;
         }
         mod update {
             mod v0_1;
@@ -2439,6 +2501,7 @@ mod vtc {
     mod operator {
         mod offline_write {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod policies {
@@ -2495,6 +2558,7 @@ mod vtc {
         }
         mod restore {
             mod v0_1;
+            mod v0_2;
         }
         mod revoke {
             mod v0_1;
@@ -2502,6 +2566,7 @@ mod vtc {
         }
         mod suspend {
             mod v0_1;
+            mod v0_2;
         }
     }
     mod roles {
@@ -2581,6 +2646,7 @@ mod vtc {
                 mod v0_1;
                 mod v0_2;
                 mod v0_3;
+                mod v0_4;
             }
         }
         mod storage {
@@ -2734,6 +2800,7 @@ mod vtc {
             mod list {
                 mod v0_1;
                 mod v0_2;
+                mod v0_3;
             }
             mod show {
                 mod v0_1;
