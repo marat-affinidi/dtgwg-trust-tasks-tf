@@ -578,7 +578,7 @@ class RepoSummary {
 class BreakGlass {
   const BreakGlass({
     required this.by,
-    required this.at,
+    required this.recordedAt,
     required this.justification,
     this.effectiveAt,
     this.ratifiedBy,
@@ -588,7 +588,7 @@ class BreakGlass {
   /// Read this payload from a decoded JSON object.
   factory BreakGlass.fromJson(Map<String, dynamic> json) => BreakGlass(
         by: json['by'] as String,
-        at: json['at'] as String,
+        recordedAt: json['recordedAt'] as String,
         justification: json['justification'] as String,
         effectiveAt: json['effectiveAt'] as String?,
         ratifiedBy: json['ratifiedBy'] as String?,
@@ -600,7 +600,7 @@ class BreakGlass {
   final Did by;
 
   /// When the VTC recorded the break-glass.
-  final String at;
+  final String recordedAt;
 
   /// The actor's statement of why nobody else could grant this right. Shown to every
   /// community administrator, every namespace admin of the namespace and every owner of
@@ -608,8 +608,8 @@ class BreakGlass {
   final String justification;
 
   /// When the right takes effect, where the community's policy imposed a delay. Absent:
-  /// it took effect at `at`. Until this instant the record confers nothing and is not
-  /// published, and any administrator who may revoke it may do so.
+  /// it took effect at `recordedAt`. Until this instant the record confers nothing and
+  /// is not published, and any administrator who may revoke it may do so.
   final String? effectiveAt;
 
   /// The administrator who ratified the record — never its subject. Absent while
@@ -622,7 +622,7 @@ class BreakGlass {
   /// Serialize to a JSON-encodable map, omitting absent members.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'by': by,
-        'at': at,
+        'recordedAt': recordedAt,
         'justification': justification,
         if (effectiveAt != null) 'effectiveAt': effectiveAt!,
         if (ratifiedBy != null) 'ratifiedBy': ratifiedBy!,

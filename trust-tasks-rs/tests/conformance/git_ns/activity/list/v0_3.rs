@@ -17,7 +17,7 @@ fn request_example_1() {
 }
 #[test]
 fn response_example_1() {
-    const JSON: &str = "{\n  \"id\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f7002\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/activity/list/0.3#response\",\n  \"threadId\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f7001\",\n  \"issuer\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"recipient\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol\",\n  \"issuedAt\": \"2026-09-26T09:35:01Z\",\n  \"payload\": {\n    \"items\": [\n      {\n        \"at\": \"2026-09-26T08:30:00Z\",\n        \"action\": \"gitNs.job.bootstrap\",\n        \"source\": \"job\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"detail\": \"failed\"\n      },\n      {\n        \"at\": \"2026-09-25T16:00:00Z\",\n        \"action\": \"gitNs.repo.renamed\",\n        \"source\": \"audit\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"detail\": \"gizmos\"\n      },\n      {\n        \"at\": \"2026-09-23T09:50:00Z\",\n        \"action\": \"gitNs.right.granted\",\n        \"source\": \"audit\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"right\": \"git.repo.own\"\n      }\n    ]\n  }\n}\n";
+    const JSON: &str = "{\n  \"id\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f7002\",\n  \"type\": \"https://trusttasks.org/spec/git-ns/activity/list/0.3#response\",\n  \"threadId\": \"urn:uuid:7a2e4c10-3b5d-4f6e-9a1b-2c3d4e5f7001\",\n  \"issuer\": \"did:webvh:QmVtcScid7:acme-vtc.example\",\n  \"recipient\": \"did:webvh:QmCarolScid3:acme-vtc.example:carol\",\n  \"issuedAt\": \"2026-09-26T09:35:01Z\",\n  \"payload\": {\n    \"items\": [\n      {\n        \"occurredAt\": \"2026-09-26T08:30:00Z\",\n        \"action\": \"gitNs.job.bootstrap\",\n        \"source\": \"job\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"detail\": \"failed\"\n      },\n      {\n        \"occurredAt\": \"2026-09-25T16:00:00Z\",\n        \"action\": \"gitNs.repo.renamed\",\n        \"source\": \"audit\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"detail\": \"gizmos\"\n      },\n      {\n        \"occurredAt\": \"2026-09-23T09:50:00Z\",\n        \"action\": \"gitNs.right.granted\",\n        \"source\": \"audit\",\n        \"namespace\": \"ns_01J8Z6Q4M2\",\n        \"resource\": \"github.com/acme/widgets\",\n        \"right\": \"git.repo.own\"\n      }\n    ]\n  }\n}\n";
     let doc: trust_tasks_rs::TrustTask<spec::Response> =
         serde_json::from_str(JSON).expect("deserialize response example");
     let rendered = serde_json::to_value(&doc).expect("re-serialize");
@@ -77,11 +77,11 @@ fn rejects_invalid_response_examples() {
     let fixtures: &[(&str, &str)] = &[
         (
             "Response variant: `action` fails the dot-separated identifier pattern (a bare hyphenated word, not camelCase segments).",
-            "{\n  \"items\": [\n    {\n      \"action\": \"git-ns-job-bootstrap\",\n      \"at\": \"2026-09-26T08:30:00Z\",\n      \"source\": \"job\"\n    }\n  ]\n}",
+            "{\n  \"items\": [\n    {\n      \"action\": \"git-ns-job-bootstrap\",\n      \"occurredAt\": \"2026-09-26T08:30:00Z\",\n      \"source\": \"job\"\n    }\n  ]\n}",
         ),
         (
             "Response variant: `source` is not one of the two declared values.",
-            "{\n  \"items\": [\n    {\n      \"action\": \"gitNs.job.bootstrap\",\n      \"at\": \"2026-09-26T08:30:00Z\",\n      \"source\": \"queue\"\n    }\n  ]\n}",
+            "{\n  \"items\": [\n    {\n      \"action\": \"gitNs.job.bootstrap\",\n      \"occurredAt\": \"2026-09-26T08:30:00Z\",\n      \"source\": \"queue\"\n    }\n  ]\n}",
         ),
         (
             "Response variant: missing required `items` member.",

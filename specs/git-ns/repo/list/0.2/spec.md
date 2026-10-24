@@ -62,8 +62,9 @@ It is a read. It changes nothing, grants nothing and publishes nothing.
 
 - **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
 - The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
+- **`lastCheck.at` → `concludedAt`** (type unchanged: an RFC 3339 date-time, still REQUIRED), for the registry's naming consistency: an event instant is named for the event it records, never a bare `at`.
 
-Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+Accepting what `0.1` refused is backwards-compatible; the rename is not — a `0.1` document carrying a `lastCheck.at` is not a valid `0.2` document. The whole is released as a `MINOR` increment under [SPEC §5.2](/SPEC.md#52-compatibility-rules)'s `draft` allowance, and `0.1` remains published. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -163,7 +164,7 @@ The VTC answers with the repositories, per the sub-schema reachable via `$anchor
         ],
         "lastCheck": {
           "conclusion": "success",
-          "at": "2026-09-26T08:40:12Z",
+          "concludedAt": "2026-09-26T08:40:12Z",
           "sha": "9f2c4e1ab37d"
         },
         "roleMap": {

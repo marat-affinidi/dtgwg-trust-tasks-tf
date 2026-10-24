@@ -10,7 +10,7 @@
     "namespace",
     "record",
     "by",
-    "at"
+    "occurredAt"
   ],
   "properties": {
     "event": {
@@ -34,7 +34,7 @@
       "$ref": "../../../_shared/0.6/git-ns.schema.json#/$defs/Did",
       "description": "Who acted: the subject for `breakGlass`, the ratifier for `ratified`, the revoker for `revoked`."
     },
-    "at": {
+    "occurredAt": {
       "type": "string",
       "format": "date-time",
       "description": "When the event took effect at the VTC — not when the notice was sent, which differs whenever the recipient was offline."

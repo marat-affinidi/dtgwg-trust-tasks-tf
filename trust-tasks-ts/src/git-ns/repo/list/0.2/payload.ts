@@ -139,7 +139,7 @@ export interface LastCheck {
   /**
    * When the check concluded.
    */
-  at: string;
+  concludedAt: string;
   /**
    * The commit it ran on.
    */
@@ -268,7 +268,7 @@ export const PAYLOAD_SCHEMA = {
       "additionalProperties": false,
       "required": [
         "conclusion",
-        "at"
+        "concludedAt"
       ],
       "properties": {
         "conclusion": {
@@ -277,7 +277,7 @@ export const PAYLOAD_SCHEMA = {
           "maxLength": 64,
           "description": "The check's conclusion, in the forge's words (`success`, `failure`)."
         },
-        "at": {
+        "concludedAt": {
           "type": "string",
           "format": "date-time",
           "description": "When the check concluded."
@@ -612,7 +612,7 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
       "additionalProperties": false,
       "required": [
         "conclusion",
-        "at"
+        "concludedAt"
       ],
       "properties": {
         "conclusion": {
@@ -621,7 +621,7 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
           "maxLength": 64,
           "description": "The check's conclusion, in the forge's words (`success`, `failure`)."
         },
-        "at": {
+        "concludedAt": {
           "type": "string",
           "format": "date-time",
           "description": "When the check concluded."

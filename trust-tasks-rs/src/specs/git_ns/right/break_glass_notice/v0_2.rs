@@ -39,22 +39,17 @@ pub mod error {
 ///  "description": "How a self-granted right came to be, and whether another administrator has since ratified it. A record whose `breakGlass` has no `ratifiedBy` is **unratified**: it is live and published like any other right, it does not count toward the last-owner or last-admin invariants, and any community administrator or namespace admin of its namespace may revoke it. Ratification (git-ns/right/ratify) sets `ratifiedBy` and `ratifiedAt`; from then on the record is an ordinary grant, and `breakGlass` stays as its history. Never published to the Trust Registry.",
 ///  "type": "object",
 ///  "required": [
-///    "at",
 ///    "by",
-///    "justification"
+///    "justification",
+///    "recordedAt"
 ///  ],
 ///  "properties": {
-///    "at": {
-///      "description": "When the VTC recorded the break-glass.",
-///      "type": "string",
-///      "format": "date-time"
-///    },
 ///    "by": {
 ///      "description": "Who broke the glass: always the record's `subject`, restated so the flag reads on its own.",
 ///      "$ref": "#/definitions/Did"
 ///    },
 ///    "effectiveAt": {
-///      "description": "When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `at`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.",
+///      "description": "When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `recordedAt`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.",
 ///      "type": "string",
 ///      "format": "date-time"
 ///    },
@@ -73,6 +68,11 @@ pub mod error {
 ///    "ratifiedBy": {
 ///      "description": "The administrator who ratified the record — never its subject. Absent while unratified.",
 ///      "$ref": "#/definitions/Did"
+///    },
+///    "recordedAt": {
+///      "description": "When the VTC recorded the break-glass.",
+///      "type": "string",
+///      "format": "date-time"
 ///    }
 ///  },
 ///  "additionalProperties": false
@@ -83,11 +83,9 @@ pub mod error {
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct BreakGlass {
-    ///When the VTC recorded the break-glass.
-    pub at: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Who broke the glass: always the record's `subject`, restated so the flag reads on its own.
     pub by: Did,
-    ///When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `at`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.
+    ///When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `recordedAt`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.
     #[serde(
         rename = "effectiveAt",
         default,
@@ -110,6 +108,9 @@ pub struct BreakGlass {
         skip_serializing_if = "::std::option::Option::is_none"
     )]
     pub ratified_by: ::std::option::Option<Did>,
+    ///When the VTC recorded the break-glass.
+    #[serde(rename = "recordedAt")]
+    pub recorded_at: ::chrono::DateTime<::chrono::offset::Utc>,
 }
 impl BreakGlass {
     pub fn builder() -> builder::BreakGlass {
@@ -473,18 +474,13 @@ impl<'de> ::serde::Deserialize<'de> for NamespaceId {
 ///  "description": "The VTC tells an administrator that a member broke the glass on an elevated git right, or that a break-glass record was ratified or revoked. Unsolicited: it answers no request from the recipient.",
 ///  "type": "object",
 ///  "required": [
-///    "at",
 ///    "by",
 ///    "event",
 ///    "namespace",
+///    "occurredAt",
 ///    "record"
 ///  ],
 ///  "properties": {
-///    "at": {
-///      "description": "When the event took effect at the VTC — not when the notice was sent, which differs whenever the recipient was offline.",
-///      "type": "string",
-///      "format": "date-time"
-///    },
 ///    "by": {
 ///      "description": "Who acted: the subject for `breakGlass`, the ratifier for `ratified`, the revoker for `revoked`.",
 ///      "$ref": "#/definitions/Did"
@@ -505,6 +501,11 @@ impl<'de> ::serde::Deserialize<'de> for NamespaceId {
 ///      "description": "The namespace the record's resource lies in.",
 ///      "$ref": "#/definitions/NamespaceId"
 ///    },
+///    "occurredAt": {
+///      "description": "When the event took effect at the VTC — not when the notice was sent, which differs whenever the recipient was offline.",
+///      "type": "string",
+///      "format": "date-time"
+///    },
 ///    "record": {
 ///      "description": "The record as it stands after the event — for `revoked`, as it stood when it was revoked. Always carries `breakGlass`, justification included.",
 ///      "$ref": "#/definitions/RightRecord"
@@ -523,8 +524,6 @@ impl<'de> ::serde::Deserialize<'de> for NamespaceId {
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Payload {
-    ///When the event took effect at the VTC — not when the notice was sent, which differs whenever the recipient was offline.
-    pub at: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Who acted: the subject for `breakGlass`, the ratifier for `ratified`, the revoker for `revoked`.
     pub by: Did,
     ///`breakGlass` — `record.subject` recorded the right for themselves with git-ns/right/break-glass. `ratified` — another administrator ratified it with git-ns/right/ratify. `revoked` — it was revoked with git-ns/right/revoke, before or after ratification.
@@ -533,6 +532,9 @@ pub struct Payload {
     pub ext: ::std::option::Option<Ext>,
     ///The namespace the record's resource lies in.
     pub namespace: NamespaceId,
+    ///When the event took effect at the VTC — not when the notice was sent, which differs whenever the recipient was offline.
+    #[serde(rename = "occurredAt")]
+    pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
     ///The record as it stands after the event — for `revoked`, as it stood when it was revoked. Always carries `breakGlass`, justification included.
     pub record: RightRecord,
     ///For `ratified`, the ratifier's statement; for `revoked`, the revoker's reason. Absent when none was given, and always for `breakGlass`, whose justification is in `record.breakGlass`.
@@ -1030,7 +1032,6 @@ impl<'de> ::serde::Deserialize<'de> for RightRecordReason {
 pub mod builder {
     #[derive(Clone, Debug)]
     pub struct BreakGlass {
-        at: ::std::result::Result<::chrono::DateTime<::chrono::offset::Utc>, ::std::string::String>,
         by: ::std::result::Result<super::Did, ::std::string::String>,
         effective_at: ::std::result::Result<
             ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
@@ -1043,30 +1044,22 @@ pub mod builder {
         >,
         ratified_by:
             ::std::result::Result<::std::option::Option<super::Did>, ::std::string::String>,
+        recorded_at:
+            ::std::result::Result<::chrono::DateTime<::chrono::offset::Utc>, ::std::string::String>,
     }
     impl ::std::default::Default for BreakGlass {
         fn default() -> Self {
             Self {
-                at: Err("no value supplied for at".to_string()),
                 by: Err("no value supplied for by".to_string()),
                 effective_at: Ok(Default::default()),
                 justification: Err("no value supplied for justification".to_string()),
                 ratified_at: Ok(Default::default()),
                 ratified_by: Ok(Default::default()),
+                recorded_at: Err("no value supplied for recorded_at".to_string()),
             }
         }
     }
     impl BreakGlass {
-        pub fn at<T>(mut self, value: T) -> Self
-        where
-            T: ::std::convert::TryInto<::chrono::DateTime<::chrono::offset::Utc>>,
-            T::Error: ::std::fmt::Display,
-        {
-            self.at = value
-                .try_into()
-                .map_err(|e| format!("error converting supplied value for at: {e}"));
-            self
-        }
         pub fn by<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<super::Did>,
@@ -1121,6 +1114,16 @@ pub mod builder {
                 .map_err(|e| format!("error converting supplied value for ratified_by: {e}"));
             self
         }
+        pub fn recorded_at<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::chrono::DateTime<::chrono::offset::Utc>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.recorded_at = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for recorded_at: {e}"));
+            self
+        }
     }
     impl ::std::convert::TryFrom<BreakGlass> for super::BreakGlass {
         type Error = super::error::ConversionError;
@@ -1128,34 +1131,35 @@ pub mod builder {
             value: BreakGlass,
         ) -> ::std::result::Result<Self, super::error::ConversionError> {
             Ok(Self {
-                at: value.at?,
                 by: value.by?,
                 effective_at: value.effective_at?,
                 justification: value.justification?,
                 ratified_at: value.ratified_at?,
                 ratified_by: value.ratified_by?,
+                recorded_at: value.recorded_at?,
             })
         }
     }
     impl ::std::convert::From<super::BreakGlass> for BreakGlass {
         fn from(value: super::BreakGlass) -> Self {
             Self {
-                at: Ok(value.at),
                 by: Ok(value.by),
                 effective_at: Ok(value.effective_at),
                 justification: Ok(value.justification),
                 ratified_at: Ok(value.ratified_at),
                 ratified_by: Ok(value.ratified_by),
+                recorded_at: Ok(value.recorded_at),
             }
         }
     }
     #[derive(Clone, Debug)]
     pub struct Payload {
-        at: ::std::result::Result<::chrono::DateTime<::chrono::offset::Utc>, ::std::string::String>,
         by: ::std::result::Result<super::Did, ::std::string::String>,
         event: ::std::result::Result<super::PayloadEvent, ::std::string::String>,
         ext: ::std::result::Result<::std::option::Option<super::Ext>, ::std::string::String>,
         namespace: ::std::result::Result<super::NamespaceId, ::std::string::String>,
+        occurred_at:
+            ::std::result::Result<::chrono::DateTime<::chrono::offset::Utc>, ::std::string::String>,
         record: ::std::result::Result<super::RightRecord, ::std::string::String>,
         statement: ::std::result::Result<
             ::std::option::Option<super::PayloadStatement>,
@@ -1165,27 +1169,17 @@ pub mod builder {
     impl ::std::default::Default for Payload {
         fn default() -> Self {
             Self {
-                at: Err("no value supplied for at".to_string()),
                 by: Err("no value supplied for by".to_string()),
                 event: Err("no value supplied for event".to_string()),
                 ext: Ok(Default::default()),
                 namespace: Err("no value supplied for namespace".to_string()),
+                occurred_at: Err("no value supplied for occurred_at".to_string()),
                 record: Err("no value supplied for record".to_string()),
                 statement: Ok(Default::default()),
             }
         }
     }
     impl Payload {
-        pub fn at<T>(mut self, value: T) -> Self
-        where
-            T: ::std::convert::TryInto<::chrono::DateTime<::chrono::offset::Utc>>,
-            T::Error: ::std::fmt::Display,
-        {
-            self.at = value
-                .try_into()
-                .map_err(|e| format!("error converting supplied value for at: {e}"));
-            self
-        }
         pub fn by<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<super::Did>,
@@ -1226,6 +1220,16 @@ pub mod builder {
                 .map_err(|e| format!("error converting supplied value for namespace: {e}"));
             self
         }
+        pub fn occurred_at<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::chrono::DateTime<::chrono::offset::Utc>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.occurred_at = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for occurred_at: {e}"));
+            self
+        }
         pub fn record<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<super::RightRecord>,
@@ -1251,11 +1255,11 @@ pub mod builder {
         type Error = super::error::ConversionError;
         fn try_from(value: Payload) -> ::std::result::Result<Self, super::error::ConversionError> {
             Ok(Self {
-                at: value.at?,
                 by: value.by?,
                 event: value.event?,
                 ext: value.ext?,
                 namespace: value.namespace?,
+                occurred_at: value.occurred_at?,
                 record: value.record?,
                 statement: value.statement?,
             })
@@ -1264,11 +1268,11 @@ pub mod builder {
     impl ::std::convert::From<super::Payload> for Payload {
         fn from(value: super::Payload) -> Self {
             Self {
-                at: Ok(value.at),
                 by: Ok(value.by),
                 event: Ok(value.event),
                 ext: Ok(value.ext),
                 namespace: Ok(value.namespace),
+                occurred_at: Ok(value.occurred_at),
                 record: Ok(value.record),
                 statement: Ok(value.statement),
             }
@@ -1430,7 +1434,7 @@ impl crate::Payload for Payload {
     const IS_ISSUED_AT_REQUIRED: bool = true;
     const IS_RECIPIENT_REQUIRED: bool = true;
     const PAYLOAD_SCHEMA: Option<&'static str> = Some(
-        "{\n  \"$defs\": {\n    \"BreakGlass\": {\n      \"additionalProperties\": false,\n      \"description\": \"How a self-granted right came to be, and whether another administrator has since ratified it. A record whose `breakGlass` has no `ratifiedBy` is **unratified**: it is live and published like any other right, it does not count toward the last-owner or last-admin invariants, and any community administrator or namespace admin of its namespace may revoke it. Ratification (git-ns/right/ratify) sets `ratifiedBy` and `ratifiedAt`; from then on the record is an ordinary grant, and `breakGlass` stays as its history. Never published to the Trust Registry.\",\n      \"properties\": {\n        \"at\": {\n          \"description\": \"When the VTC recorded the break-glass.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"by\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"Who broke the glass: always the record's `subject`, restated so the flag reads on its own.\"\n        },\n        \"effectiveAt\": {\n          \"description\": \"When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `at`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"justification\": {\n          \"description\": \"The actor's statement of why nobody else could grant this right. Shown to every community administrator, every namespace admin of the namespace and every owner of the resource; kept in the audit record; never published.\",\n          \"maxLength\": 2048,\n          \"minLength\": 1,\n          \"pattern\": \"\\\\S\",\n          \"type\": \"string\"\n        },\n        \"ratifiedAt\": {\n          \"description\": \"When it was ratified. Present exactly when `ratifiedBy` is.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"ratifiedBy\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"The administrator who ratified the record — never its subject. Absent while unratified.\"\n        }\n      },\n      \"required\": [\n        \"by\",\n        \"at\",\n        \"justification\"\n      ],\n      \"title\": \"BreakGlass\",\n      \"type\": \"object\"\n    },\n    \"Did\": {\n      \"description\": \"A bare DID in the W3C DID Core syntax (§3.1): `did:`, a method name of lowercase letters and digits, `:`, and a method-specific id of colon-separated segments drawn from `A-Z a-z 0-9 . - _` and percent-encoded octets, the last segment non-empty. A DID URL is not a DID: no path, query or fragment (`/`, `?`, `#`), so a verification-method id such as `did:key:z6Mk…#z6Mk…` is refused. Compared by exact string equality — no case folding or percent-decoding. A consumer MUST still treat the value as data: the pattern keeps shell metacharacters, whitespace and quotes out of the wire form, but it does not make a DID safe to splice into a command or markup.\",\n      \"maxLength\": 2048,\n      \"pattern\": \"^did:[a-z0-9]+:(?:(?:[A-Za-z0-9._-]|%[0-9A-Fa-f]{2})*:)*(?:[A-Za-z0-9._-]|%[0-9A-Fa-f]{2})+$\",\n      \"title\": \"Did\",\n      \"type\": \"string\"\n    },\n    \"Ext\": {\n      \"additionalProperties\": true,\n      \"description\": \"Vendor-namespaced extension object per SPEC.md §4.5.1. Each immediate key MUST be a reverse-DNS namespace; structure under each namespace is opaque to the framework.\",\n      \"minProperties\": 1,\n      \"propertyNames\": {\n        \"pattern\": \"^[a-z][a-z0-9-]*(\\\\.[a-z0-9-]+)+$\"\n      },\n      \"title\": \"Ext\",\n      \"type\": \"object\"\n    },\n    \"NamespaceId\": {\n      \"description\": \"The VTC's opaque identifier for a namespace, assigned when it is bound. Stable for the life of the binding; never reused for another binding.\",\n      \"maxLength\": 128,\n      \"minLength\": 1,\n      \"title\": \"NamespaceId\",\n      \"type\": \"string\"\n    },\n    \"Resource\": {\n      \"description\": \"A forge-qualified resource, all lowercase: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`, and a subgroup such as `gitlab.com/acme/platform` is not a resource. A repository path has 1 to 21 segments (GitLab: 20 levels of subgroup and the project); GitHub and Forgejo repository paths are always one. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.\",\n      \"maxLength\": 5885,\n      \"pattern\": \"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){0,21}$\",\n      \"title\": \"Resource\",\n      \"type\": \"string\"\n    },\n    \"Right\": {\n      \"description\": \"One of the five git rights. Each string is also the TRQP `action` the VTC publishes the right under in its Trust Registry, so it is carried verbatim. `git.ns.admin` and `git.repo.create` apply to a namespace resource; `git.repo.own` and `git.repo.maintain` to a repository resource; `git.commit.sign` to either.\",\n      \"enum\": [\n        \"git.ns.admin\",\n        \"git.repo.create\",\n        \"git.repo.own\",\n        \"git.repo.maintain\",\n        \"git.commit.sign\"\n      ],\n      \"title\": \"Right\",\n      \"type\": \"string\"\n    },\n    \"RightRecord\": {\n      \"additionalProperties\": false,\n      \"description\": \"One recorded right. Implied rights (§4.2 of the rights model: `own` implies `maintain` implies `commit.sign` on the same resource; `ns.admin` implies `repo.create` and `own` across its namespace) are not records and never appear as RightRecords. A record carrying `breakGlass` was given by its subject to themselves through git-ns/right/break-glass; it is a real right, published like any other, and is shown with that flag on every surface that shows the record.\",\n      \"properties\": {\n        \"breakGlass\": {\n          \"$ref\": \"#/$defs/BreakGlass\",\n          \"description\": \"Present exactly when the subject gave themselves this right through git-ns/right/break-glass. Absent for every other record.\"\n        },\n        \"expiresAt\": {\n          \"description\": \"When the right lapses. Absent: no expiry.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"grantedAt\": {\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"grantedBy\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"The actor whose task caused the right: the granter, the creator of a repository (for its first `own`), the adopting admin, the transferring owner, or the binding admin (for the first `git.ns.admin`). The VTC's own DID for a right it derives from its configuration.\"\n        },\n        \"reason\": {\n          \"description\": \"The granter's free-text reason. Disclosed only to holders of `git.repo.own` on the resource and of `git.ns.admin` over it.\",\n          \"maxLength\": 1024,\n          \"type\": \"string\"\n        },\n        \"resource\": {\n          \"$ref\": \"#/$defs/Resource\"\n        },\n        \"right\": {\n          \"$ref\": \"#/$defs/Right\"\n        },\n        \"subject\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"Who holds the right. For `git.commit.sign` this is the DID whose commit signatures the CI check accepts.\"\n        }\n      },\n      \"required\": [\n        \"subject\",\n        \"right\",\n        \"resource\",\n        \"grantedBy\",\n        \"grantedAt\"\n      ],\n      \"title\": \"RightRecord\",\n      \"type\": \"object\"\n    }\n  },\n  \"$id\": \"https://trusttasks.org/spec/git-ns/right/break-glass-notice/0.2\",\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"additionalProperties\": false,\n  \"description\": \"The VTC tells an administrator that a member broke the glass on an elevated git right, or that a break-glass record was ratified or revoked. Unsolicited: it answers no request from the recipient.\",\n  \"properties\": {\n    \"at\": {\n      \"description\": \"When the event took effect at the VTC — not when the notice was sent, which differs whenever the recipient was offline.\",\n      \"format\": \"date-time\",\n      \"type\": \"string\"\n    },\n    \"by\": {\n      \"$ref\": \"#/$defs/Did\",\n      \"description\": \"Who acted: the subject for `breakGlass`, the ratifier for `ratified`, the revoker for `revoked`.\"\n    },\n    \"event\": {\n      \"description\": \"`breakGlass` — `record.subject` recorded the right for themselves with git-ns/right/break-glass. `ratified` — another administrator ratified it with git-ns/right/ratify. `revoked` — it was revoked with git-ns/right/revoke, before or after ratification.\",\n      \"enum\": [\n        \"breakGlass\",\n        \"ratified\",\n        \"revoked\"\n      ],\n      \"type\": \"string\"\n    },\n    \"ext\": {\n      \"$ref\": \"#/$defs/Ext\"\n    },\n    \"namespace\": {\n      \"$ref\": \"#/$defs/NamespaceId\",\n      \"description\": \"The namespace the record's resource lies in.\"\n    },\n    \"record\": {\n      \"$ref\": \"#/$defs/RightRecord\",\n      \"description\": \"The record as it stands after the event — for `revoked`, as it stood when it was revoked. Always carries `breakGlass`, justification included.\"\n    },\n    \"statement\": {\n      \"description\": \"For `ratified`, the ratifier's statement; for `revoked`, the revoker's reason. Absent when none was given, and always for `breakGlass`, whose justification is in `record.breakGlass`.\",\n      \"maxLength\": 1024,\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"event\",\n    \"namespace\",\n    \"record\",\n    \"by\",\n    \"at\"\n  ],\n  \"title\": \"Git Namespaces — Break-Glass Notice — payload\",\n  \"type\": \"object\"\n}\n",
+        "{\n  \"$defs\": {\n    \"BreakGlass\": {\n      \"additionalProperties\": false,\n      \"description\": \"How a self-granted right came to be, and whether another administrator has since ratified it. A record whose `breakGlass` has no `ratifiedBy` is **unratified**: it is live and published like any other right, it does not count toward the last-owner or last-admin invariants, and any community administrator or namespace admin of its namespace may revoke it. Ratification (git-ns/right/ratify) sets `ratifiedBy` and `ratifiedAt`; from then on the record is an ordinary grant, and `breakGlass` stays as its history. Never published to the Trust Registry.\",\n      \"properties\": {\n        \"by\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"Who broke the glass: always the record's `subject`, restated so the flag reads on its own.\"\n        },\n        \"effectiveAt\": {\n          \"description\": \"When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `recordedAt`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"justification\": {\n          \"description\": \"The actor's statement of why nobody else could grant this right. Shown to every community administrator, every namespace admin of the namespace and every owner of the resource; kept in the audit record; never published.\",\n          \"maxLength\": 2048,\n          \"minLength\": 1,\n          \"pattern\": \"\\\\S\",\n          \"type\": \"string\"\n        },\n        \"ratifiedAt\": {\n          \"description\": \"When it was ratified. Present exactly when `ratifiedBy` is.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"ratifiedBy\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"The administrator who ratified the record — never its subject. Absent while unratified.\"\n        },\n        \"recordedAt\": {\n          \"description\": \"When the VTC recorded the break-glass.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        }\n      },\n      \"required\": [\n        \"by\",\n        \"recordedAt\",\n        \"justification\"\n      ],\n      \"title\": \"BreakGlass\",\n      \"type\": \"object\"\n    },\n    \"Did\": {\n      \"description\": \"A bare DID in the W3C DID Core syntax (§3.1): `did:`, a method name of lowercase letters and digits, `:`, and a method-specific id of colon-separated segments drawn from `A-Z a-z 0-9 . - _` and percent-encoded octets, the last segment non-empty. A DID URL is not a DID: no path, query or fragment (`/`, `?`, `#`), so a verification-method id such as `did:key:z6Mk…#z6Mk…` is refused. Compared by exact string equality — no case folding or percent-decoding. A consumer MUST still treat the value as data: the pattern keeps shell metacharacters, whitespace and quotes out of the wire form, but it does not make a DID safe to splice into a command or markup.\",\n      \"maxLength\": 2048,\n      \"pattern\": \"^did:[a-z0-9]+:(?:(?:[A-Za-z0-9._-]|%[0-9A-Fa-f]{2})*:)*(?:[A-Za-z0-9._-]|%[0-9A-Fa-f]{2})+$\",\n      \"title\": \"Did\",\n      \"type\": \"string\"\n    },\n    \"Ext\": {\n      \"additionalProperties\": true,\n      \"description\": \"Vendor-namespaced extension object per SPEC.md §4.5.1. Each immediate key MUST be a reverse-DNS namespace; structure under each namespace is opaque to the framework.\",\n      \"minProperties\": 1,\n      \"propertyNames\": {\n        \"pattern\": \"^[a-z][a-z0-9-]*(\\\\.[a-z0-9-]+)+$\"\n      },\n      \"title\": \"Ext\",\n      \"type\": \"object\"\n    },\n    \"NamespaceId\": {\n      \"description\": \"The VTC's opaque identifier for a namespace, assigned when it is bound. Stable for the life of the binding; never reused for another binding.\",\n      \"maxLength\": 128,\n      \"minLength\": 1,\n      \"title\": \"NamespaceId\",\n      \"type\": \"string\"\n    },\n    \"Resource\": {\n      \"description\": \"A forge-qualified resource, all lowercase: `<forge-host>/<owner>` for a namespace, or `<forge-host>/<owner>/<repo-path>` for one repository — `github.com/acme`, `github.com/acme/widgets`, `codeberg.org/acme`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`, and a subgroup such as `gitlab.com/acme/platform` is not a resource. A repository path has 1 to 21 segments (GitLab: 20 levels of subgroup and the project); GitHub and Forgejo repository paths are always one. The forge is never implied: `acme/widgets` alone is not a resource. Containment is by whole segment: `github.com/acme` contains `github.com/acme/widgets` and does not contain `github.com/acme-labs/x` or `codeberg.org/acme/widgets`.\",\n      \"maxLength\": 5885,\n      \"pattern\": \"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+/[a-z0-9_-][a-z0-9._-]{0,254}(?:/[a-z0-9_-][a-z0-9._-]{0,254}){0,21}$\",\n      \"title\": \"Resource\",\n      \"type\": \"string\"\n    },\n    \"Right\": {\n      \"description\": \"One of the five git rights. Each string is also the TRQP `action` the VTC publishes the right under in its Trust Registry, so it is carried verbatim. `git.ns.admin` and `git.repo.create` apply to a namespace resource; `git.repo.own` and `git.repo.maintain` to a repository resource; `git.commit.sign` to either.\",\n      \"enum\": [\n        \"git.ns.admin\",\n        \"git.repo.create\",\n        \"git.repo.own\",\n        \"git.repo.maintain\",\n        \"git.commit.sign\"\n      ],\n      \"title\": \"Right\",\n      \"type\": \"string\"\n    },\n    \"RightRecord\": {\n      \"additionalProperties\": false,\n      \"description\": \"One recorded right. Implied rights (§4.2 of the rights model: `own` implies `maintain` implies `commit.sign` on the same resource; `ns.admin` implies `repo.create` and `own` across its namespace) are not records and never appear as RightRecords. A record carrying `breakGlass` was given by its subject to themselves through git-ns/right/break-glass; it is a real right, published like any other, and is shown with that flag on every surface that shows the record.\",\n      \"properties\": {\n        \"breakGlass\": {\n          \"$ref\": \"#/$defs/BreakGlass\",\n          \"description\": \"Present exactly when the subject gave themselves this right through git-ns/right/break-glass. Absent for every other record.\"\n        },\n        \"expiresAt\": {\n          \"description\": \"When the right lapses. Absent: no expiry.\",\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"grantedAt\": {\n          \"format\": \"date-time\",\n          \"type\": \"string\"\n        },\n        \"grantedBy\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"The actor whose task caused the right: the granter, the creator of a repository (for its first `own`), the adopting admin, the transferring owner, or the binding admin (for the first `git.ns.admin`). The VTC's own DID for a right it derives from its configuration.\"\n        },\n        \"reason\": {\n          \"description\": \"The granter's free-text reason. Disclosed only to holders of `git.repo.own` on the resource and of `git.ns.admin` over it.\",\n          \"maxLength\": 1024,\n          \"type\": \"string\"\n        },\n        \"resource\": {\n          \"$ref\": \"#/$defs/Resource\"\n        },\n        \"right\": {\n          \"$ref\": \"#/$defs/Right\"\n        },\n        \"subject\": {\n          \"$ref\": \"#/$defs/Did\",\n          \"description\": \"Who holds the right. For `git.commit.sign` this is the DID whose commit signatures the CI check accepts.\"\n        }\n      },\n      \"required\": [\n        \"subject\",\n        \"right\",\n        \"resource\",\n        \"grantedBy\",\n        \"grantedAt\"\n      ],\n      \"title\": \"RightRecord\",\n      \"type\": \"object\"\n    }\n  },\n  \"$id\": \"https://trusttasks.org/spec/git-ns/right/break-glass-notice/0.2\",\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"additionalProperties\": false,\n  \"description\": \"The VTC tells an administrator that a member broke the glass on an elevated git right, or that a break-glass record was ratified or revoked. Unsolicited: it answers no request from the recipient.\",\n  \"properties\": {\n    \"by\": {\n      \"$ref\": \"#/$defs/Did\",\n      \"description\": \"Who acted: the subject for `breakGlass`, the ratifier for `ratified`, the revoker for `revoked`.\"\n    },\n    \"event\": {\n      \"description\": \"`breakGlass` — `record.subject` recorded the right for themselves with git-ns/right/break-glass. `ratified` — another administrator ratified it with git-ns/right/ratify. `revoked` — it was revoked with git-ns/right/revoke, before or after ratification.\",\n      \"enum\": [\n        \"breakGlass\",\n        \"ratified\",\n        \"revoked\"\n      ],\n      \"type\": \"string\"\n    },\n    \"ext\": {\n      \"$ref\": \"#/$defs/Ext\"\n    },\n    \"namespace\": {\n      \"$ref\": \"#/$defs/NamespaceId\",\n      \"description\": \"The namespace the record's resource lies in.\"\n    },\n    \"occurredAt\": {\n      \"description\": \"When the event took effect at the VTC — not when the notice was sent, which differs whenever the recipient was offline.\",\n      \"format\": \"date-time\",\n      \"type\": \"string\"\n    },\n    \"record\": {\n      \"$ref\": \"#/$defs/RightRecord\",\n      \"description\": \"The record as it stands after the event — for `revoked`, as it stood when it was revoked. Always carries `breakGlass`, justification included.\"\n    },\n    \"statement\": {\n      \"description\": \"For `ratified`, the ratifier's statement; for `revoked`, the revoker's reason. Absent when none was given, and always for `breakGlass`, whose justification is in `record.breakGlass`.\",\n      \"maxLength\": 1024,\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"event\",\n    \"namespace\",\n    \"record\",\n    \"by\",\n    \"occurredAt\"\n  ],\n  \"title\": \"Git Namespaces — Break-Glass Notice — payload\",\n  \"type\": \"object\"\n}\n",
     );
 }
 /// The extended error codes this specification declares (SPEC §7.3 item 9,

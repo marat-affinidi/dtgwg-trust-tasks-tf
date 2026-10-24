@@ -5016,7 +5016,7 @@ export interface AdminRightRow_GitNsV0_5 {
   /**
    * Present exactly when `origin` is `recorded` and the record carries `breakGlass` — see `RightRecord.breakGlass`. Absent for a role-derived grant, which cannot be self-granted through break-glass.
    */
-  breakGlass?: BreakGlass;
+  breakGlass?: BreakGlass_GitNsV0_4;
 }
 /**
  * One right as the administrator's rights console shows it: a recorded `RightRecord` restated with the membership facts an administrator needs (`subjectMember`, `granterDeparted`), or a role-derived grant that carries no record. `git-ns/right/list` and `git-ns/right/issued-by-departed` are its only producers.
@@ -5056,7 +5056,7 @@ export interface AdminRightRow_GitNsV0_6 {
   /**
    * Present exactly when `origin` is `recorded` and the record carries `breakGlass` — see `RightRecord.breakGlass`. Absent for a role-derived grant, which cannot be self-granted through break-glass.
    */
-  breakGlass?: BreakGlass;
+  breakGlass?: BreakGlass_GitNsV0_6;
 }
 /**
  * A membership admitted directly, with the credentials issued for it — the success payload of vtc/members/admit and vtc/members/make-membership.
@@ -5911,7 +5911,7 @@ export interface Bootstrap {
 /**
  * How a self-granted right came to be, and whether another administrator has since ratified it. A record whose `breakGlass` has no `ratifiedBy` is **unratified**: it is live and published like any other right, it does not count toward the last-owner or last-admin invariants, and any community administrator or namespace admin of its namespace may revoke it. Ratification (git-ns/right/ratify) sets `ratifiedBy` and `ratifiedAt`; from then on the record is an ordinary grant, and `breakGlass` stays as its history. Never published to the Trust Registry.
  */
-export interface BreakGlass {
+export interface BreakGlass_GitNsV0_4 {
   /**
    * Who broke the glass: always the record's `subject`, restated so the flag reads on its own.
    */
@@ -5926,6 +5926,35 @@ export interface BreakGlass {
   justification: string;
   /**
    * When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `at`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.
+   */
+  effectiveAt?: string;
+  /**
+   * The administrator who ratified the record — never its subject. Absent while unratified.
+   */
+  ratifiedBy?: Did_GitNsV0_3;
+  /**
+   * When it was ratified. Present exactly when `ratifiedBy` is.
+   */
+  ratifiedAt?: string;
+}
+/**
+ * How a self-granted right came to be, and whether another administrator has since ratified it. A record whose `breakGlass` has no `ratifiedBy` is **unratified**: it is live and published like any other right, it does not count toward the last-owner or last-admin invariants, and any community administrator or namespace admin of its namespace may revoke it. Ratification (git-ns/right/ratify) sets `ratifiedBy` and `ratifiedAt`; from then on the record is an ordinary grant, and `breakGlass` stays as its history. Never published to the Trust Registry.
+ */
+export interface BreakGlass_GitNsV0_6 {
+  /**
+   * Who broke the glass: always the record's `subject`, restated so the flag reads on its own.
+   */
+  by: Did_GitNsV0_3;
+  /**
+   * When the VTC recorded the break-glass.
+   */
+  recordedAt: string;
+  /**
+   * The actor's statement of why nobody else could grant this right. Shown to every community administrator, every namespace admin of the namespace and every owner of the resource; kept in the audit record; never published.
+   */
+  justification: string;
+  /**
+   * When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `recordedAt`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so.
    */
   effectiveAt?: string;
   /**
@@ -11125,7 +11154,7 @@ export interface RightRecord_GitNsV0_4 {
   /**
    * Present exactly when the subject gave themselves this right through git-ns/right/break-glass. Absent for every other record.
    */
-  breakGlass?: BreakGlass;
+  breakGlass?: BreakGlass_GitNsV0_4;
 }
 /**
  * One recorded right. Implied rights (§4.2 of the rights model: `own` implies `maintain` implies `commit.sign` on the same resource; `ns.admin` implies `repo.create` and `own` across its namespace) are not records and never appear as RightRecords. A record carrying `breakGlass` was given by its subject to themselves through git-ns/right/break-glass; it is a real right, published like any other, and is shown with that flag on every surface that shows the record.
@@ -11153,7 +11182,7 @@ export interface RightRecord_GitNsV0_6 {
   /**
    * Present exactly when the subject gave themselves this right through git-ns/right/break-glass. Absent for every other record.
    */
-  breakGlass?: BreakGlass;
+  breakGlass?: BreakGlass_GitNsV0_6;
 }
 /**
  * A grant set by reference: the capability ceiling of a defined role, conferred as resource grants exactly as a `grants` binding confers its list. It never assigns the role itself — an entry's administrative role and its community role stay direct assignments.

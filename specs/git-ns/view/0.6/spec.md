@@ -60,8 +60,9 @@ A member reads what the VTC governs on the forges: the namespaces bound to it, t
 
 - **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
 - The schema pins [`git-ns/_shared/0.6`](../../_shared/0.6/git-ns.schema.json) (was `0.4`).
+- **`breakGlass.at` → `recordedAt`** in every right record, through [`git-ns/_shared/0.6`](../../_shared/0.6/git-ns.schema.json) (type unchanged: an RFC 3339 date-time, still REQUIRED), for the registry's naming consistency: an event instant is named for the event it records, never a bare `at`.
 
-Accepting what `0.5` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.5` document is a valid `0.6` document. A producer that also serves `0.5` **MUST NOT** put a resource `0.5` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.5` document: a `0.5` consumer validates against the `0.5` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.5` answer instead. Everything else is unchanged from `0.5` and restated below, so that this version stands on its own.
+Accepting what `0.5` refused is backwards-compatible; the rename is not — a `0.5` document carrying a `breakGlass.at` is not a valid `0.6` document. The whole is released as a `MINOR` increment under [SPEC §5.2](/SPEC.md#52-compatibility-rules)'s `draft` allowance, and `0.5` remains published. A producer that also serves `0.5` **MUST NOT** put a resource `0.5` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.5` document: a `0.5` consumer validates against the `0.5` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.5` answer instead. Everything else is unchanged from `0.5` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -319,7 +320,7 @@ Carol, the only admin of `acme`, was away when a release had to ship, and Bob ga
         "grantedAt": "2026-09-25T22:14:03Z",
         "breakGlass": {
           "by": "did:webvh:QmBobScid2:acme-vtc.example:bob",
-          "at": "2026-09-25T22:14:03Z",
+          "recordedAt": "2026-09-25T22:14:03Z",
           "justification": "Release 2.4 must ship tonight and Carol, our only admin, is on a flight until Monday."
         }
       }

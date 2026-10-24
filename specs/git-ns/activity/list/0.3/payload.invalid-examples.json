@@ -20,7 +20,7 @@
     "variant": "response",
     "payload": {
       "items": [
-        { "at": "2026-09-26T08:30:00Z", "action": "git-ns-job-bootstrap", "source": "job" }
+        { "occurredAt": "2026-09-26T08:30:00Z", "action": "git-ns-job-bootstrap", "source": "job" }
       ]
     }
   },
@@ -29,7 +29,7 @@
     "variant": "response",
     "payload": {
       "items": [
-        { "at": "2026-09-26T08:30:00Z", "action": "gitNs.job.bootstrap", "source": "queue" }
+        { "occurredAt": "2026-09-26T08:30:00Z", "action": "gitNs.job.bootstrap", "source": "queue" }
       ]
     }
   },

@@ -40,12 +40,12 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "at",
+        "occurredAt",
         "action",
         "source"
       ],
       "properties": {
-        "at": {
+        "occurredAt": {
           "type": "string",
           "format": "date-time",
           "description": "When it happened: the audit row's timestamp, or the job's acceptance time (its creation time if never accepted)."
@@ -103,7 +103,7 @@
           "items": {
             "$ref": "#/$defs/ActivityItem"
           },
-          "description": "Items in administered namespaces, newest (`at`) first."
+          "description": "Items in administered namespaces, newest (`occurredAt`) first."
         },
         "nextCursor": {
           "type": "string",

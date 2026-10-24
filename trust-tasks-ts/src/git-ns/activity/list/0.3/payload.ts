@@ -34,7 +34,7 @@ export interface GitNamespacesListActivityPayload {
  */
 export interface GitNamespacesListActivityResponsePayload {
   /**
-   * Items in administered namespaces, newest (`at`) first.
+   * Items in administered namespaces, newest (`occurredAt`) first.
    */
   items: ActivityItem[];
   /**
@@ -50,7 +50,7 @@ export interface ActivityItem {
   /**
    * When it happened: the audit row's timestamp, or the job's acceptance time (its creation time if never accepted).
    */
-  at: string;
+  occurredAt: string;
   /**
    * What happened: `gitNs.right.granted`, `gitNs.repo.renamed`, `gitNs.drift.reported`, `gitNs.job.createRepo`, and so on. Not a closed enumeration — a VTC MAY add its own dot-separated `gitNs.*` actions, and a consumer MUST treat one it does not recognise as an opaque activity item rather than failing to parse it.
    */
@@ -148,12 +148,12 @@ export const PAYLOAD_SCHEMA = {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "at",
+        "occurredAt",
         "action",
         "source"
       ],
       "properties": {
-        "at": {
+        "occurredAt": {
           "type": "string",
           "format": "date-time",
           "description": "When it happened: the audit row's timestamp, or the job's acceptance time (its creation time if never accepted)."
@@ -211,7 +211,7 @@ export const PAYLOAD_SCHEMA = {
           "items": {
             "$ref": "#/$defs/ActivityItem"
           },
-          "description": "Items in administered namespaces, newest (`at`) first."
+          "description": "Items in administered namespaces, newest (`occurredAt`) first."
         },
         "nextCursor": {
           "type": "string",
@@ -288,12 +288,12 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "at",
+        "occurredAt",
         "action",
         "source"
       ],
       "properties": {
-        "at": {
+        "occurredAt": {
           "type": "string",
           "format": "date-time",
           "description": "When it happened: the audit row's timestamp, or the job's acceptance time (its creation time if never accepted)."
@@ -351,7 +351,7 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
           "items": {
             "$ref": "#/$defs/ActivityItem"
           },
-          "description": "Items in administered namespaces, newest (`at`) first."
+          "description": "Items in administered namespaces, newest (`occurredAt`) first."
         },
         "nextCursor": {
           "type": "string",

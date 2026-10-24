@@ -88,7 +88,7 @@
       "additionalProperties": false,
       "required": [
         "conclusion",
-        "at"
+        "concludedAt"
       ],
       "properties": {
         "conclusion": {
@@ -97,7 +97,7 @@
           "maxLength": 64,
           "description": "The check's conclusion, in the forge's words (`success`, `failure`)."
         },
-        "at": {
+        "concludedAt": {
           "type": "string",
           "format": "date-time",
           "description": "When the check concluded."

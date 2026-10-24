@@ -49,7 +49,7 @@ errorCodes:
     meaning: "No live, unratified break-glass record matches this subject, right and resource: there is no such record, it was never a break-glass, or it is already ratified."
     retryable: false
   - code: git-ns/right/ratify:recordChanged
-    meaning: "The matching break-glass record is not the one the ratifier read: its `breakGlass.at` is not `breakGlassAt`. Read the record again, and its justification, before ratifying."
+    meaning: "The matching break-glass record is not the one the ratifier read: its `breakGlass.recordedAt` is not `breakGlassAt`. Read the record again, and its justification, before ratifying."
     retryable: false
   - code: git-ns/right/ratify:selfRatification
     meaning: "The actor is the record's subject. A break-glass is ratified by someone else, or not at all."
@@ -72,8 +72,9 @@ Ratification changes nothing about who holds what. It clears the flag, and it ma
 
 - **Nested repository paths.** A repository resource is `<forge-host>/<owner>/<repo-path>`. On a forge with nested groups (GitLab) the repository path holds the subgroups between the top-level owner and the project, up to 21 segments: `gitlab.com/acme/platform/tools/cli` is one repository of the namespace `gitlab.com/acme`. The namespace is still the top-level owner alone, and a subgroup is not a resource, so no right is held on one. A segment may be up to 255 characters.
 - The schema pins [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (was `0.4`).
+- **`breakGlass.at` → `recordedAt`** in every right record, through [`git-ns/_shared/0.6`](../../../_shared/0.6/git-ns.schema.json) (type unchanged: an RFC 3339 date-time, still REQUIRED), for the registry's naming consistency: an event instant is named for the event it records, never a bare `at`.
 
-Accepting what `0.1` refused is a backwards-compatible change, released as a `MINOR` increment ([SPEC §5.2](/SPEC.md#52-compatibility-rules)); a `0.1` document is a valid `0.2` document. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
+Accepting what `0.1` refused is backwards-compatible; the rename is not — a `0.1` document carrying a `breakGlass.at` is not a valid `0.2` document. The whole is released as a `MINOR` increment under [SPEC §5.2](/SPEC.md#52-compatibility-rules)'s `draft` allowance, and `0.1` remains published. A producer that also serves `0.1` **MUST NOT** put a resource `0.1` cannot carry — a repository path of more than one segment, or a segment longer than 100 characters — into a `0.1` document: a `0.1` consumer validates against the `0.1` schema and would refuse the whole document. It leaves such repositories, and the rights on them, out of a `0.1` answer instead. Everything else is unchanged from `0.1` and restated below, so that this version stands on its own.
 
 ## Status of this Document
 
@@ -100,7 +101,7 @@ The subject is refused with `git-ns/right/ratify:selfRatification`, whatever els
 
 **`subject`**, **`right`**, **`resource`** — identify the record exactly, as for [`git-ns/right/revoke`](../../revoke/0.3/spec.md).
 
-**`breakGlassAt`** — the record's `breakGlass.at`, as the ratifier read it.
+**`breakGlassAt`** — the record's `breakGlass.recordedAt`, as the ratifier read it.
 
 **`statement`** — the ratifier's free text, kept in the audit record and carried in the notice.
 
@@ -109,7 +110,7 @@ The subject is refused with `git-ns/right/ratify:selfRatification`, whatever els
 The administrator sends the request to the VTC. See the top-level schema in [`payload.schema.json`](payload.schema.json). A conforming VTC:
 
 1. Refuses a triple that matches no live record carrying `breakGlass` without `ratifiedBy` with `git-ns/right/ratify:notBreakGlass`. A pending record — one whose `breakGlass.effectiveAt` has not arrived — matches: ratifying it does not bring its effect forward.
-2. Refuses a record whose `breakGlass.at` is not `breakGlassAt` with `git-ns/right/ratify:recordChanged`.
+2. Refuses a record whose `breakGlass.recordedAt` is not `breakGlassAt` with `git-ns/right/ratify:recordChanged`.
 3. Refuses the record's subject with `git-ns/right/ratify:selfRatification`, then checks the rest of the [authorization](#authorization).
 4. Evaluates the community's git-namespace policy, which may refuse with `git-ns:policyDenied` (for example, a policy that only community administrators ratify a break-glass `git.ns.admin`) and may not override the rules above.
 5. Sets `breakGlass.ratifiedBy` to the actor and `breakGlass.ratifiedAt` to now, leaving every other member of the record as it was. Steps 1–3 and 5 **MUST** be atomic with respect to every other change to the resource's rights, so that a ratification and a revocation racing each other have exactly one outcome.
@@ -168,7 +169,7 @@ The VTC, now responding, returns the ratified record, per the sub-schema reachab
       "grantedAt": "2026-09-25T02:10:31Z",
       "breakGlass": {
         "by": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
-        "at": "2026-09-25T02:10:31Z",
+        "recordedAt": "2026-09-25T02:10:31Z",
         "justification": "CVE-2026-4411 fix must ship tonight; both owners (Alice, Bob) unreachable since 22:00, paged twice. Will ask Dana to ratify in the morning.",
         "ratifiedBy": "did:webvh:QmDanaScid8:acme-vtc.example:dana",
         "ratifiedAt": "2026-09-25T09:00:01Z"

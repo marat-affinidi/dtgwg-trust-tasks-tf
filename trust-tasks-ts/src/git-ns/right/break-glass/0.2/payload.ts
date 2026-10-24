@@ -3,7 +3,7 @@
  * Source: specs/git-ns/right/break-glass/0.2/payload.schema.json
  */
 
-import type { BreakGlass, Did_GitNsV0_3 as Did, ElevatedRight, Ext, Resource_GitNsV0_6 as Resource, Right, RightRecord_GitNsV0_6 as RightRecord } from "../../../../_shared/components.js";
+import type { BreakGlass_GitNsV0_6 as BreakGlass, Did_GitNsV0_3 as Did, ElevatedRight, Ext, Resource_GitNsV0_6 as Resource, Right, RightRecord_GitNsV0_6 as RightRecord } from "../../../../_shared/components.js";
 
 
 /**
@@ -175,7 +175,7 @@ export const PAYLOAD_SCHEMA = {
       "additionalProperties": false,
       "required": [
         "by",
-        "at",
+        "recordedAt",
         "justification"
       ],
       "properties": {
@@ -183,7 +183,7 @@ export const PAYLOAD_SCHEMA = {
           "$ref": "#/$defs/Did",
           "description": "Who broke the glass: always the record's `subject`, restated so the flag reads on its own."
         },
-        "at": {
+        "recordedAt": {
           "type": "string",
           "format": "date-time",
           "description": "When the VTC recorded the break-glass."
@@ -198,7 +198,7 @@ export const PAYLOAD_SCHEMA = {
         "effectiveAt": {
           "type": "string",
           "format": "date-time",
-          "description": "When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `at`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so."
+          "description": "When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `recordedAt`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so."
         },
         "ratifiedBy": {
           "$ref": "#/$defs/Did",
@@ -338,7 +338,7 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
       "additionalProperties": false,
       "required": [
         "by",
-        "at",
+        "recordedAt",
         "justification"
       ],
       "properties": {
@@ -346,7 +346,7 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
           "$ref": "#/$defs/Did",
           "description": "Who broke the glass: always the record's `subject`, restated so the flag reads on its own."
         },
-        "at": {
+        "recordedAt": {
           "type": "string",
           "format": "date-time",
           "description": "When the VTC recorded the break-glass."
@@ -361,7 +361,7 @@ export const RESPONSE_PAYLOAD_SCHEMA = {
         "effectiveAt": {
           "type": "string",
           "format": "date-time",
-          "description": "When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `at`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so."
+          "description": "When the right takes effect, where the community's policy imposed a delay. Absent: it took effect at `recordedAt`. Until this instant the record confers nothing and is not published, and any administrator who may revoke it may do so."
         },
         "ratifiedBy": {
           "$ref": "#/$defs/Did",

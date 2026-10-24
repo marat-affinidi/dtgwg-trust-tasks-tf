@@ -26,7 +26,7 @@
     "breakGlassAt": {
       "type": "string",
       "format": "date-time",
-      "description": "The record's `breakGlass.at`, as the ratifier read it. Binds the ratification to the one break-glass the ratifier read and judged, so that it cannot ratify a later one — made after that one was revoked, with a different justification — by the same subject for the same right."
+      "description": "The record's `breakGlass.recordedAt`, as the ratifier read it. Binds the ratification to the one break-glass the ratifier read and judged, so that it cannot ratify a later one — made after that one was revoked, with a different justification — by the same subject for the same right."
     },
     "statement": {
       "type": "string",

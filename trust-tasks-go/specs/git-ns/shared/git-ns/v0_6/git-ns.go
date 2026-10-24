@@ -364,7 +364,7 @@ type BreakGlass struct {
 	By DID `json:"by"`
 
 	// When the VTC recorded the break-glass.
-	At string `json:"at"`
+	RecordedAt string `json:"recordedAt"`
 
 	// The actor's statement of why nobody else could grant this right. Shown to every
 	// community administrator, every namespace admin of the namespace and every owner of the
@@ -372,7 +372,7 @@ type BreakGlass struct {
 	Justification string `json:"justification"`
 
 	// When the right takes effect, where the community's policy imposed a delay. Absent: it
-	// took effect at `at`. Until this instant the record confers nothing and is not
+	// took effect at `recordedAt`. Until this instant the record confers nothing and is not
 	// published, and any administrator who may revoke it may do so.
 	EffectiveAt *string `json:"effectiveAt,omitempty"`
 

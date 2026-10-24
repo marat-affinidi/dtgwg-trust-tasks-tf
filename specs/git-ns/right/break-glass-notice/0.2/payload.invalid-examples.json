@@ -12,12 +12,12 @@
         "grantedAt": "2026-09-25T02:10:31Z",
         "breakGlass": {
           "by": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
-          "at": "2026-09-25T02:10:31Z",
+          "recordedAt": "2026-09-25T02:10:31Z",
           "justification": "CVE fix must ship tonight"
         }
       },
       "by": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
-      "at": "2026-09-25T02:10:31Z"
+      "occurredAt": "2026-09-25T02:10:31Z"
     }
   },
   {
@@ -33,11 +33,11 @@
         "grantedAt": "2026-09-25T02:10:31Z",
         "breakGlass": {
           "by": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
-          "at": "2026-09-25T02:10:31Z",
+          "recordedAt": "2026-09-25T02:10:31Z",
           "justification": "CVE fix must ship tonight"
         }
       },
-      "at": "2026-09-25T02:10:31Z"
+      "occurredAt": "2026-09-25T02:10:31Z"
     }
   },
   {
@@ -53,11 +53,11 @@
         "grantedAt": "2026-09-25T02:10:31Z",
         "breakGlass": {
           "by": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
-          "at": "2026-09-25T02:10:31Z"
+          "recordedAt": "2026-09-25T02:10:31Z"
         }
       },
       "by": "did:webvh:QmCarolScid3:acme-vtc.example:carol",
-      "at": "2026-09-25T02:10:31Z"
+      "occurredAt": "2026-09-25T02:10:31Z"
     }
   }
 ]
